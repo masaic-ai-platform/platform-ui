@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -158,7 +157,7 @@ const ImageGenerator: React.FC = () => {
       {/* Header */}
       <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">AI Image Generator</h1>
+          <h1 className="text-2xl font-bold text-gray-900">OpenResponses ImageGen</h1>
           <p className="text-sm text-gray-500">Create amazing images with AI</p>
         </div>
         <div className="flex items-center space-x-2">
