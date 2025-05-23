@@ -22,6 +22,8 @@ const ImageGenerator: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('http://localhost:8080');
+  const [modelProvider, setModelProvider] = useState('openai');
+  const [modelName, setModelName] = useState('gpt-4.1-mini');
   const [lastMessageWasImage, setLastMessageWasImage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -29,8 +31,13 @@ const ImageGenerator: React.FC = () => {
     // Load saved settings from localStorage
     const savedApiKey = localStorage.getItem('imageGen_apiKey') || '';
     const savedBaseUrl = localStorage.getItem('imageGen_baseUrl') || 'http://localhost:8080';
+    const savedModelProvider = localStorage.getItem('imageGen_modelProvider') || 'openai';
+    const savedModelName = localStorage.getItem('imageGen_modelName') || 'gpt-4.1-mini';
+    
     setApiKey(savedApiKey);
     setBaseUrl(savedBaseUrl);
+    setModelProvider(savedModelProvider);
+    setModelName(savedModelName);
   }, []);
 
   useEffect(() => {
@@ -67,6 +74,8 @@ const ImageGenerator: React.FC = () => {
     setMessages(prev => [...prev, userMessage]);
 
     try {
+      const modelString = `${modelProvider}@${modelName}`;
+      
       const response = await fetch(`${baseUrl}/v1/chat/completions`, {
         method: 'POST',
         headers: {
@@ -74,7 +83,7 @@ const ImageGenerator: React.FC = () => {
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: "openai@gpt-4.1-mini",
+          model: modelString,
           stream: false,
           messages: [
             {
@@ -175,6 +184,10 @@ const ImageGenerator: React.FC = () => {
             setApiKey={setApiKey}
             baseUrl={baseUrl}
             setBaseUrl={setBaseUrl}
+            modelProvider={modelProvider}
+            setModelProvider={setModelProvider}
+            modelName={modelName}
+            setModelName={setModelName}
           />
         </div>
       </div>
