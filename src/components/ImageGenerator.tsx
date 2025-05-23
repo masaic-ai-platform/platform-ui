@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
-import { Loader2, Send } from 'lucide-react';
+import { Loader2, Send, Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import ChatMessage from './ChatMessage';
 import SettingsModal from './SettingsModal';
@@ -22,6 +22,7 @@ const ImageGenerator: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('http://localhost:8080');
+  const [lastMessageWasImage, setLastMessageWasImage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,7 +37,18 @@ const ImageGenerator: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const resetConversation = () => {
+    setMessages([]);
+    setLastMessageWasImage(false);
+    toast.success('Conversation reset');
+  };
+
   const generateImage = async (prompt: string) => {
+    // Check if we need to reset the conversation based on previous messages
+    if (lastMessageWasImage) {
+      resetConversation();
+    }
+
     if (!apiKey.trim()) {
       toast.error('Please set your API key in settings first');
       return;
@@ -90,17 +102,19 @@ const ImageGenerator: React.FC = () => {
 
       if (data.choices && data.choices[0] && data.choices[0].message) {
         const message = data.choices[0].message;
+        const isImageResponse = message.type === 'image';
         
         // Add assistant response
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
           content: message.content,
-          type: message.type === 'image' ? 'image' : 'text',
+          type: isImageResponse ? 'image' : 'text',
           timestamp: new Date(),
         };
         
         setMessages(prev => [...prev, assistantMessage]);
+        setLastMessageWasImage(isImageResponse);
         toast.success('Image generated successfully!');
       } else {
         throw new Error('Invalid response format');
@@ -118,6 +132,7 @@ const ImageGenerator: React.FC = () => {
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
+      setLastMessageWasImage(false);
     } finally {
       setIsLoading(false);
     }
@@ -146,12 +161,22 @@ const ImageGenerator: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900">AI Image Generator</h1>
           <p className="text-sm text-gray-500">Create amazing images with AI</p>
         </div>
-        <SettingsModal 
-          apiKey={apiKey}
-          setApiKey={setApiKey}
-          baseUrl={baseUrl}
-          setBaseUrl={setBaseUrl}
-        />
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={resetConversation}
+            title="Reset conversation"
+          >
+            <Trash className="h-4 w-4" />
+          </Button>
+          <SettingsModal 
+            apiKey={apiKey}
+            setApiKey={setApiKey}
+            baseUrl={baseUrl}
+            setBaseUrl={setBaseUrl}
+          />
+        </div>
       </div>
 
       {/* Messages Area */}
