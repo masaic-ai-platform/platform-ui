@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
-import { Loader2, Send, Trash } from 'lucide-react';
+import { Loader2, Send, Trash, Star, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import ChatMessage from './ChatMessage';
 import SettingsModal from './SettingsModal';
@@ -173,6 +173,23 @@ const ImageGenerator: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
+      {/* GitHub Star Banner */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2">
+        <div className="flex items-center justify-center space-x-2 text-sm">
+          <Star className="h-4 w-4 fill-current" />
+          <span>Like this project? Star us on GitHub!</span>
+          <a 
+            href="https://github.com/masaic-ai-platform/open-responses" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-flex items-center space-x-1 bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition-colors duration-200"
+          >
+            <span className="font-medium">⭐ Star</span>
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
         <div>
