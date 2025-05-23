@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,6 +23,9 @@ const ImageGenerator: React.FC = () => {
   const [baseUrl, setBaseUrl] = useState('http://localhost:8080');
   const [modelProvider, setModelProvider] = useState('openai');
   const [modelName, setModelName] = useState('gpt-4.1-mini');
+  const [imageModelProvider, setImageModelProvider] = useState('gemini');
+  const [imageModelName, setImageModelName] = useState('imagen-3.0-generate-002');
+  const [imageProviderKey, setImageProviderKey] = useState('');
   const [lastMessageWasImage, setLastMessageWasImage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -33,11 +35,17 @@ const ImageGenerator: React.FC = () => {
     const savedBaseUrl = localStorage.getItem('imageGen_baseUrl') || 'http://localhost:8080';
     const savedModelProvider = localStorage.getItem('imageGen_modelProvider') || 'openai';
     const savedModelName = localStorage.getItem('imageGen_modelName') || 'gpt-4.1-mini';
+    const savedImageModelProvider = localStorage.getItem('imageGen_imageModelProvider') || 'gemini';
+    const savedImageModelName = localStorage.getItem('imageGen_imageModelName') || 'imagen-3.0-generate-002';
+    const savedImageProviderKey = localStorage.getItem('imageGen_imageProviderKey') || '';
     
     setApiKey(savedApiKey);
     setBaseUrl(savedBaseUrl);
     setModelProvider(savedModelProvider);
     setModelName(savedModelName);
+    setImageModelProvider(savedImageModelProvider);
+    setImageModelName(savedImageModelName);
+    setImageProviderKey(savedImageProviderKey);
   }, []);
 
   useEffect(() => {
@@ -97,7 +105,8 @@ const ImageGenerator: React.FC = () => {
           ],
           tools: [{
             type: "image_generation",
-            model: "imagen-3.0-generate-002"
+            model: `${imageModelProvider}@${imageModelName}`,
+            image_provider_key: imageProviderKey
           }]
         }),
       });
@@ -188,6 +197,12 @@ const ImageGenerator: React.FC = () => {
             setModelProvider={setModelProvider}
             modelName={modelName}
             setModelName={setModelName}
+            imageModelProvider={imageModelProvider}
+            setImageModelProvider={setImageModelProvider}
+            imageModelName={imageModelName}
+            setImageModelName={setImageModelName}
+            imageProviderKey={imageProviderKey}
+            setImageProviderKey={setImageProviderKey}
           />
         </div>
       </div>

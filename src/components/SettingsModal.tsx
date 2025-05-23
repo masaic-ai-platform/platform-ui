@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +15,12 @@ interface SettingsModalProps {
   setModelProvider?: (provider: string) => void;
   modelName?: string;
   setModelName?: (model: string) => void;
+  imageModelProvider?: string;
+  setImageModelProvider?: (provider: string) => void;
+  imageModelName?: string;
+  setImageModelName?: (model: string) => void;
+  imageProviderKey?: string;
+  setImageProviderKey?: (key: string) => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ 
@@ -26,24 +31,68 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   modelProvider = 'openai',
   setModelProvider = () => {},
   modelName = 'gpt-4.1-mini',
-  setModelName = () => {}
+  setModelName = () => {},
+  imageModelProvider = 'gemini',
+  setImageModelProvider = () => {},
+  imageModelName = 'imagen-3.0-generate-002',
+  setImageModelName = () => {},
+  imageProviderKey = '',
+  setImageProviderKey = () => {}
 }) => {
   const [tempApiKey, setTempApiKey] = useState(apiKey);
   const [tempBaseUrl, setTempBaseUrl] = useState(baseUrl);
   const [tempModelProvider, setTempModelProvider] = useState(modelProvider);
   const [tempModelName, setTempModelName] = useState(modelName);
+  const [tempImageModelProvider, setTempImageModelProvider] = useState(imageModelProvider);
+  const [tempImageModelName, setTempImageModelName] = useState(imageModelName);
+  const [tempImageProviderKey, setTempImageProviderKey] = useState(imageProviderKey);
   const [isOpen, setIsOpen] = useState(false);
+
+  // Sync temporary state with props when they change (after localStorage loading)
+  useEffect(() => {
+    setTempApiKey(apiKey);
+  }, [apiKey]);
+
+  useEffect(() => {
+    setTempBaseUrl(baseUrl);
+  }, [baseUrl]);
+
+  useEffect(() => {
+    setTempModelProvider(modelProvider);
+  }, [modelProvider]);
+
+  useEffect(() => {
+    setTempModelName(modelName);
+  }, [modelName]);
+
+  useEffect(() => {
+    setTempImageModelProvider(imageModelProvider);
+  }, [imageModelProvider]);
+
+  useEffect(() => {
+    setTempImageModelName(imageModelName);
+  }, [imageModelName]);
+
+  useEffect(() => {
+    setTempImageProviderKey(imageProviderKey);
+  }, [imageProviderKey]);
 
   const handleSave = () => {
     setApiKey(tempApiKey);
     setBaseUrl(tempBaseUrl);
     setModelProvider(tempModelProvider);
     setModelName(tempModelName);
+    setImageModelProvider(tempImageModelProvider);
+    setImageModelName(tempImageModelName);
+    setImageProviderKey(tempImageProviderKey);
     
     localStorage.setItem('imageGen_apiKey', tempApiKey);
     localStorage.setItem('imageGen_baseUrl', tempBaseUrl);
     localStorage.setItem('imageGen_modelProvider', tempModelProvider);
     localStorage.setItem('imageGen_modelName', tempModelName);
+    localStorage.setItem('imageGen_imageModelProvider', tempImageModelProvider);
+    localStorage.setItem('imageGen_imageModelName', tempImageModelName);
+    localStorage.setItem('imageGen_imageProviderKey', tempImageProviderKey);
     
     toast.success('Settings saved successfully!');
     setIsOpen(false);
@@ -54,6 +103,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setTempBaseUrl(baseUrl);
     setTempModelProvider(modelProvider);
     setTempModelName(modelName);
+    setTempImageModelProvider(imageModelProvider);
+    setTempImageModelName(imageModelName);
+    setTempImageProviderKey(imageProviderKey);
     setIsOpen(false);
   };
 
@@ -71,7 +123,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             Configure your OpenResponses API settings
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="baseUrl">Base URL</Label>
             <Input
@@ -82,36 +134,77 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               onChange={(e) => setTempBaseUrl(e.target.value)}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="apiKey">API Key</Label>
-            <Input
-              id="apiKey"
-              type="password"
-              placeholder="Enter your API key"
-              value={tempApiKey}
-              onChange={(e) => setTempApiKey(e.target.value)}
-            />
+          
+          {/* Chat Model Provider, Model and Key Section */}
+          <div className="space-y-4 border-t pt-4">
+            <h3 className="text-sm font-medium text-gray-900">Chat Model Provider, Model and Key</h3>
+            <div className="space-y-2">
+              <Label htmlFor="apiKey">Chat API Key</Label>
+              <Input
+                id="apiKey"
+                type="password"
+                placeholder="Enter your chat API key"
+                value={tempApiKey}
+                onChange={(e) => setTempApiKey(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="modelProvider">Chat Model Provider</Label>
+              <Input
+                id="modelProvider"
+                type="text"
+                placeholder="openai"
+                value={tempModelProvider}
+                onChange={(e) => setTempModelProvider(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="modelName">Chat Model Name</Label>
+              <Input
+                id="modelName"
+                type="text"
+                placeholder="gpt-4.1-mini"
+                value={tempModelName}
+                onChange={(e) => setTempModelName(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="modelProvider">Model Provider</Label>
-            <Input
-              id="modelProvider"
-              type="text"
-              placeholder="openai"
-              value={tempModelProvider}
-              onChange={(e) => setTempModelProvider(e.target.value)}
-            />
+
+          {/* Image Model Configuration Section */}
+          <div className="space-y-4 border-t pt-4">
+            <h3 className="text-sm font-medium text-gray-900">Image Model Configuration</h3>
+            <div className="space-y-2">
+              <Label htmlFor="imageProviderKey">Image Provider Key</Label>
+              <Input
+                id="imageProviderKey"
+                type="password"
+                placeholder="Enter your image provider key"
+                value={tempImageProviderKey}
+                onChange={(e) => setTempImageProviderKey(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="imageModelProvider">Image Model Provider</Label>
+              <Input
+                id="imageModelProvider"
+                type="text"
+                placeholder="gemini"
+                value={tempImageModelProvider}
+                onChange={(e) => setTempImageModelProvider(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="imageModelName">Image Model Name</Label>
+              <Input
+                id="imageModelName"
+                type="text"
+                placeholder="imagen-3.0-generate-002"
+                value={tempImageModelName}
+                onChange={(e) => setTempImageModelName(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="modelName">Model Name</Label>
-            <Input
-              id="modelName"
-              type="text"
-              placeholder="gpt-4.1-mini"
-              value={tempModelName}
-              onChange={(e) => setTempModelName(e.target.value)}
-            />
-          </div>
+
           <div className="flex justify-end space-x-2">
             <Button variant="outline" onClick={handleCancel}>
               Cancel
