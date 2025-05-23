@@ -26,7 +26,7 @@ const ImageGenerator: React.FC = () => {
   const [imageModelProvider, setImageModelProvider] = useState('gemini');
   const [imageModelName, setImageModelName] = useState('imagen-3.0-generate-002');
   const [imageProviderKey, setImageProviderKey] = useState('');
-  const [lastMessageWasImage, setLastMessageWasImage] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,16 +54,11 @@ const ImageGenerator: React.FC = () => {
 
   const resetConversation = () => {
     setMessages([]);
-    setLastMessageWasImage(false);
+    setConversationId(null);
     toast.success('Conversation reset');
   };
 
-  const generateImage = async (prompt: string) => {
-    // Check if we need to reset the conversation based on previous messages
-    if (lastMessageWasImage) {
-      resetConversation();
-    }
-
+  const generateResponse = async (prompt: string) => {
     if (!apiKey.trim()) {
       toast.error('Please set your API key in settings first');
       return;
@@ -84,31 +79,30 @@ const ImageGenerator: React.FC = () => {
     try {
       const modelString = `${modelProvider}@${modelName}`;
       
-      const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+      const requestBody: any = {
+        model: modelString,
+        store: true,
+        tools: [{
+          type: "image_generation",
+          model: `${imageModelProvider}@${imageModelName}`,
+          model_provider_key: imageProviderKey
+        }],
+        input: prompt,
+        stream: false
+      };
+
+      // Add previous_response_id for subsequent requests (continue conversation)
+      if (conversationId) {
+        requestBody.previous_response_id = conversationId;
+      }
+      
+      const response = await fetch(`${baseUrl}/v1/responses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
-        body: JSON.stringify({
-          model: modelString,
-          stream: false,
-          messages: [
-            {
-              role: "system",
-              content: "You are a helpful image generation agent."
-            },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          tools: [{
-            type: "image_generation",
-            model: `${imageModelProvider}@${imageModelName}`,
-            image_provider_key: imageProviderKey
-          }]
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -118,39 +112,49 @@ const ImageGenerator: React.FC = () => {
       const data = await response.json();
       console.log('API Response:', data);
 
-      if (data.choices && data.choices[0] && data.choices[0].message) {
-        const message = data.choices[0].message;
-        const isImageResponse = message.type === 'image';
-        
-        // Add assistant response
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: message.content,
-          type: isImageResponse ? 'image' : 'text',
-          timestamp: new Date(),
-        };
-        
-        setMessages(prev => [...prev, assistantMessage]);
-        setLastMessageWasImage(isImageResponse);
-        toast.success('Image generated successfully!');
+      // Update conversation ID for subsequent requests
+      if (data.id) {
+        setConversationId(data.id);
+      }
+
+      if (data.output && data.output.length > 0) {
+        const output = data.output[0];
+        if (output.content && output.content.length > 0) {
+          const content = output.content[0];
+          
+          // Add assistant response
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: content.text,
+            type: content.type === 'image' ? 'image' : 'text',
+            timestamp: new Date(),
+          };
+          
+          setMessages(prev => [...prev, assistantMessage]);
+          
+          if (content.type === 'image') {
+            toast.success('Image generated successfully!');
+          } else {
+            toast.success('Response received!');
+          }
+        }
       } else {
         throw new Error('Invalid response format');
       }
     } catch (error) {
-      console.error('Error generating image:', error);
-      toast.error('Failed to generate image. Please check your settings and try again.');
+      console.error('Error generating response:', error);
+      toast.error('Failed to generate response. Please check your settings and try again.');
       
       // Add error message
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Sorry, I encountered an error while generating the image. Please try again.',
+        content: 'Sorry, I encountered an error while processing your request. Please try again.',
         type: 'text',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
-      setLastMessageWasImage(false);
     } finally {
       setIsLoading(false);
     }
@@ -159,7 +163,7 @@ const ImageGenerator: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputValue.trim() && !isLoading) {
-      generateImage(inputValue.trim());
+      generateResponse(inputValue.trim());
       setInputValue('');
     }
   };
@@ -193,8 +197,8 @@ const ImageGenerator: React.FC = () => {
       {/* Header */}
       <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">OpenResponses ImageGen</h1>
-          <p className="text-sm text-gray-500">Create amazing images with OpenResponses API</p>
+          <h1 className="text-2xl font-bold text-gray-900">OpenResponses AI Chat</h1>
+          <p className="text-sm text-gray-500">Chat with AI and generate images using OpenResponses API</p>
         </div>
         <div className="flex items-center space-x-2">
           <Button 
@@ -229,9 +233,9 @@ const ImageGenerator: React.FC = () => {
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <Card className="p-8 text-center max-w-md">
-              <h2 className="text-xl font-semibold mb-2">Welcome to AI Image Generator</h2>
+              <h2 className="text-xl font-semibold mb-2">Welcome to OpenResponses AI Chat</h2>
               <p className="text-gray-600">
-                Type a description below to generate amazing images with AI.
+                Chat with AI and generate amazing images! Ask questions, request images, or have a conversation.
                 Don't forget to configure your API settings first!
               </p>
             </Card>
@@ -251,7 +255,7 @@ const ImageGenerator: React.FC = () => {
               <div className="flex justify-start mb-4">
                 <div className="bg-gray-100 text-gray-800 px-4 py-3 rounded-lg flex items-center space-x-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Generating image...</span>
+                  <span>Processing your request...</span>
                 </div>
               </div>
             )}
@@ -268,7 +272,7 @@ const ImageGenerator: React.FC = () => {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Describe the image you want to generate..."
+              placeholder="Ask me anything or describe an image you want to generate..."
               className="flex-1 min-h-[60px] resize-none"
               disabled={isLoading}
             />
