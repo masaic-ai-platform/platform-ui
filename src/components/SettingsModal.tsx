@@ -126,13 +126,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="baseUrl">Base URL</Label>
-            <Input
-              id="baseUrl"
-              type="text"
-              placeholder="http://localhost:8080"
-              value={tempBaseUrl}
-              onChange={(e) => setTempBaseUrl(e.target.value)}
-            />
+            <div className="flex items-center border rounded-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <Input
+                id="baseUrl"
+                type="text"
+                placeholder="http://localhost:8080"
+                value={tempBaseUrl}
+                onChange={(e) => setTempBaseUrl(e.target.value)}
+                className="border-0 rounded-r-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              <div className="bg-gray-50 px-3 py-2 text-sm text-gray-600 font-mono border-l">
+                /v1
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">The /v1 path will be automatically appended</p>
           </div>
           
           {/* Chat Model Provider, Model and Key Section */}
