@@ -6,6 +6,7 @@ import { Loader2, Send, Trash, Star, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import ChatMessage from './ChatMessage';
 import SettingsModal from './SettingsModal';
+import DocumentModal from './DocumentModal';
 
 interface Message {
   id: string;
@@ -27,6 +28,8 @@ const ImageGenerator: React.FC = () => {
   const [imageModelName, setImageModelName] = useState('imagen-3.0-generate-002');
   const [imageProviderKey, setImageProviderKey] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [selectedVectorStore, setSelectedVectorStore] = useState<string>('');
+  const [instructions, setInstructions] = useState('Answer questions using information from the provided documents when relevant. For image generation requests, create images as requested.');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,6 +41,8 @@ const ImageGenerator: React.FC = () => {
     const savedImageModelProvider = localStorage.getItem('imageGen_imageModelProvider') || 'gemini';
     const savedImageModelName = localStorage.getItem('imageGen_imageModelName') || 'imagen-3.0-generate-002';
     const savedImageProviderKey = localStorage.getItem('imageGen_imageProviderKey') || '';
+    const savedSelectedVectorStore = localStorage.getItem('imageGen_selectedVectorStore') || '';
+    const savedInstructions = localStorage.getItem('imageGen_instructions') || 'Answer questions using information from the provided documents when relevant. For image generation requests, create images as requested.';
     
     setApiKey(savedApiKey);
     setBaseUrl(savedBaseUrl);
@@ -46,6 +51,8 @@ const ImageGenerator: React.FC = () => {
     setImageModelProvider(savedImageModelProvider);
     setImageModelName(savedImageModelName);
     setImageProviderKey(savedImageProviderKey);
+    setSelectedVectorStore(savedSelectedVectorStore);
+    setInstructions(savedInstructions);
   }, []);
 
   useEffect(() => {
@@ -56,6 +63,12 @@ const ImageGenerator: React.FC = () => {
     setMessages([]);
     setConversationId(null);
     toast.success('Conversation reset');
+  };
+
+  const handleVectorStoreSelect = (vectorStoreId: string) => {
+    setSelectedVectorStore(vectorStoreId);
+    localStorage.setItem('imageGen_selectedVectorStore', vectorStoreId);
+    toast.success('Vector store selected for file search');
   };
 
   const generateResponse = async (prompt: string) => {
@@ -91,6 +104,21 @@ const ImageGenerator: React.FC = () => {
         stream: false
       };
 
+      // Add file_search tool if vector store is selected
+      if (selectedVectorStore) {
+        requestBody.tools.push({
+          type: "file_search",
+          vector_store_ids: [selectedVectorStore],
+          max_num_results: 5,
+          filters: {
+            type: "eq",
+            key: "language",
+            value: "en"
+          }
+        });
+        requestBody.instructions = instructions;
+      }
+
       // Add previous_response_id for subsequent requests (continue conversation)
       if (conversationId) {
         requestBody.previous_response_id = conversationId;
@@ -121,6 +149,15 @@ const ImageGenerator: React.FC = () => {
         const output = data.output[0];
         if (output.content && output.content.length > 0) {
           const content = output.content[0];
+          
+          // Debug logging to see what we're receiving
+          console.log('API Response Content:', {
+            type: content.type,
+            textLength: content.text?.length,
+            textPreview: content.text?.substring(0, 100),
+            isImageType: content.type === 'image',
+            startsWithImageSignature: content.text?.startsWith('/9j/') || content.text?.startsWith('iVBORw0KGgo')
+          });
           
           // Add assistant response
           const assistantMessage: Message = {
@@ -198,7 +235,14 @@ const ImageGenerator: React.FC = () => {
       <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">OpenResponses AI Chat</h1>
-          <p className="text-sm text-gray-500">Chat with AI and generate images using OpenResponses API</p>
+          <p className="text-sm text-gray-500">
+            Chat with AI and generate images using OpenResponses API
+            {selectedVectorStore && (
+              <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                📁 File Search Enabled
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex items-center space-x-2">
           <Button 
@@ -209,6 +253,12 @@ const ImageGenerator: React.FC = () => {
           >
             <Trash className="h-4 w-4" />
           </Button>
+          <DocumentModal
+            apiKey={apiKey}
+            baseUrl={baseUrl}
+            selectedVectorStore={selectedVectorStore}
+            onVectorStoreSelect={handleVectorStoreSelect}
+          />
           <SettingsModal 
             apiKey={apiKey}
             setApiKey={setApiKey}
@@ -224,6 +274,8 @@ const ImageGenerator: React.FC = () => {
             setImageModelName={setImageModelName}
             imageProviderKey={imageProviderKey}
             setImageProviderKey={setImageProviderKey}
+            instructions={instructions}
+            setInstructions={setInstructions}
           />
         </div>
       </div>
@@ -236,7 +288,14 @@ const ImageGenerator: React.FC = () => {
               <h2 className="text-xl font-semibold mb-2">Welcome to OpenResponses AI Chat</h2>
               <p className="text-gray-600">
                 Chat with AI and generate amazing images! Ask questions, request images, or have a conversation.
-                Don't forget to configure your API settings first!
+                {selectedVectorStore && (
+                  <span className="block mt-2 text-sm text-blue-600">
+                    📁 File search enabled - AI can search your documents for relevant information.
+                  </span>
+                )}
+                <span className="block mt-2 text-sm">
+                  Don't forget to configure your API settings first!
+                </span>
               </p>
             </Card>
           </div>

@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Settings } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -21,6 +22,8 @@ interface SettingsModalProps {
   setImageModelName?: (model: string) => void;
   imageProviderKey?: string;
   setImageProviderKey?: (key: string) => void;
+  instructions?: string;
+  setInstructions?: (instructions: string) => void;
 }
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ 
@@ -37,7 +40,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   imageModelName = 'imagen-3.0-generate-002',
   setImageModelName = () => {},
   imageProviderKey = '',
-  setImageProviderKey = () => {}
+  setImageProviderKey = () => {},
+  instructions = 'Answer questions using information from the provided documents when relevant. For image generation requests, create images as requested.',
+  setInstructions = () => {}
 }) => {
   const [tempApiKey, setTempApiKey] = useState(apiKey);
   const [tempBaseUrl, setTempBaseUrl] = useState(baseUrl);
@@ -46,6 +51,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [tempImageModelProvider, setTempImageModelProvider] = useState(imageModelProvider);
   const [tempImageModelName, setTempImageModelName] = useState(imageModelName);
   const [tempImageProviderKey, setTempImageProviderKey] = useState(imageProviderKey);
+  const [tempInstructions, setTempInstructions] = useState(instructions);
   const [isOpen, setIsOpen] = useState(false);
 
   // Sync temporary state with props when they change (after localStorage loading)
@@ -77,6 +83,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setTempImageProviderKey(imageProviderKey);
   }, [imageProviderKey]);
 
+  useEffect(() => {
+    setTempInstructions(instructions);
+  }, [instructions]);
+
   const handleSave = () => {
     setApiKey(tempApiKey);
     setBaseUrl(tempBaseUrl);
@@ -85,6 +95,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setImageModelProvider(tempImageModelProvider);
     setImageModelName(tempImageModelName);
     setImageProviderKey(tempImageProviderKey);
+    setInstructions(tempInstructions);
     
     localStorage.setItem('imageGen_apiKey', tempApiKey);
     localStorage.setItem('imageGen_baseUrl', tempBaseUrl);
@@ -93,6 +104,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     localStorage.setItem('imageGen_imageModelProvider', tempImageModelProvider);
     localStorage.setItem('imageGen_imageModelName', tempImageModelName);
     localStorage.setItem('imageGen_imageProviderKey', tempImageProviderKey);
+    localStorage.setItem('imageGen_instructions', tempInstructions);
     
     toast.success('Settings saved successfully!');
     setIsOpen(false);
@@ -106,6 +118,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setTempImageModelProvider(imageModelProvider);
     setTempImageModelName(imageModelName);
     setTempImageProviderKey(imageProviderKey);
+    setTempInstructions(instructions);
     setIsOpen(false);
   };
 
@@ -116,14 +129,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <Settings className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle>API Settings</DialogTitle>
           <DialogDescription>
             Configure your OpenResponses API settings
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto pr-2 space-y-6">
           <div className="space-y-2">
             <Label htmlFor="baseUrl">Base URL</Label>
             <div className="flex items-center border rounded-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
@@ -212,6 +225,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
+          <div className="space-y-4 border-t pt-4">
+            <h3 className="text-sm font-medium text-gray-900">Instructions</h3>
+            <div className="space-y-2">
+              <Label htmlFor="instructions">Model Instructions</Label>
+              <Textarea
+                id="instructions"
+                value={tempInstructions}
+                onChange={(e) => setTempInstructions(e.target.value)}
+                placeholder="Enter instructions for the model behavior..."
+                className="min-h-[80px] resize-none"
+              />
+              <p className="text-xs text-gray-500">
+                These instructions guide how the AI behaves when file search is enabled
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="shrink-0 border-t pt-4 mt-4">
           <div className="flex justify-end space-x-2">
             <Button variant="outline" onClick={handleCancel}>
               Cancel
