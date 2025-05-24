@@ -289,8 +289,36 @@ const ImageGenerator: React.FC = () => {
       <div className="flex-1 overflow-y-auto px-6 py-4">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <Card className="p-8 text-center max-w-md">
-              <h2 className="text-xl font-semibold mb-2">Welcome to OpenResponses AI Chat</h2>
+            <Card className="p-8 text-center max-w-2xl">
+              <h2 className="text-xl font-semibold mb-4">Welcome to OpenResponses AI Chat</h2>
+              
+              <div className="mb-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                <h3 className="text-lg font-semibold mb-3 text-blue-800">Prerequisites:</h3>
+                <div className="text-left space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-blue-700 mb-1">1. Run OpenResponses server with Docker:</p>
+                    <code className="block bg-gray-800 text-green-400 text-xs p-2 rounded font-mono">
+                      docker run -p 8080:8080 masaicai/open-responses:latest
+                    </code>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-blue-700 mb-1">2. Expose port 8080 using ngrok:</p>
+                    <code className="block bg-gray-800 text-green-400 text-xs p-2 rounded font-mono">
+                      ngrok http 8080
+                    </code>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Example output: <code className="bg-gray-100 px-1 rounded">https://abc123.ngrok.io</code>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-blue-700 mb-1">3. Configure API settings:</p>
+                    <p className="text-xs text-gray-600">
+                      Copy the ngrok URL (e.g., <code className="bg-gray-100 px-1 rounded">https://abc123.ngrok.io</code>) and enter it as the Base URL in the API settings ⚙️
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
               <p className="text-gray-600">
                 Chat with AI and generate amazing images! Ask questions, request images, or have a conversation.
                 {selectedVectorStore && (
