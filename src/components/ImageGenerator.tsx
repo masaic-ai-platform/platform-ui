@@ -65,10 +65,15 @@ const ImageGenerator: React.FC = () => {
     toast.success('Conversation reset');
   };
 
-  const handleVectorStoreSelect = (vectorStoreId: string) => {
-    setSelectedVectorStore(vectorStoreId);
-    localStorage.setItem('imageGen_selectedVectorStore', vectorStoreId);
-    toast.success('Vector store selected for file search');
+  const handleVectorStoreSelect = (vectorStoreId: string | null) => {
+    setSelectedVectorStore(vectorStoreId || '');
+    localStorage.setItem('imageGen_selectedVectorStore', vectorStoreId || '');
+    
+    if (vectorStoreId) {
+      toast.success('Vector store selected for file search');
+    } else {
+      toast.success('Vector store deselected');
+    }
   };
 
   const generateResponse = async (prompt: string) => {

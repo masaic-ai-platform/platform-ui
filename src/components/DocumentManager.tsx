@@ -26,7 +26,7 @@ interface VectorStore {
 interface DocumentManagerProps {
   apiKey: string;
   baseUrl: string;
-  onVectorStoreSelect?: (vectorStoreId: string) => void;
+  onVectorStoreSelect?: (vectorStoreId: string | null) => void;
   selectedVectorStore?: string;
 }
 
@@ -291,7 +291,13 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
                   ? 'border-blue-500 bg-blue-50'
                   : 'border-gray-200 hover:border-gray-300'
               }`}
-              onClick={() => onVectorStoreSelect?.(store.id)}
+              onClick={() => {
+                if (selectedVectorStore === store.id) {
+                  onVectorStoreSelect?.(null); // Deselect if already selected
+                } else {
+                  onVectorStoreSelect?.(store.id); // Select if not selected
+                }
+              }}
             >
               <div className="flex justify-between items-center">
                 <div>

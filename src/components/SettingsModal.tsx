@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Settings } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -41,7 +42,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   setImageModelName = () => {},
   imageProviderKey = '',
   setImageProviderKey = () => {},
-  instructions = 'Answer questions using information from the provided documents when relevant. For image generation requests, create images as requested.',
+  instructions = 'You help with answer generation using file search when available, and you can generate images when requested. You should use provided documents and search results to give accurate answers, and create images based on file content and user descriptions.',
   setInstructions = () => {}
 }) => {
   const [tempApiKey, setTempApiKey] = useState(apiKey);
@@ -53,6 +54,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [tempImageProviderKey, setTempImageProviderKey] = useState(imageProviderKey);
   const [tempInstructions, setTempInstructions] = useState(instructions);
   const [isOpen, setIsOpen] = useState(false);
+  const [customChatProvider, setCustomChatProvider] = useState('');
+  const [customImageProvider, setCustomImageProvider] = useState('');
 
   // Sync temporary state with props when they change (after localStorage loading)
   useEffect(() => {
@@ -87,21 +90,41 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setTempInstructions(instructions);
   }, [instructions]);
 
+  // Set custom provider values when a custom provider is detected
+  useEffect(() => {
+    const knownChatProviders = ['openai', 'claude', 'anthropic', 'groq', 'togetherai', 'gemini', 'google', 'deepseek', 'ollama', 'xai'];
+    if (!knownChatProviders.includes(modelProvider)) {
+      setCustomChatProvider(modelProvider);
+      setTempModelProvider('custom');
+    }
+  }, [modelProvider]);
+
+  useEffect(() => {
+    const knownImageProviders = ['openai', 'togetherai', 'gemini', 'google'];
+    if (!knownImageProviders.includes(imageModelProvider)) {
+      setCustomImageProvider(imageModelProvider);
+      setTempImageModelProvider('custom');
+    }
+  }, [imageModelProvider]);
+
   const handleSave = () => {
+    const finalChatProvider = tempModelProvider === 'custom' ? customChatProvider : tempModelProvider;
+    const finalImageProvider = tempImageModelProvider === 'custom' ? customImageProvider : tempImageModelProvider;
+    
     setApiKey(tempApiKey);
     setBaseUrl(tempBaseUrl);
-    setModelProvider(tempModelProvider);
+    setModelProvider(finalChatProvider);
     setModelName(tempModelName);
-    setImageModelProvider(tempImageModelProvider);
+    setImageModelProvider(finalImageProvider);
     setImageModelName(tempImageModelName);
     setImageProviderKey(tempImageProviderKey);
     setInstructions(tempInstructions);
     
     localStorage.setItem('imageGen_apiKey', tempApiKey);
     localStorage.setItem('imageGen_baseUrl', tempBaseUrl);
-    localStorage.setItem('imageGen_modelProvider', tempModelProvider);
+    localStorage.setItem('imageGen_modelProvider', finalChatProvider);
     localStorage.setItem('imageGen_modelName', tempModelName);
-    localStorage.setItem('imageGen_imageModelProvider', tempImageModelProvider);
+    localStorage.setItem('imageGen_imageModelProvider', finalImageProvider);
     localStorage.setItem('imageGen_imageModelName', tempImageModelName);
     localStorage.setItem('imageGen_imageProviderKey', tempImageProviderKey);
     localStorage.setItem('imageGen_instructions', tempInstructions);
@@ -119,6 +142,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setTempImageModelName(imageModelName);
     setTempImageProviderKey(imageProviderKey);
     setTempInstructions(instructions);
+    
+    // Reset custom provider values
+    const knownChatProviders = ['openai', 'claude', 'anthropic', 'groq', 'togetherai', 'gemini', 'google', 'deepseek', 'ollama', 'xai'];
+    const knownImageProviders = ['openai', 'togetherai', 'gemini', 'google'];
+    
+    if (!knownChatProviders.includes(modelProvider)) {
+      setCustomChatProvider(modelProvider);
+    } else {
+      setCustomChatProvider('');
+    }
+    
+    if (!knownImageProviders.includes(imageModelProvider)) {
+      setCustomImageProvider(imageModelProvider);
+    } else {
+      setCustomImageProvider('');
+    }
+    
     setIsOpen(false);
   };
 
@@ -170,13 +210,35 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
             <div className="space-y-2">
               <Label htmlFor="modelProvider">Chat Model Provider</Label>
-              <Input
-                id="modelProvider"
-                type="text"
-                placeholder="openai"
+              <Select
                 value={tempModelProvider}
-                onChange={(e) => setTempModelProvider(e.target.value)}
-              />
+                onValueChange={(value) => setTempModelProvider(value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="openai">openai</SelectItem>
+                  <SelectItem value="claude">claude</SelectItem>
+                  <SelectItem value="anthropic">anthropic</SelectItem>
+                  <SelectItem value="groq">groq</SelectItem>
+                  <SelectItem value="togetherai">togetherai</SelectItem>
+                  <SelectItem value="gemini">gemini</SelectItem>
+                  <SelectItem value="google">google</SelectItem>
+                  <SelectItem value="deepseek">deepseek</SelectItem>
+                  <SelectItem value="ollama">ollama</SelectItem>
+                  <SelectItem value="xai">xai</SelectItem>
+                  <SelectItem value="custom">custom</SelectItem>
+                </SelectContent>
+              </Select>
+              {tempModelProvider === 'custom' && (
+                <Input
+                  type="text"
+                  placeholder="Enter custom provider"
+                  value={customChatProvider}
+                  onChange={(e) => setCustomChatProvider(e.target.value)}
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="modelName">Chat Model Name</Label>
@@ -205,13 +267,29 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
             <div className="space-y-2">
               <Label htmlFor="imageModelProvider">Image Model Provider</Label>
-              <Input
-                id="imageModelProvider"
-                type="text"
-                placeholder="gemini"
+              <Select
                 value={tempImageModelProvider}
-                onChange={(e) => setTempImageModelProvider(e.target.value)}
-              />
+                onValueChange={(value) => setTempImageModelProvider(value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="openai">openai</SelectItem>
+                  <SelectItem value="togetherai">togetherai</SelectItem>
+                  <SelectItem value="gemini">gemini</SelectItem>
+                  <SelectItem value="google">google</SelectItem>
+                  <SelectItem value="custom">custom</SelectItem>
+                </SelectContent>
+              </Select>
+              {tempImageModelProvider === 'custom' && (
+                <Input
+                  type="text"
+                  placeholder="Enter custom provider"
+                  value={customImageProvider}
+                  onChange={(e) => setCustomImageProvider(e.target.value)}
+                />
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="imageModelName">Image Model Name</Label>
