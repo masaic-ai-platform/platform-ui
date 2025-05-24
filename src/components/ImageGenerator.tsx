@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
-import { Loader2, Send, Trash, Star, ExternalLink } from 'lucide-react';
+import { Loader2, Send, Trash, Star, ExternalLink, Search, Palette, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import ChatMessage from './ChatMessage';
 import SettingsModal from './SettingsModal';
@@ -16,10 +16,74 @@ interface Message {
   timestamp: Date;
 }
 
+interface LoadingState {
+  stage: 'thinking' | 'preparing' | 'searching' | 'analyzing' | 'generating' | 'creating' | 'completing' | 'streaming';
+  message: string;
+  toolType?: 'file_search' | 'image_generation' | 'text';
+}
+
+// Beautiful Loading Card Component
+const LoadingCard: React.FC<{ loadingState: LoadingState }> = ({ loadingState }) => {
+  const getIcon = () => {
+    switch (loadingState.stage) {
+      case 'thinking':
+        return <MessageSquare className="h-5 w-5 text-blue-500" />;
+      case 'preparing':
+      case 'searching':
+      case 'analyzing':
+        return <Search className="h-5 w-5 text-green-500" />;
+      case 'generating':
+      case 'creating':
+        return <Palette className="h-5 w-5 text-purple-500" />;
+      case 'streaming':
+        return <MessageSquare className="h-5 w-5 text-blue-500" />;
+      default:
+        return <Loader2 className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
+  const getBackgroundGradient = () => {
+    switch (loadingState.toolType) {
+      case 'file_search':
+        return 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200';
+      case 'image_generation':
+        return 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200';
+      case 'text':
+        return 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200';
+      default:
+        return 'bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200';
+    }
+  };
+
+  return (
+    <div className="flex justify-start mb-4">
+      <Card className={`max-w-3xl px-4 py-3 border-2 ${getBackgroundGradient()} shadow-sm`}>
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            {getIcon()}
+            <div className="absolute inset-0 animate-ping">
+              {getIcon()}
+            </div>
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-gray-800">{loadingState.message}</p>
+            <div className="mt-2 flex space-x-1">
+              <div className="h-1 w-2 bg-current opacity-60 rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
+              <div className="h-1 w-2 bg-current opacity-60 rounded-full animate-pulse" style={{ animationDelay: '150ms' }}></div>
+              <div className="h-1 w-2 bg-current opacity-60 rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></div>
+            </div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+};
+
 const ImageGenerator: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingState, setLoadingState] = useState<LoadingState | null>(null);
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('http://localhost:8080');
   const [modelProvider, setModelProvider] = useState('openai');
@@ -83,6 +147,11 @@ const ImageGenerator: React.FC = () => {
     }
 
     setIsLoading(true);
+    setLoadingState({
+      stage: 'thinking',
+      message: 'Starting your request...',
+      toolType: 'text'
+    });
 
     // Add user message
     const userMessage: Message = {
@@ -93,6 +162,17 @@ const ImageGenerator: React.FC = () => {
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, userMessage]);
+
+    // Create placeholder assistant message for streaming
+    const assistantMessageId = (Date.now() + 1).toString();
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      type: 'text',
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, assistantMessage]);
 
     try {
       const modelString = `${modelProvider}@${modelName}`;
@@ -106,7 +186,7 @@ const ImageGenerator: React.FC = () => {
           model_provider_key: imageProviderKey
         }],
         input: prompt,
-        stream: false
+        stream: true // Enable streaming
       };
 
       // Add file_search tool if vector store is selected
@@ -128,77 +208,323 @@ const ImageGenerator: React.FC = () => {
       if (conversationId) {
         requestBody.previous_response_id = conversationId;
       }
+
+      console.log('Sending streaming request:', requestBody);
       
       const response = await fetch(`${baseUrl}/v1/responses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
+          'Accept': 'text/event-stream',
         },
         body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('HTTP Error:', response.status, errorText);
+        throw new Error(`HTTP error! status: ${response.status}: ${errorText}`);
       }
 
-      const data = await response.json();
-      console.log('API Response:', data);
-
-      // Update conversation ID for subsequent requests
-      if (data.id) {
-        setConversationId(data.id);
+      if (!response.body) {
+        throw new Error('No response body received');
       }
 
-      if (data.output && data.output.length > 0) {
-        const output = data.output[0];
-        if (output.content && output.content.length > 0) {
-          const content = output.content[0];
+      console.log('Starting SSE stream processing...');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let currentResponseId = '';
+      let isImageGeneration = false;
+      let toolInProgress = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
           
-          // Debug logging to see what we're receiving
-          console.log('API Response Content:', {
-            type: content.type,
-            textLength: content.text?.length,
-            textPreview: content.text?.substring(0, 100),
-            isImageType: content.type === 'image',
-            startsWithImageSignature: content.text?.startsWith('/9j/') || content.text?.startsWith('iVBORw0KGgo')
-          });
-          
-          // Add assistant response
-          const assistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            role: 'assistant',
-            content: content.text,
-            type: content.type === 'image' ? 'image' : 'text',
-            timestamp: new Date(),
-          };
-          
-          setMessages(prev => [...prev, assistantMessage]);
-          
-          if (content.type === 'image') {
-            toast.success('Image generated successfully!');
-          } else {
-            toast.success('Response received!');
+          if (done) {
+            console.log('SSE stream completed');
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine) continue;
+
+            console.log('Processing SSE line:', trimmedLine);
+
+            // Track the current event type from event: lines
+            let currentEventType = '';
+            if (trimmedLine.startsWith('event:')) {
+              currentEventType = trimmedLine.substring(6).trim();
+              console.log('Event type detected:', currentEventType);
+              
+              // Directly update loading state based on event type
+              if (currentEventType === 'response.image_generation.in_progress') {
+                console.log('🎨 Image generation in progress (from event line)');
+                toolInProgress = 'image_generation';
+                isImageGeneration = true;
+                setLoadingState({
+                  stage: 'generating',
+                  message: 'Generating your image...',
+                  toolType: 'image_generation'
+                });
+              }
+              else if (currentEventType === 'response.image_generation.executing') {
+                console.log('🎨 Image generation executing (from event line)');
+                setLoadingState({
+                  stage: 'creating',
+                  message: 'Creating your beautiful image...',
+                  toolType: 'image_generation'
+                });
+              }
+              else if (currentEventType === 'response.image_generation.completed') {
+                console.log('🎨 Image generation completed (from event line)');
+                toolInProgress = '';
+                setLoadingState({
+                  stage: 'completing',
+                  message: 'Image ready! Finalizing...',
+                  toolType: 'image_generation'
+                });
+              }
+              else if (currentEventType === 'response.file_search.in_progress') {
+                console.log('📁 File search in progress (from event line)');
+                toolInProgress = 'file_search';
+                setLoadingState({
+                  stage: 'searching',
+                  message: 'Searching through your documents...',
+                  toolType: 'file_search'
+                });
+              }
+              else if (currentEventType === 'response.file_search.executing') {
+                console.log('📁 File search executing (from event line)');
+                setLoadingState({
+                  stage: 'analyzing',
+                  message: 'Analyzing document content...',
+                  toolType: 'file_search'
+                });
+              }
+              else if (currentEventType === 'response.file_search.completed') {
+                console.log('📁 File search completed (from event line)');
+                toolInProgress = '';
+                setLoadingState({
+                  stage: 'completing',
+                  message: 'Document search completed!',
+                  toolType: 'file_search'
+                });
+              }
+              
+              continue;
+            }
+
+            if (trimmedLine.startsWith('data: ')) {
+              try {
+                const eventDataStr = trimmedLine.substring(6).trim();
+                console.log('Attempting to parse event data:', eventDataStr);
+                
+                if (eventDataStr === '[DONE]') {
+                  console.log('Stream finished with [DONE]');
+                  break;
+                }
+
+                const eventData = JSON.parse(eventDataStr);
+                console.log('✅ Successfully parsed event data. Type:', eventData.type, 'Full data:', eventData);
+
+                switch (eventData.type) {
+                  case 'response.created':
+                    console.log('Response created:', eventData.response?.id);
+                    currentResponseId = eventData.response?.id;
+                    if (currentResponseId) {
+                      setConversationId(currentResponseId);
+                    }
+                    break;
+
+                  case 'response.in_progress':
+                    console.log('Response in progress');
+                    setLoadingState({
+                      stage: 'thinking',
+                      message: 'Processing your request...',
+                      toolType: 'text'
+                    });
+                    break;
+
+                  case 'response.output_item.added':
+                    console.log('Output item added:', eventData.item);
+                    if (eventData.item?.name === 'file_search') {
+                      setLoadingState({
+                        stage: 'preparing',
+                        message: 'Preparing to search documents...',
+                        toolType: 'file_search'
+                      });
+                    } else if (eventData.item?.name === 'image_generation') {
+                      setLoadingState({
+                        stage: 'preparing',
+                        message: 'Preparing to generate image...',
+                        toolType: 'image_generation'
+                      });
+                    }
+                    break;
+
+                  case 'response.output_text.delta':
+                    console.log('Text delta received:', eventData.delta);
+                    setLoadingState({
+                      stage: 'streaming',
+                      message: 'Generating response...',
+                      toolType: 'text'
+                    });
+                    // Stream each delta directly by appending to existing content
+                    setMessages(prev => prev.map(msg => 
+                      msg.id === assistantMessageId 
+                        ? { ...msg, content: msg.content + eventData.delta, type: 'text' }
+                        : msg
+                    ));
+                    break;
+
+                  case 'response.output_text.done':
+                    console.log('Text done:', eventData.text);
+                    setLoadingState(null); // Hide loading card
+                    // Use the complete text from the done event
+                    setMessages(prev => prev.map(msg => 
+                      msg.id === assistantMessageId 
+                        ? { ...msg, content: eventData.text, type: 'text' }
+                        : msg
+                    ));
+                    break;
+
+                  case 'response.image_generation.in_progress':
+                    console.log('🎨 Image generation in progress - UPDATING LOADING STATE');
+                    toolInProgress = 'image_generation';
+                    isImageGeneration = true;
+                    setLoadingState({
+                      stage: 'generating',
+                      message: 'Generating your image...',
+                      toolType: 'image_generation'
+                    });
+                    toast.info('Image generation started...');
+                    break;
+
+                  case 'response.image_generation.executing':
+                    console.log('🎨 Image generation executing - UPDATING LOADING STATE TO CREATING');
+                    setLoadingState({
+                      stage: 'creating',
+                      message: 'Creating your beautiful image...',
+                      toolType: 'image_generation'
+                    });
+                    break;
+
+                  case 'response.image_generation.completed':
+                    console.log('🎨 Image generation completed - UPDATING LOADING STATE TO COMPLETING');
+                    toolInProgress = '';
+                    setLoadingState({
+                      stage: 'completing',
+                      message: 'Image ready! Finalizing...',
+                      toolType: 'image_generation'
+                    });
+                    toast.success('Image generated successfully!');
+                    break;
+
+                  case 'response.file_search.in_progress':
+                    console.log('📁 File search in progress - UPDATING LOADING STATE:', eventData);
+                    toolInProgress = 'file_search';
+                    setLoadingState({
+                      stage: 'searching',
+                      message: 'Searching through your documents...',
+                      toolType: 'file_search'
+                    });
+                    toast.info('Searching documents...');
+                    break;
+
+                  case 'response.file_search.executing':
+                    console.log('📁 File search executing - UPDATING LOADING STATE TO ANALYZING:', eventData);
+                    setLoadingState({
+                      stage: 'analyzing',
+                      message: 'Analyzing document content...',
+                      toolType: 'file_search'
+                    });
+                    break;
+
+                  case 'response.file_search.completed':
+                    console.log('📁 File search completed - UPDATING LOADING STATE TO COMPLETING:', eventData);
+                    toolInProgress = '';
+                    setLoadingState({
+                      stage: 'completing',
+                      message: 'Document search completed!',
+                      toolType: 'file_search'
+                    });
+                    toast.success('Document search completed!');
+                    break;
+
+                  case 'response.completed':
+                    console.log('Response completed:', eventData.response);
+                    setLoadingState(null); // Hide loading card
+                    if (eventData.response?.output && eventData.response.output.length > 0) {
+                      const output = eventData.response.output[0];
+                      if (output.content && output.content.length > 0) {
+                        const content = output.content[0];
+                        
+                        console.log('Final content received:', {
+                          type: content.type,
+                          textLength: content.text?.length,
+                          isImage: content.type === 'image'
+                        });
+                        
+                        // Update the final message with the complete content
+                        setMessages(prev => prev.map(msg => 
+                          msg.id === assistantMessageId 
+                            ? { 
+                                ...msg, 
+                                content: content.text || '',
+                                type: content.type === 'image' ? 'image' : 'text'
+                              }
+                            : msg
+                        ));
+
+                        if (content.type === 'image') {
+                          toast.success('Image generated successfully!');
+                        } else {
+                          toast.success('Response completed!');
+                        }
+                      }
+                    }
+                    break;
+
+                  default:
+                    console.log('❓ Unhandled event type:', eventData.type, 'Full event data:', eventData);
+                    break;
+                }
+              } catch (parseError) {
+                console.error('❌ Error parsing SSE data:', parseError, 'Original line:', trimmedLine);
+                console.error('Parse error details:', parseError.message);
+              }
+            }
           }
         }
-      } else {
-        throw new Error('Invalid response format');
+      } finally {
+        reader.releaseLock();
       }
+
     } catch (error) {
       console.error('Error generating response:', error);
       toast.error('Failed to generate response. Please check your settings and try again.');
       
-      // Add error message
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: 'Sorry, I encountered an error while processing your request. Please try again.',
-        type: 'text',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      // Update the assistant message with error
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessageId 
+          ? { 
+              ...msg, 
+              content: 'Sorry, I encountered an error while processing your request. Please try again.',
+              type: 'text'
+            }
+          : msg
+      ));
     } finally {
       setIsLoading(false);
+      setLoadingState(null); // Ensure loading card is hidden
     }
   };
 
@@ -343,14 +669,7 @@ const ImageGenerator: React.FC = () => {
                 timestamp={message.timestamp}
               />
             ))}
-            {isLoading && (
-              <div className="flex justify-start mb-4">
-                <div className="bg-gray-100 text-gray-800 px-4 py-3 rounded-lg flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Processing your request...</span>
-                </div>
-              </div>
-            )}
+            {loadingState && <LoadingCard loadingState={loadingState} />}
           </div>
         )}
         <div ref={messagesEndRef} />
