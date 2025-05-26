@@ -598,7 +598,7 @@ const ImageGenerator: React.FC = () => {
       {/* Header */}
       <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">OpenResponses AI Chat</h1>
+          <h1 className="text-2xl font-bold text-gray-900">OpenResponses Chat</h1>
           <p className="text-sm text-gray-500">
             Chat with AI and generate images using OpenResponses API
             {selectedVectorStore && (
@@ -649,7 +649,7 @@ const ImageGenerator: React.FC = () => {
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <Card className="p-8 text-center max-w-2xl">
-              <h2 className="text-xl font-semibold mb-4">Welcome to OpenResponses AI Chat</h2>
+              <h2 className="text-xl font-semibold mb-4">Welcome to OpenResponses Chat</h2>
               
               <div className="mb-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
                 <h3 className="text-lg font-semibold mb-3 text-blue-800">Prerequisites:</h3>
