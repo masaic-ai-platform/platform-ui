@@ -339,9 +339,7 @@ const ImageGenerator: React.FC = () => {
                   case 'response.created':
                     console.log('Response created:', eventData.response?.id);
                     currentResponseId = eventData.response?.id;
-                    if (currentResponseId) {
-                      setConversationId(currentResponseId);
-                    }
+                    // Don't set conversationId yet - wait for successful completion
                     break;
 
                   case 'response.in_progress':
@@ -462,12 +460,47 @@ const ImageGenerator: React.FC = () => {
                   case 'response.completed':
                     console.log('Response completed:', eventData.response);
                     setLoadingState(null); // Hide loading card
+                    
+                    // Only set conversationId on successful completion
+                    if (currentResponseId) {
+                      setConversationId(currentResponseId);
+                    }
+                    
                     if (eventData.response?.output && eventData.response.output.length > 0) {
                       const output = eventData.response.output[0];
-                      if (output.content && output.content.length > 0) {
+                      
+                      // Check for new format with result field (for images)
+                      if (output.result) {
+                        console.log('Final content received (new format):', {
+                          result: output.result,
+                          isImage: output.result.includes('<image>')
+                        });
+                        
+                        // Check if result contains image tag
+                        const isImage = output.result.includes('<image>');
+                        
+                        // Update the final message with the complete content
+                        setMessages(prev => prev.map(msg => 
+                          msg.id === assistantMessageId 
+                            ? { 
+                                ...msg, 
+                                content: output.result,
+                                type: isImage ? 'image' : 'text'
+                              }
+                            : msg
+                        ));
+
+                        if (isImage) {
+                          toast.success('Image generated successfully!');
+                        } else {
+                          toast.success('Response completed!');
+                        }
+                      }
+                      // Fallback to old format for backward compatibility
+                      else if (output.content && output.content.length > 0) {
                         const content = output.content[0];
                         
-                        console.log('Final content received:', {
+                        console.log('Final content received (old format):', {
                           type: content.type,
                           textLength: content.text?.length,
                           isImage: content.type === 'image'
