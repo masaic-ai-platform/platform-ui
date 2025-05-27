@@ -700,6 +700,15 @@ const ImageGenerator: React.FC = () => {
                 content={message.content}
                 type={message.type}
                 timestamp={message.timestamp}
+                apiKey={apiKey}
+                baseUrl={baseUrl}
+                modelProvider={modelProvider}
+                modelName={modelName}
+                imageModelProvider={imageModelProvider}
+                imageModelName={imageModelName}
+                imageProviderKey={imageProviderKey}
+                selectedVectorStore={selectedVectorStore}
+                instructions={instructions}
               />
             ))}
             {loadingState && <LoadingCard loadingState={loadingState} />}

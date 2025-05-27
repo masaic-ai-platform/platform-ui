@@ -1,13 +1,56 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Code, Copy, Check, X } from 'lucide-react';
 
 interface ChatMessageProps {
   role: 'user' | 'assistant';
   content: string;
   type?: 'text' | 'image';
   timestamp: Date;
+  // New props for code generation
+  apiKey?: string;
+  baseUrl?: string;
+  modelProvider?: string;
+  modelName?: string;
+  imageModelProvider?: string;
+  imageModelName?: string;
+  imageProviderKey?: string;
+  selectedVectorStore?: string;
+  instructions?: string;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ role, content, type = 'text', timestamp }) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({ 
+  role, 
+  content, 
+  type = 'text', 
+  timestamp,
+  apiKey = '',
+  baseUrl = 'http://localhost:8080',
+  modelProvider = 'openai',
+  modelName = 'gpt-4.1-mini',
+  imageModelProvider = 'gemini',
+  imageModelName = 'imagen-3.0-generate-002',
+  imageProviderKey = '',
+  selectedVectorStore = '',
+  instructions = 'Answer questions using information from the provided documents when relevant. For image generation requests, create images as requested.'
+}) => {
+  const [showCodeModal, setShowCodeModal] = useState(false);
+  const [activeTab, setActiveTab] = useState<'curl' | 'python'>('curl');
+  const [copiedCurl, setCopiedCurl] = useState(false);
+  const [copiedPython, setCopiedPython] = useState(false);
+
+  // Function to mask API keys
+  const maskApiKey = (key: string): string => {
+    if (!key || key === 'YOUR_API_KEY' || key === 'YOUR_IMAGE_PROVIDER_KEY') {
+      return key;
+    }
+    if (key.length <= 8) {
+      return '*'.repeat(key.length);
+    }
+    return key.substring(0, 4) + '*'.repeat(key.length - 8) + key.substring(key.length - 4);
+  };
+
   // Function to check if content looks like a base64 image
   const isImageContent = (content: string): boolean => {
     // Remove any data URL prefix if present
@@ -119,6 +162,126 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ role, content, type = 'text',
     return 'png';
   };
 
+  // Generate cURL code example
+  const generateCurlCode = () => {
+    const modelString = `${modelProvider}@${modelName}`;
+    
+    const requestBody: any = {
+      model: modelString,
+      store: true,
+      tools: [{
+        type: "image_generation",
+        model: `${imageModelProvider}@${imageModelName}`,
+        model_provider_key: imageProviderKey || "YOUR_IMAGE_PROVIDER_KEY"
+      }],
+      input: content,
+      stream: true
+    };
+
+    // Add file_search tool if vector store is selected
+    if (selectedVectorStore) {
+      requestBody.tools.push({
+        type: "file_search",
+        vector_store_ids: [selectedVectorStore],
+        max_num_results: 5,
+        filters: {
+          type: "eq",
+          key: "language",
+          value: "en"
+        }
+      });
+      requestBody.instructions = instructions;
+    }
+
+    // Mask the API key in the request body for display
+    const displayRequestBody = {
+      ...requestBody,
+      tools: requestBody.tools.map((tool: any) => ({
+        ...tool,
+        model_provider_key: tool.model_provider_key ? maskApiKey(tool.model_provider_key) : undefined
+      }))
+    };
+
+    return `curl -X POST "${baseUrl}/v1/responses" \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${maskApiKey(apiKey || 'YOUR_API_KEY')}" \\
+  -H "Accept: text/event-stream" \\
+  -d '${JSON.stringify(displayRequestBody, null, 2).replace(/'/g, "'\\''")}' \\
+  --no-buffer`;
+  };
+
+  // Generate Python code example
+  const generatePythonCode = () => {
+    const modelString = `${modelProvider}@${modelName}`;
+    
+    const tools: any[] = [{
+      type: "image_generation",
+      model: `${imageModelProvider}@${imageModelName}`,
+      model_provider_key: imageProviderKey || "YOUR_IMAGE_PROVIDER_KEY"
+    }];
+
+    // Add file_search tool if vector store is selected
+    if (selectedVectorStore) {
+      tools.push({
+        type: "file_search",
+        vector_store_ids: [selectedVectorStore],
+        max_num_results: 5,
+        filters: {
+          type: "eq",
+          key: "language",
+          value: "en"
+        }
+      });
+    }
+
+    // Mask API keys for display
+    const displayTools = tools.map(tool => ({
+      ...tool,
+      model_provider_key: tool.model_provider_key ? maskApiKey(tool.model_provider_key) : undefined
+    }));
+
+    const maskedApiKey = apiKey ? maskApiKey(apiKey) : 'os.environ.get("OPENAI_API_KEY")';
+
+    const pythonCode = `import os
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="${baseUrl}",
+    api_key="${maskedApiKey}"
+)
+
+response = client.responses.create(
+    model="${modelString}",
+    store=True,
+    tools=${JSON.stringify(displayTools, null, 4).replace(/"/g, '"')},${selectedVectorStore ? `
+    instructions="${instructions}",` : ''}
+    input="${content.replace(/"/g, '\\"')}",
+    stream=True
+)
+
+# Handle streaming response
+for chunk in response:
+    if hasattr(chunk, 'delta') and chunk.delta:
+        print(chunk.delta, end='', flush=True)`;
+
+    return pythonCode;
+  };
+
+  const copyToClipboard = async (text: string, type: 'curl' | 'python') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      if (type === 'curl') {
+        setCopiedCurl(true);
+        setTimeout(() => setCopiedCurl(false), 2000);
+      } else {
+        setCopiedPython(true);
+        setTimeout(() => setCopiedPython(false), 2000);
+      }
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
   const renderImage = () => {
     const validation = validateAndCleanBase64(content);
     
@@ -178,20 +341,144 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ role, content, type = 'text',
   };
 
   return (
-    <div className={`flex ${role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
-      <div className={`max-w-3xl px-4 py-3 rounded-lg ${
-        role === 'user' 
-          ? 'bg-blue-500 text-white' 
-          : 'bg-gray-100 text-gray-800'
-      }`}>
-        {isImageContent(content) ? renderImage() : (
-          <p className="whitespace-pre-wrap">{content}</p>
-        )}
-        <p className={`text-xs mt-2 opacity-75`}>
-          {timestamp.toLocaleTimeString()}
-        </p>
+    <>
+      <div className={`flex ${role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
+        <div className="max-w-3xl">
+          <div className={`px-4 py-3 rounded-lg ${
+            role === 'user' 
+              ? 'bg-blue-500 text-white' 
+              : 'bg-gray-100 text-gray-800'
+          }`}>
+            {isImageContent(content) ? renderImage() : (
+              <p className="whitespace-pre-wrap">{content}</p>
+            )}
+            <p className={`text-xs mt-2 opacity-75`}>
+              {timestamp.toLocaleTimeString()}
+            </p>
+          </div>
+          
+          {/* Show Code button for user messages */}
+          {role === 'user' && (
+            <div className="mt-2 flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCodeModal(true)}
+                className="text-xs"
+              >
+                <Code className="h-3 w-3 mr-1" />
+                Show Code
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      {/* Code Modal */}
+      {showCodeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">API Code Examples</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCodeModal(false)}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="flex border-b">
+              <button
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'curl'
+                    ? 'border-blue-500 text-blue-600 bg-blue-50'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+                onClick={() => setActiveTab('curl')}
+              >
+                cURL
+              </button>
+              <button
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'python'
+                    ? 'border-blue-500 text-blue-600 bg-blue-50'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+                onClick={() => setActiveTab('python')}
+              >
+                Python
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            <div className="p-4 overflow-y-auto max-h-[calc(90vh-140px)]">
+              {activeTab === 'curl' && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-gray-700">cURL Command</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(generateCurlCode(), 'curl')}
+                      className="h-8 px-3"
+                    >
+                      {copiedCurl ? (
+                        <>
+                          <Check className="h-3 w-3 mr-1 text-green-500" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <pre className="text-xs bg-gray-900 text-green-400 p-4 rounded overflow-x-auto">
+                    <code>{generateCurlCode()}</code>
+                  </pre>
+                </div>
+              )}
+
+              {activeTab === 'python' && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-gray-700">Python Code</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyToClipboard(generatePythonCode(), 'python')}
+                      className="h-8 px-3"
+                    >
+                      {copiedPython ? (
+                        <>
+                          <Check className="h-3 w-3 mr-1 text-green-500" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  <pre className="text-xs bg-gray-900 text-green-400 p-4 rounded overflow-x-auto">
+                    <code>{generatePythonCode()}</code>
+                  </pre>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 
