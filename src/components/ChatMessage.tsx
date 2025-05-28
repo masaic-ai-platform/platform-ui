@@ -8,6 +8,7 @@ interface ChatMessageProps {
   content: string;
   type?: 'text' | 'image';
   timestamp: Date;
+  hasThinkTags?: boolean;
   // New props for code generation
   apiKey?: string;
   baseUrl?: string;
@@ -25,6 +26,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   content, 
   type = 'text', 
   timestamp,
+  hasThinkTags = false,
   apiKey = '',
   baseUrl = 'http://localhost:8080',
   modelProvider = 'openai',
@@ -49,6 +51,91 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
       return '*'.repeat(key.length);
     }
     return key.substring(0, 4) + '*'.repeat(key.length - 8) + key.substring(key.length - 4);
+  };
+
+  // Function to parse content with think tags
+  const parseContentWithThinkTags = (content: string) => {
+    if (!hasThinkTags || !content.includes('<think>')) {
+      return <p className="whitespace-pre-wrap">{content}</p>;
+    }
+
+    const parts = [];
+    let currentIndex = 0;
+    let partKey = 0;
+    let thinkBlockNumber = 1;
+
+    while (currentIndex < content.length) {
+      const thinkStart = content.indexOf('<think>', currentIndex);
+      
+      if (thinkStart === -1) {
+        // No more think tags, add remaining content
+        const remainingContent = content.substring(currentIndex);
+        if (remainingContent.trim()) {
+          parts.push(
+            <p key={partKey++} className="whitespace-pre-wrap">
+              {remainingContent}
+            </p>
+          );
+        }
+        break;
+      }
+
+      // Add content before think tag
+      if (thinkStart > currentIndex) {
+        const beforeThink = content.substring(currentIndex, thinkStart);
+        if (beforeThink.trim()) {
+          parts.push(
+            <p key={partKey++} className="whitespace-pre-wrap">
+              {beforeThink}
+            </p>
+          );
+        }
+      }
+
+      // Find the closing think tag
+      const thinkEnd = content.indexOf('</think>', thinkStart);
+      if (thinkEnd === -1) {
+        // No closing tag found, treat rest as think content (but don't show the opening tag)
+        const thinkContent = content.substring(thinkStart + 7); // Skip '<think>'
+        if (thinkContent.trim()) {
+          parts.push(
+            <div key={partKey++} className="my-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg shadow-sm">
+              <div className="flex items-center mb-2">
+                <span className="text-xs font-medium text-yellow-700 uppercase tracking-wide">
+                  🤔 AI Thinking #{thinkBlockNumber}
+                </span>
+              </div>
+              <p className="text-sm text-yellow-800 italic whitespace-pre-wrap">
+                {thinkContent}
+              </p>
+            </div>
+          );
+        }
+        break;
+      }
+
+      // Add think content (exclude the tags themselves)
+      const thinkContent = content.substring(thinkStart + 7, thinkEnd); // Skip '<think>' and '</think>'
+      if (thinkContent.trim()) {
+        parts.push(
+          <div key={partKey++} className="my-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg shadow-sm">
+            <div className="flex items-center mb-2">
+              <span className="text-xs font-medium text-yellow-700 uppercase tracking-wide">
+                🤔 AI Thinking #{thinkBlockNumber}
+              </span>
+            </div>
+            <p className="text-sm text-yellow-800 italic whitespace-pre-wrap">
+              {thinkContent}
+            </p>
+          </div>
+        );
+        thinkBlockNumber++;
+      }
+
+      currentIndex = thinkEnd + 8; // Skip '</think>'
+    }
+
+    return <div className="space-y-2">{parts}</div>;
   };
 
   // Function to check if content looks like a base64 image
@@ -349,9 +436,7 @@ for chunk in response:
               ? 'bg-blue-500 text-white' 
               : 'bg-gray-100 text-gray-800'
           }`}>
-            {isImageContent(content) ? renderImage() : (
-              <p className="whitespace-pre-wrap">{content}</p>
-            )}
+                      {isImageContent(content) ? renderImage() : parseContentWithThinkTags(content)}
             <p className={`text-xs mt-2 opacity-75`}>
               {timestamp.toLocaleTimeString()}
             </p>

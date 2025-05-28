@@ -14,6 +14,7 @@ interface Message {
   content: string;
   type: 'text' | 'image';
   timestamp: Date;
+  hasThinkTags?: boolean;
 }
 
 interface LoadingState {
@@ -378,7 +379,12 @@ const ImageGenerator: React.FC = () => {
                     // Stream each delta directly by appending to existing content
                     setMessages(prev => prev.map(msg => 
                       msg.id === assistantMessageId 
-                        ? { ...msg, content: msg.content + eventData.delta, type: 'text' }
+                        ? { 
+                            ...msg, 
+                            content: msg.content + eventData.delta, 
+                            type: 'text',
+                            hasThinkTags: (msg.content + eventData.delta).includes('<think>')
+                          }
                         : msg
                     ));
                     break;
@@ -389,7 +395,12 @@ const ImageGenerator: React.FC = () => {
                     // Use the complete text from the done event
                     setMessages(prev => prev.map(msg => 
                       msg.id === assistantMessageId 
-                        ? { ...msg, content: eventData.text, type: 'text' }
+                        ? { 
+                            ...msg, 
+                            content: eventData.text, 
+                            type: 'text',
+                            hasThinkTags: eventData.text.includes('<think>')
+                          }
                         : msg
                     ));
                     break;
@@ -410,7 +421,7 @@ const ImageGenerator: React.FC = () => {
                     console.log('🎨 Image generation executing - UPDATING LOADING STATE TO CREATING');
                     setLoadingState({
                       stage: 'creating',
-                      message: 'Creating your beautiful image...',
+                      message: 'Generating your image...',
                       toolType: 'image_generation'
                     });
                     break;
@@ -485,7 +496,8 @@ const ImageGenerator: React.FC = () => {
                             ? { 
                                 ...msg, 
                                 content: output.result,
-                                type: isImage ? 'image' : 'text'
+                                type: isImage ? 'image' : 'text',
+                                hasThinkTags: !isImage && output.result.includes('<think>')
                               }
                             : msg
                         ));
@@ -512,7 +524,8 @@ const ImageGenerator: React.FC = () => {
                             ? { 
                                 ...msg, 
                                 content: content.text || '',
-                                type: content.type === 'image' ? 'image' : 'text'
+                                type: content.type === 'image' ? 'image' : 'text',
+                                hasThinkTags: content.type !== 'image' && (content.text || '').includes('<think>')
                               }
                             : msg
                         ));
@@ -700,6 +713,7 @@ const ImageGenerator: React.FC = () => {
                 content={message.content}
                 type={message.type}
                 timestamp={message.timestamp}
+                hasThinkTags={message.hasThinkTags}
                 apiKey={apiKey}
                 baseUrl={baseUrl}
                 modelProvider={modelProvider}
