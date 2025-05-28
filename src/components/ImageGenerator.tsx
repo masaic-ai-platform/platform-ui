@@ -280,7 +280,7 @@ const ImageGenerator: React.FC = () => {
                 console.log('🎨 Image generation executing (from event line)');
                 setLoadingState({
                   stage: 'creating',
-                  message: 'Creating your beautiful image...',
+                  message: 'Generating your image...',
                   toolType: 'image_generation'
                 });
               }
