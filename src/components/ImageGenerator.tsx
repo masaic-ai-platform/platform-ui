@@ -210,8 +210,6 @@ const ImageGenerator: React.FC = () => {
         requestBody.previous_response_id = conversationId;
       }
 
-      console.log('Sending streaming request:', requestBody);
-      
       const response = await fetch(`${baseUrl}/v1/responses`, {
         method: 'POST',
         headers: {
@@ -232,7 +230,6 @@ const ImageGenerator: React.FC = () => {
         throw new Error('No response body received');
       }
 
-      console.log('Starting SSE stream processing...');
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
@@ -245,7 +242,6 @@ const ImageGenerator: React.FC = () => {
           const { done, value } = await reader.read();
           
           if (done) {
-            console.log('SSE stream completed');
             break;
           }
 
@@ -257,17 +253,13 @@ const ImageGenerator: React.FC = () => {
             const trimmedLine = line.trim();
             if (!trimmedLine) continue;
 
-            console.log('Processing SSE line:', trimmedLine);
-
             // Track the current event type from event: lines
             let currentEventType = '';
             if (trimmedLine.startsWith('event:')) {
               currentEventType = trimmedLine.substring(6).trim();
-              console.log('Event type detected:', currentEventType);
               
               // Directly update loading state based on event type
               if (currentEventType === 'response.image_generation.in_progress') {
-                console.log('🎨 Image generation in progress (from event line)');
                 toolInProgress = 'image_generation';
                 isImageGeneration = true;
                 setLoadingState({
@@ -277,7 +269,6 @@ const ImageGenerator: React.FC = () => {
                 });
               }
               else if (currentEventType === 'response.image_generation.executing') {
-                console.log('🎨 Image generation executing (from event line)');
                 setLoadingState({
                   stage: 'creating',
                   message: 'Generating your image...',
@@ -285,7 +276,6 @@ const ImageGenerator: React.FC = () => {
                 });
               }
               else if (currentEventType === 'response.image_generation.completed') {
-                console.log('🎨 Image generation completed (from event line)');
                 toolInProgress = '';
                 setLoadingState({
                   stage: 'completing',
@@ -294,7 +284,6 @@ const ImageGenerator: React.FC = () => {
                 });
               }
               else if (currentEventType === 'response.file_search.in_progress') {
-                console.log('📁 File search in progress (from event line)');
                 toolInProgress = 'file_search';
                 setLoadingState({
                   stage: 'searching',
@@ -303,7 +292,6 @@ const ImageGenerator: React.FC = () => {
                 });
               }
               else if (currentEventType === 'response.file_search.executing') {
-                console.log('📁 File search executing (from event line)');
                 setLoadingState({
                   stage: 'analyzing',
                   message: 'Analyzing document content...',
@@ -311,7 +299,6 @@ const ImageGenerator: React.FC = () => {
                 });
               }
               else if (currentEventType === 'response.file_search.completed') {
-                console.log('📁 File search completed (from event line)');
                 toolInProgress = '';
                 setLoadingState({
                   stage: 'completing',
@@ -326,25 +313,20 @@ const ImageGenerator: React.FC = () => {
             if (trimmedLine.startsWith('data: ')) {
               try {
                 const eventDataStr = trimmedLine.substring(6).trim();
-                console.log('Attempting to parse event data:', eventDataStr);
                 
                 if (eventDataStr === '[DONE]') {
-                  console.log('Stream finished with [DONE]');
                   break;
                 }
 
                 const eventData = JSON.parse(eventDataStr);
-                console.log('✅ Successfully parsed event data. Type:', eventData.type, 'Full data:', eventData);
 
                 switch (eventData.type) {
                   case 'response.created':
-                    console.log('Response created:', eventData.response?.id);
                     currentResponseId = eventData.response?.id;
                     // Don't set conversationId yet - wait for successful completion
                     break;
 
                   case 'response.in_progress':
-                    console.log('Response in progress');
                     setLoadingState({
                       stage: 'thinking',
                       message: 'Processing your request...',
@@ -353,7 +335,6 @@ const ImageGenerator: React.FC = () => {
                     break;
 
                   case 'response.output_item.added':
-                    console.log('Output item added:', eventData.item);
                     if (eventData.item?.name === 'file_search') {
                       setLoadingState({
                         stage: 'preparing',
@@ -370,7 +351,6 @@ const ImageGenerator: React.FC = () => {
                     break;
 
                   case 'response.output_text.delta':
-                    console.log('Text delta received:', eventData.delta);
                     setLoadingState({
                       stage: 'streaming',
                       message: 'Generating response...',
@@ -390,7 +370,6 @@ const ImageGenerator: React.FC = () => {
                     break;
 
                   case 'response.output_text.done':
-                    console.log('Text done:', eventData.text);
                     setLoadingState(null); // Hide loading card
                     // Use the complete text from the done event
                     setMessages(prev => prev.map(msg => 
@@ -406,7 +385,6 @@ const ImageGenerator: React.FC = () => {
                     break;
 
                   case 'response.image_generation.in_progress':
-                    console.log('🎨 Image generation in progress - UPDATING LOADING STATE');
                     toolInProgress = 'image_generation';
                     isImageGeneration = true;
                     setLoadingState({
@@ -418,7 +396,6 @@ const ImageGenerator: React.FC = () => {
                     break;
 
                   case 'response.image_generation.executing':
-                    console.log('🎨 Image generation executing - UPDATING LOADING STATE TO CREATING');
                     setLoadingState({
                       stage: 'creating',
                       message: 'Generating your image...',
@@ -427,7 +404,6 @@ const ImageGenerator: React.FC = () => {
                     break;
 
                   case 'response.image_generation.completed':
-                    console.log('🎨 Image generation completed - UPDATING LOADING STATE TO COMPLETING');
                     toolInProgress = '';
                     setLoadingState({
                       stage: 'completing',
@@ -438,7 +414,6 @@ const ImageGenerator: React.FC = () => {
                     break;
 
                   case 'response.file_search.in_progress':
-                    console.log('📁 File search in progress - UPDATING LOADING STATE:', eventData);
                     toolInProgress = 'file_search';
                     setLoadingState({
                       stage: 'searching',
@@ -449,7 +424,6 @@ const ImageGenerator: React.FC = () => {
                     break;
 
                   case 'response.file_search.executing':
-                    console.log('📁 File search executing - UPDATING LOADING STATE TO ANALYZING:', eventData);
                     setLoadingState({
                       stage: 'analyzing',
                       message: 'Analyzing document content...',
@@ -458,7 +432,6 @@ const ImageGenerator: React.FC = () => {
                     break;
 
                   case 'response.file_search.completed':
-                    console.log('📁 File search completed - UPDATING LOADING STATE TO COMPLETING:', eventData);
                     toolInProgress = '';
                     setLoadingState({
                       stage: 'completing',
@@ -469,7 +442,6 @@ const ImageGenerator: React.FC = () => {
                     break;
 
                   case 'response.completed':
-                    console.log('Response completed:', eventData.response);
                     setLoadingState(null); // Hide loading card
                     
                     // Only set conversationId on successful completion
@@ -482,11 +454,6 @@ const ImageGenerator: React.FC = () => {
                       
                       // Check for new format with result field (for images)
                       if (output.result) {
-                        console.log('Final content received (new format):', {
-                          result: output.result,
-                          isImage: output.result.includes('<image>')
-                        });
-                        
                         // Check if result contains image tag
                         const isImage = output.result.includes('<image>');
                         
@@ -512,12 +479,6 @@ const ImageGenerator: React.FC = () => {
                       else if (output.content && output.content.length > 0) {
                         const content = output.content[0];
                         
-                        console.log('Final content received (old format):', {
-                          type: content.type,
-                          textLength: content.text?.length,
-                          isImage: content.type === 'image'
-                        });
-                        
                         // Update the final message with the complete content
                         setMessages(prev => prev.map(msg => 
                           msg.id === assistantMessageId 
@@ -540,7 +501,6 @@ const ImageGenerator: React.FC = () => {
                     break;
 
                   default:
-                    console.log('❓ Unhandled event type:', eventData.type, 'Full event data:', eventData);
                     break;
                 }
               } catch (parseError) {
