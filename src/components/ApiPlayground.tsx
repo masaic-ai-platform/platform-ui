@@ -38,6 +38,10 @@ import { toast } from 'sonner';
 
 interface Tool {
   type: string;
+  provider?: string;
+  model?: string;
+  model_provider_key?: string;
+  alias?: string;
   [key: string]: any;
 }
 
@@ -100,19 +104,20 @@ interface ApiPlaygroundState {
   apiKey: string;
   baseUrl: string;
   modelProvider: string;
+  customProviderUrl?: string;
 }
 
 const ApiPlayground: React.FC = () => {
   const [state, setState] = useState<ApiPlaygroundState>({
     model: 'gpt-4o',
-    input: 'Hello, how are you?',
+    input: '',
     inputType: 'text',
     stream: false,
     store: true,
     background: false,
     temperature: 1.0,
-    top_p: 1.0,
-    max_output_tokens: 4096,
+    top_p: 0.9,
+    max_output_tokens: 2048,
     instructions: '',
     previous_response_id: '',
     service_tier: 'auto',
@@ -140,7 +145,7 @@ const ApiPlayground: React.FC = () => {
   const [presets, setPresets] = useState<Record<string, any>>({});
   const [presetName, setPresetName] = useState('');
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'user', content: 'Hello, how are you?' }
+    { role: 'user', content: '' }
   ]);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
@@ -152,6 +157,9 @@ const ApiPlayground: React.FC = () => {
     'system': true,
     'temperature': true
   });
+  const [streamingEvents, setStreamingEvents] = useState<any[]>([]);
+  const [showEventsModal, setShowEventsModal] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
 
   // Load settings from localStorage
   useEffect(() => {
@@ -178,12 +186,30 @@ const ApiPlayground: React.FC = () => {
       const defaultPresets = {
         'Simple Chat': {
           model: 'gpt-4o',
-          input: 'Hello! Can you tell me a joke?',
+          input: '',
           inputType: 'text',
           stream: false,
           store: true,
+          background: false,
           temperature: 1.0,
+          top_p: 0.9,
+          max_output_tokens: 2048,
+          instructions: '',
+          previous_response_id: '',
+          service_tier: 'auto',
           tools: [],
+          tool_choice: 'auto',
+          parallel_tool_calls: true,
+          text_format_type: 'text',
+          json_schema_name: '',
+          json_schema: '{}',
+          json_schema_description: '',
+          json_schema_strict: false,
+          reasoning_effort: 'medium',
+          reasoning_summary: 'auto',
+          truncation: 'disabled',
+          include: [],
+          metadata: {},
           apiKey: savedApiKey,
           baseUrl: savedBaseUrl,
           modelProvider: savedModelProvider
@@ -194,13 +220,31 @@ const ApiPlayground: React.FC = () => {
           inputType: 'text',
           stream: false,
           store: true,
+          background: false,
           temperature: 0.8,
+          top_p: 0.9,
+          max_output_tokens: 2048,
+          instructions: '',
+          previous_response_id: '',
+          service_tier: 'auto',
+          text_format_type: 'text',
+          json_schema_name: '',
+          json_schema: '{}',
+          json_schema_description: '',
+          json_schema_strict: false,
+          reasoning_effort: 'medium',
+          reasoning_summary: 'auto',
+          truncation: 'disabled',
+          tool_choice: 'auto',
+          parallel_tool_calls: true,
+          include: [],
+          metadata: {},
           tools: [{
             type: 'image_generation',
+            provider: 'openai',
             model: 'gpt-image-1',
-            size: 'auto',
-            quality: 'auto',
-            output_format: 'png'
+            output_format: 'png',
+            model_provider_key: 'YOUR_IMAGE_PROVIDER_KEY'
           }],
           apiKey: savedApiKey,
           baseUrl: savedBaseUrl,
@@ -212,7 +256,13 @@ const ApiPlayground: React.FC = () => {
           inputType: 'text',
           stream: false,
           store: true,
+          background: false,
           temperature: 0.7,
+          top_p: 0.9,
+          max_output_tokens: 2048,
+          instructions: '',
+          previous_response_id: '',
+          service_tier: 'auto',
           text_format_type: 'json_schema',
           json_schema_name: 'user_profile',
           json_schema: JSON.stringify({
@@ -224,6 +274,15 @@ const ApiPlayground: React.FC = () => {
             },
             required: ['name', 'age', 'skills']
           }, null, 2),
+          json_schema_description: '',
+          json_schema_strict: false,
+          reasoning_effort: 'medium',
+          reasoning_summary: 'auto',
+          truncation: 'disabled',
+          tool_choice: 'auto',
+          parallel_tool_calls: true,
+          include: [],
+          metadata: {},
           tools: [],
           apiKey: savedApiKey,
           baseUrl: savedBaseUrl,
@@ -256,6 +315,15 @@ const ApiPlayground: React.FC = () => {
   };
 
   const addTool = (toolType: string) => {
+    // Check if tool type already exists (except for file_search and agentic_search)
+    const allowMultiple = ['file_search', 'agentic_search'];
+    const existingTool = state.tools.find(tool => tool.type === toolType);
+    
+    if (!allowMultiple.includes(toolType) && existingTool) {
+      toast.error(`Only one ${toolType} tool is allowed. Remove the existing one first.`);
+      return;
+    }
+    
     const newTool: Tool = { type: toolType };
     
     // Add default configurations for specific tools
@@ -263,15 +331,22 @@ const ApiPlayground: React.FC = () => {
       case 'file_search':
         newTool.vector_store_ids = [''];
         newTool.max_num_results = 5;
+        // Generate default alias for multiple instances
+        const fileSearchCount = state.tools.filter(t => t.type === 'file_search').length;
+        newTool.alias = fileSearchCount > 0 ? `file_search_${fileSearchCount + 1}` : '';
         break;
       case 'image_generation':
+        newTool.provider = 'openai';
         newTool.model = 'gpt-image-1';
-        newTool.size = 'auto';
-        newTool.quality = 'auto';
         newTool.output_format = 'png';
+        newTool.model_provider_key = 'YOUR_IMAGE_PROVIDER_KEY';
         break;
-      case 'web_search_preview':
-        newTool.search_context_size = 'medium';
+      case 'agentic_search':
+        newTool.vector_store_ids = [''];
+        newTool.max_num_results = 5;
+        // Generate default alias for multiple instances
+        const agenticSearchCount = state.tools.filter(t => t.type === 'agentic_search').length;
+        newTool.alias = agenticSearchCount > 0 ? `agentic_search_${agenticSearchCount + 1}` : '';
         break;
       case 'code_interpreter':
         newTool.container = '';
@@ -287,6 +362,8 @@ const ApiPlayground: React.FC = () => {
       ...prev,
       tools: [...prev.tools, newTool]
     }));
+    
+    toast.success(`${toolType} tool added successfully!`);
   };
 
   const removeTool = (index: number) => {
@@ -297,6 +374,25 @@ const ApiPlayground: React.FC = () => {
   };
 
   const updateTool = (index: number, field: string, value: any) => {
+    // Validate alias uniqueness for file_search and agentic_search
+    if (field === 'alias') {
+      const tool = state.tools[index];
+      const allowMultiple = ['file_search', 'agentic_search'];
+      
+      if (allowMultiple.includes(tool.type) && value.trim()) {
+        const existingAlias = state.tools.find((t, i) => 
+          i !== index && 
+          t.type === tool.type && 
+          t.alias === value.trim()
+        );
+        
+        if (existingAlias) {
+          toast.error(`Alias "${value}" already exists for ${tool.type}. Please use a unique alias.`);
+          return;
+        }
+      }
+    }
+    
     setState(prev => ({
       ...prev,
       tools: prev.tools.map((tool, i) => 
@@ -305,22 +401,33 @@ const ApiPlayground: React.FC = () => {
     }));
   };
 
-  const buildRequestBody = () => {
-    // Use chat history if available, otherwise fall back to input/messages
+  const buildRequestBody = (customChatHistory?: ChatMessage[]) => {
+    // Use custom chat history if provided, otherwise use current chat history, otherwise fall back to input/messages
+    const historyToUse = customChatHistory || chatHistory;
     let inputData;
-    if (chatHistory.length > 0) {
+    if (historyToUse.length > 0) {
       // Send full chat history as messages
-      inputData = chatHistory.map(msg => ({
+      inputData = historyToUse.map(msg => ({
         role: msg.role,
         content: msg.content
       }));
+      
+      // Prepend system instructions as first message if they exist and no previous_response_id
+      if (state.instructions && state.instructions.trim() && !state.previous_response_id) {
+        inputData.unshift({
+          role: 'system',
+          content: state.instructions.trim()
+        });
+      }
     } else {
       // Fall back to original input logic
       inputData = state.inputType === 'text' ? state.input : messages;
     }
 
     const body: any = {
-      model: `${state.modelProvider}@${state.model}`,
+      model: state.modelProvider === 'custom' && state.customProviderUrl 
+        ? `${state.customProviderUrl}@${state.model}`
+        : `${state.modelProvider}@${state.model}`,
       input: inputData,
       stream: state.stream,
       store: state.store
@@ -329,22 +436,62 @@ const ApiPlayground: React.FC = () => {
     // Add optional parameters only if they differ from defaults
     if (state.background) body.background = true;
     if (state.temperature !== 1.0) body.temperature = state.temperature;
-    if (state.top_p !== 1.0) body.top_p = state.top_p;
-    if (state.max_output_tokens !== 4096) body.max_output_tokens = state.max_output_tokens;
-    if (state.instructions) body.instructions = state.instructions;
+    if (state.top_p !== 0.9) body.top_p = state.top_p;
+    if (state.max_output_tokens !== 2048) body.max_output_tokens = state.max_output_tokens;
+    
+    // Instructions are now included as system messages in the input array above
+    // Only include as separate field when using non-chat input modes
+    if (state.instructions && state.instructions.trim() && !state.previous_response_id && 
+        (customChatHistory || chatHistory).length === 0) {
+      body.instructions = state.instructions;
+    }
+    
     if (state.previous_response_id) body.previous_response_id = state.previous_response_id;
-    if (state.service_tier !== 'auto') body.service_tier = state.service_tier;
     if (state.truncation !== 'disabled') body.truncation = state.truncation;
     if (!state.parallel_tool_calls) body.parallel_tool_calls = false;
 
-    // Add tools if any
+    // Add tools if any - format model as provider@model for image generation
     if (state.tools.length > 0) {
-      body.tools = state.tools;
+      body.tools = state.tools.map(tool => {
+        // Create a new tool object to avoid modifying the original
+        const formattedTool = { ...tool };
+        
+        // Format image generation tool
+        if (tool.type === 'image_generation' && tool.model && tool.provider) {
+          // Important: Keep the provider field separate in the request
+          const modelString = `${tool.provider}@${tool.model}`;
+          console.log('Image generation tool model formatted as:', modelString);
+          toast.success(`Using image model: ${modelString}`, { duration: 2000, id: 'image-model' });
+          
+          // Set model with provider@model format
+          formattedTool.model = modelString;
+          
+          // Keep the provider field
+          formattedTool.provider = tool.provider;
+          
+          // Always include model_provider_key for image generation (required field)
+          formattedTool.model_provider_key = tool.model_provider_key || '';
+        }
+        
+        // Include alias if it exists and is not empty (only for file_search and agentic_search)
+        if ((tool.type === 'file_search' || tool.type === 'agentic_search') && 
+            tool.alias && tool.alias.trim()) {
+          formattedTool.alias = tool.alias.trim();
+        }
+        
+        return formattedTool;
+      });
+      
+      // Log the final tools array for debugging
+      console.log('Final formatted tools:', JSON.stringify(body.tools, null, 2));
+      
+      // Add tool_choice if not auto
       if (state.tool_choice !== 'auto') body.tool_choice = state.tool_choice;
     }
 
-    // Add text configuration if not default
-    if (state.text_format_type !== 'text') {
+    // Add text configuration only if not default or empty
+    if (state.text_format_type && state.text_format_type !== 'text') {
+      console.log(`Adding text format: ${state.text_format_type}`);
       body.text = { format: {} };
       if (state.text_format_type === 'json_schema') {
         body.text.format = {
@@ -357,6 +504,8 @@ const ApiPlayground: React.FC = () => {
       } else if (state.text_format_type === 'json_object') {
         body.text.format = { type: 'json_object' };
       }
+    } else {
+      console.log(`Skipping text format: ${state.text_format_type || 'empty'}`);
     }
 
     // Add reasoning for o-series models
@@ -367,49 +516,97 @@ const ApiPlayground: React.FC = () => {
       };
     }
 
-    // Add include options
-    if (state.include.length > 0) {
+    // Add include options (ensure it's an array)
+    if (state.include && Array.isArray(state.include) && state.include.length > 0) {
       body.include = state.include;
     }
 
     // Add metadata
-    if (Object.keys(state.metadata).length > 0) {
+    if (Object.keys(state.metadata || {}).length > 0) {
       body.metadata = state.metadata;
     }
 
     return body;
   };
 
-  const executeRequest = async () => {
+  const executeRequest = async (customChatHistory?: ChatMessage[]) => {
     if (!state.apiKey.trim()) {
       toast.error('Please set your API key');
       return;
     }
 
+    // Validate image generation tools have required model_provider_key
+    const imageGenTools = state.tools.filter(tool => tool.type === 'image_generation');
+    for (const tool of imageGenTools) {
+      if (!tool.model_provider_key?.trim()) {
+        toast.error(`Image generation tool requires a provider API key. Please configure the "Image Provider Key" field.`);
+        return;
+      }
+    }
+
+    // Validate file_search and agentic_search tools have unique aliases when multiple exist
+    const fileSearchTools = state.tools.filter(tool => tool.type === 'file_search');
+    const agenticSearchTools = state.tools.filter(tool => tool.type === 'agentic_search');
+    
+    if (fileSearchTools.length > 1) {
+      const aliases = fileSearchTools.map(tool => tool.alias?.trim()).filter(Boolean);
+      const uniqueAliases = new Set(aliases);
+      
+      if (aliases.length !== fileSearchTools.length || aliases.length !== uniqueAliases.size) {
+        toast.error(`Multiple file_search tools require unique aliases. Please ensure all file_search tools have unique alias values.`);
+        return;
+      }
+    }
+    
+    if (agenticSearchTools.length > 1) {
+      const aliases = agenticSearchTools.map(tool => tool.alias?.trim()).filter(Boolean);
+      const uniqueAliases = new Set(aliases);
+      
+      if (aliases.length !== agenticSearchTools.length || aliases.length !== uniqueAliases.size) {
+        toast.error(`Multiple agentic_search tools require unique aliases. Please ensure all agentic_search tools have unique alias values.`);
+        return;
+      }
+    }
+
     setIsLoading(true);
+    setIsStreaming(true);
     setResponse(null);
+    setStreamingEvents([]); // Clear previous events
     const startTime = Date.now();
 
-    // Add user message to chat history only if we're starting fresh and have no chat history
-    // and there's content in the input field
-    if (chatHistory.length === 0 && state.input && typeof state.input === 'string' && state.input.trim()) {
-      setChatHistory(prev => [...prev, {
-        role: 'user',
-        content: (state.input as string).trim(),
+
+
+    // Create placeholder assistant message for streaming (only if streaming is enabled)
+    let assistantMessage: ChatMessage | null = null;
+    let assistantMessageId: string | null = null;
+    if (state.stream) {
+      assistantMessageId = `assistant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      assistantMessage = {
+        role: 'assistant',
+        content: '',
         timestamp: new Date().toISOString()
-      }]);
+      };
+      // Add a copy to avoid reference issues
+      setChatHistory(prev => [...prev, { ...assistantMessage }]);
     }
 
     try {
-      const requestBody = buildRequestBody();
+      const requestBody = buildRequestBody(customChatHistory);
       
+      const headers: any = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.apiKey}`,
+        ...(state.modelProvider !== 'openai' && { 'x-model-provider': state.modelProvider })
+      };
+
+      // Add Accept header for streaming
+      if (state.stream) {
+        headers['Accept'] = 'text/event-stream';
+      }
+
       const response = await fetch(`${state.baseUrl}/v1/responses`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${state.apiKey}`,
-          ...(state.modelProvider !== 'openai' && { 'x-model-provider': state.modelProvider })
-        },
+        headers,
         body: JSON.stringify(requestBody)
       });
 
@@ -424,71 +621,154 @@ const ApiPlayground: React.FC = () => {
       let responseData;
       if (state.stream) {
         // Handle streaming response
-        responseData = { type: 'stream', status: 'streaming...', chunks: [] };
-        setResponse(responseData);
-        toast.info('Streaming response started');
+        if (!response.body) {
+          throw new Error('No response body received');
+        }
 
-        const reader = response.body?.getReader();
+        const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        
-        if (reader) {
-          try {
-            let buffer = '';
-            let assistantMessage = '';
-            while (true) {
-              const { done, value } = await reader.read();
-              
-              if (done) break;
+        let buffer = '';
+        let currentResponseId = '';
+        let assistantContent = '';
 
-              buffer += decoder.decode(value, { stream: true });
-              const lines = buffer.split('\n');
-              buffer = lines.pop() || '';
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) {
+              break;
+            }
 
-              for (const line of lines) {
-                const trimmedLine = line.trim();
-                if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
 
-                const eventDataStr = trimmedLine.substring(6).trim();
-                if (eventDataStr === '[DONE]') break;
+            for (const line of lines) {
+              const trimmedLine = line.trim();
+              if (!trimmedLine) continue;
 
+              if (trimmedLine.startsWith('data: ')) {
                 try {
-                  const eventData = JSON.parse(eventDataStr);
-                  setResponse(prev => ({
-                    ...prev,
-                    chunks: [...(prev?.chunks || []), eventData],
-                    lastChunk: eventData
-                  }));
+                  const eventDataStr = trimmedLine.substring(6).trim();
+                  
+                  if (eventDataStr === '[DONE]') {
+                    break;
+                  }
 
-                  // Extract text content for chat display
-                  if (eventData.type === 'response.output_text.delta') {
-                    assistantMessage += eventData.delta;
-                  } else if (eventData.type === 'response.output_text.done') {
-                    assistantMessage = eventData.text;
+                  const eventData = JSON.parse(eventDataStr);
+                  
+                  // Add event to streaming events list
+                  setStreamingEvents(prev => [...prev, {
+                    ...eventData,
+                    timestamp: new Date().toISOString(),
+                    id: Math.random().toString(36).substr(2, 9)
+                  }]);
+
+                  switch (eventData.type) {
+                    case 'response.created':
+                      currentResponseId = eventData.response?.id;
+                      toast.info('Response created, starting processing...');
+                      break;
+
+                    case 'response.in_progress':
+                      toast.info('Processing your request...');
+                      break;
+
+                    case 'response.output_text.delta':
+                      // Stream each delta directly by appending to existing content
+                      assistantContent += eventData.delta;
+                      if (assistantMessage && assistantMessage.timestamp) {
+                        setChatHistory(prev => prev.map((msg, index) => {
+                          // Find the last assistant message that matches our timestamp
+                          if (msg.role === 'assistant' && 
+                              msg.timestamp === assistantMessage.timestamp &&
+                              index === prev.length - 1) {
+                            return { ...msg, content: assistantContent };
+                          }
+                          return msg;
+                        }));
+                      }
+                      break;
+
+                    case 'response.output_text.done':
+                      // Use the complete text from the done event
+                      assistantContent = eventData.text;
+                      if (assistantMessage && assistantMessage.timestamp) {
+                        setChatHistory(prev => prev.map((msg, index) => {
+                          // Find the last assistant message that matches our timestamp
+                          if (msg.role === 'assistant' && 
+                              msg.timestamp === assistantMessage.timestamp &&
+                              index === prev.length - 1) {
+                            return { ...msg, content: assistantContent };
+                          }
+                          return msg;
+                        }));
+                      }
+                      break;
+
+                    case 'response.image_generation.in_progress':
+                      toast.info('Generating image...');
+                      break;
+
+                    case 'response.image_generation.completed':
+                      toast.success('Image generated successfully!');
+                      break;
+
+                    case 'response.file_search.in_progress':
+                      toast.info('Searching documents...');
+                      break;
+
+                    case 'response.file_search.completed':
+                      toast.success('Document search completed!');
+                      break;
+
+                    case 'response.agentic_search.in_progress':
+                      toast.info('Performing agentic search...');
+                      break;
+
+                    case 'response.agentic_search.completed':
+                      toast.success('Agentic search completed!');
+                      break;
+
+                    case 'response.completed':
+                      if (eventData.response?.output && eventData.response.output.length > 0) {
+                        const output = eventData.response.output[0];
+                        
+                        // Check for new format with result field
+                        if (output.result) {
+                          assistantContent = output.result;
+                          if (assistantMessage && assistantMessage.timestamp) {
+                            setChatHistory(prev => prev.map((msg, index) => {
+                              // Find the last assistant message that matches our timestamp
+                              if (msg.role === 'assistant' && 
+                                  msg.timestamp === assistantMessage.timestamp &&
+                                  index === prev.length - 1) {
+                                return { ...msg, content: assistantContent };
+                              }
+                              return msg;
+                            }));
+                          }
+                        }
+                      }
+                      
+                      setResponse(eventData.response);
+                      toast.success('Request completed successfully!');
+                      break;
+
+                    default:
+                      break;
                   }
                 } catch (parseError) {
-                  console.error('Error parsing SSE data:', parseError);
+                  console.error('Error parsing SSE data:', parseError, 'Original line:', trimmedLine);
                 }
               }
             }
-            
-            // Add assistant response to chat history
-            if (assistantMessage) {
-              setChatHistory(prev => [...prev, {
-                role: 'assistant',
-                content: assistantMessage,
-                timestamp: new Date().toISOString()
-              }]);
-            }
-            
-            toast.success('Streaming completed!');
-          } catch (streamError) {
-            console.error('Streaming error:', streamError);
-            toast.error('Streaming interrupted');
-          } finally {
-            reader.releaseLock();
           }
+        } finally {
+          reader.releaseLock();
         }
       } else {
+        // Handle non-streaming response
         responseData = await response.json();
         setResponse(responseData);
         
@@ -519,11 +799,25 @@ const ApiPlayground: React.FC = () => {
       const errorMessage = `Error: ${error.message}`;
       
       // Add error message to chat history
-      setChatHistory(prev => [...prev, {
-        role: 'assistant',
-        content: errorMessage,
-        timestamp: new Date().toISOString()
-      }]);
+      if (state.stream && assistantMessage && assistantMessage.timestamp) {
+        // Update the placeholder assistant message with error
+        setChatHistory(prev => prev.map((msg, index) => {
+          // Find the last assistant message that matches our timestamp
+          if (msg.role === 'assistant' && 
+              msg.timestamp === assistantMessage.timestamp &&
+              index === prev.length - 1) {
+            return { ...msg, content: errorMessage };
+          }
+          return msg;
+        }));
+      } else {
+        // Add new error message for non-streaming
+        setChatHistory(prev => [...prev, {
+          role: 'assistant',
+          content: errorMessage,
+          timestamp: new Date().toISOString()
+        }]);
+      }
       
       setResponse({
         error: true,
@@ -533,6 +827,7 @@ const ApiPlayground: React.FC = () => {
       toast.error(`Request failed: ${error.message}`);
     } finally {
       setIsLoading(false);
+      setIsStreaming(false);
     }
   };
 
@@ -608,7 +903,28 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
     const preset = presets[name];
     if (!preset) return;
 
-    setState(preset);
+    // Merge preset with current state to preserve default values for missing fields
+    setState(prev => ({
+      ...prev,
+      ...preset,
+      // Ensure default values are preserved if not in preset
+      top_p: preset.top_p ?? 0.9,
+      max_output_tokens: preset.max_output_tokens ?? 2048,
+      temperature: preset.temperature ?? 1.0,
+      stream: preset.stream ?? false,
+      store: preset.store ?? true,
+      background: preset.background ?? false,
+      parallel_tool_calls: preset.parallel_tool_calls ?? true,
+      text_format_type: preset.text_format_type ?? 'text',
+      json_schema_strict: preset.json_schema_strict ?? false,
+      reasoning_effort: preset.reasoning_effort ?? 'medium',
+      reasoning_summary: preset.reasoning_summary ?? 'auto',
+      truncation: preset.truncation ?? 'disabled',
+      tool_choice: preset.tool_choice ?? 'auto',
+      include: preset.include ?? [],
+      metadata: preset.metadata ?? {},
+      tools: preset.tools ?? []
+    }));
     if (preset.messages) {
       setMessages(preset.messages);
     }
@@ -701,21 +1017,23 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
   const sendChatMessage = async () => {
     if (!currentMessage.trim()) return;
     
-    // Add message to chat history
-    setChatHistory(prev => [...prev, {
+    // Create the new message
+    const newMessage = {
       role: currentMessageRole,
       content: currentMessage.trim(),
       timestamp: new Date().toISOString()
-    }]);
+    };
+    
+    // Add message to chat history
+    setChatHistory(prev => [...prev, newMessage]);
     
     setCurrentMessage('');
     
     // If it's a user message, automatically execute the API request
     if (currentMessageRole === 'user') {
-      // Small delay to ensure the message is added to chat history
-      setTimeout(() => {
-        executeRequest();
-      }, 100);
+      // Execute request immediately with the updated chat history
+      // We need to pass the updated chat history since state might not have updated yet
+      executeRequest([...chatHistory, newMessage]);
     } else {
       toast.success('System message added to chat');
     }
@@ -741,6 +1059,188 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
 
   const closeConfigPanel = () => {
     setActiveConfigPanel(null);
+  };
+
+  // Image rendering functions (adapted from ChatMessage component)
+  const isImageContent = (content: string): boolean => {
+    const cleanContent = content.replace(/^data:image\/[^;]+;base64,/, '').trim();
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    const isValidBase64 = base64Regex.test(cleanContent);
+    
+    const hasImageSignature = 
+      cleanContent.startsWith('/9j/') ||     // JPEG
+      cleanContent.startsWith('FFD8') ||     // JPEG hex
+      cleanContent.startsWith('/9j') ||      // JPEG variant
+      cleanContent.startsWith('iVBORw0KGgo') || // PNG
+      cleanContent.startsWith('89504E47') ||    // PNG hex
+      cleanContent.startsWith('iVBORw') ||      // PNG variant
+      cleanContent.startsWith('UklGR') ||       // WebP (RIFF)
+      cleanContent.startsWith('UklGRg') ||      // WebP variant
+      cleanContent.startsWith('R0lGODlh') ||    // GIF
+      cleanContent.startsWith('R0lGODdh') ||    // GIF variant
+      cleanContent.startsWith('R0lGOD');        // GIF variant
+
+    return isValidBase64 && hasImageSignature && cleanContent.length > 100;
+  };
+
+  const validateAndCleanBase64 = (base64Content: string): { isValid: boolean; cleanBase64: string; issues: string[] } => {
+    const issues: string[] = [];
+    let cleanBase64 = base64Content.replace(/^data:image\/[^;]+;base64,/, '');
+    
+    cleanBase64 = cleanBase64.replace(/\s/g, '');
+    
+    const paddingNeeded = cleanBase64.length % 4;
+    if (paddingNeeded > 0) {
+      const padding = '='.repeat(4 - paddingNeeded);
+      cleanBase64 += padding;
+      issues.push(`Added ${4 - paddingNeeded} padding characters`);
+    }
+    
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    const isValidBase64 = base64Regex.test(cleanBase64);
+    
+    if (!isValidBase64) {
+      issues.push('Contains invalid base64 characters');
+    }
+    
+    if (cleanBase64.length < 100) {
+      issues.push('Base64 data too short for valid image');
+    }
+    
+    return {
+      isValid: isValidBase64 && issues.length <= 1,
+      cleanBase64,
+      issues
+    };
+  };
+
+  const detectImageFormat = (base64Content: string): string => {
+    const cleanContent = base64Content.replace(/^data:image\/[^;]+;base64,/, '').trim();
+    
+    if (cleanContent.startsWith('/9j/') || cleanContent.startsWith('/9j') || cleanContent.startsWith('FFD8')) {
+      return 'jpeg';
+    } else if (cleanContent.startsWith('iVBORw0KGgo') || cleanContent.startsWith('iVBORw') || cleanContent.startsWith('89504E47')) {
+      return 'png';
+    } else if (cleanContent.startsWith('UklGR') || cleanContent.startsWith('UklGRg')) {
+      return 'webp';
+    } else if (cleanContent.startsWith('R0lGODlh') || cleanContent.startsWith('R0lGODdh') || cleanContent.startsWith('R0lGOD')) {
+      return 'gif';
+    }
+    
+    return 'png';
+  };
+
+  const renderMessageContent = (content: string) => {
+    // Check if this is a text message that contains <image> tags
+    if (content.includes('<image>')) {
+      const parts = content.split(/<image>|<\/image>/);
+      const elements = [];
+      
+      for (let i = 0; i < parts.length; i++) {
+        if (i % 2 === 0) {
+          // Text part
+          if (parts[i].trim()) {
+            elements.push(
+              <div key={i} className="mb-4 whitespace-pre-wrap text-sm leading-relaxed break-words">
+                {parts[i]}
+              </div>
+            );
+          }
+        } else {
+          // Image part
+          const imageData = parts[i].trim();
+          if (imageData && isImageContent(imageData)) {
+            const validation = validateAndCleanBase64(imageData);
+            const imageFormat = detectImageFormat(imageData);
+            const dataUrl = validation.cleanBase64.startsWith('data:') 
+              ? validation.cleanBase64 
+              : `data:image/${imageFormat};base64,${validation.cleanBase64}`;
+            
+            elements.push(
+              <div key={i} className="mb-6">
+                <div className="relative inline-block bg-muted p-2 rounded-lg shadow-sm">
+                  <img 
+                    src={dataUrl}
+                    alt="Generated"
+                    className="max-w-full h-auto rounded-md shadow-sm"
+                    style={{ maxHeight: '512px' }}
+                    onError={(e) => {
+                      console.error('Image failed to load');
+                      console.log('Validation issues:', validation.issues);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                  {validation.issues.length > 0 && (
+                    <div className="mt-2 text-xs text-warning dark:text-warning-light">
+                      Issues: {validation.issues.join(', ')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+        }
+      }
+      
+      return <div className="space-y-4">{elements}</div>;
+    }
+    
+    // Check if the entire content is an image
+    if (isImageContent(content)) {
+      const validation = validateAndCleanBase64(content);
+      
+      if (!validation.isValid) {
+        return (
+          <div className="p-4 bg-error/5 dark:bg-error/10 border border-error/20 dark:border-error/30 rounded-lg">
+            <div className="flex items-center space-x-2 mb-2">
+              <XCircle className="h-4 w-4 text-error" />
+              <span className="text-sm font-medium text-error">Image Error</span>
+            </div>
+            <p className="text-sm text-error-dark dark:text-error-light">Invalid image data detected.</p>
+            {validation.issues.length > 0 && (
+              <ul className="mt-2 text-xs text-error-dark dark:text-error-light">
+                {validation.issues.map((issue, index) => (
+                  <li key={index}>• {issue}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      }
+      
+      const imageFormat = detectImageFormat(content);
+      const dataUrl = validation.cleanBase64.startsWith('data:') 
+        ? validation.cleanBase64 
+        : `data:image/${imageFormat};base64,${validation.cleanBase64}`;
+      
+      return (
+        <div className="relative inline-block bg-muted p-2 rounded-lg shadow-sm">
+          <img 
+            src={dataUrl}
+            alt="Generated"
+            className="max-w-full h-auto rounded-md shadow-sm"
+            style={{ maxHeight: '512px' }}
+            onError={(e) => {
+              console.error('Image failed to load');
+              console.log('Validation issues:', validation.issues);
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+          {validation.issues.length > 0 && (
+            <div className="mt-2 text-xs text-warning dark:text-warning-light">
+              Issues: {validation.issues.join(', ')}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Default text rendering
+    return (
+      <div className="whitespace-pre-wrap text-sm leading-relaxed break-words">
+        {content}
+      </div>
+    );
   };
 
   return (
@@ -918,9 +1418,14 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                           Stream
                         </Badge>
                       )}
-                      {state.top_p !== 1.0 && (
+                      {state.top_p !== 0.9 && (
                         <Badge variant="outline" className="text-xs bg-error/10 dark:bg-error/20 text-error dark:text-error-light border-error/20 dark:border-error/30">
                           Top-P: {state.top_p}
+                        </Badge>
+                      )}
+                      {state.max_output_tokens !== 2048 && (
+                        <Badge variant="outline" className="text-xs bg-error/10 dark:bg-error/20 text-error dark:text-error-light border-error/20 dark:border-error/30">
+                          Max: {state.max_output_tokens}
                         </Badge>
                       )}
                     </div>
@@ -958,8 +1463,8 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                   <Button variant="outline" size="sm" onClick={() => addTool('image_generation')} className="h-8 text-xs border-border text-foreground hover:bg-success/5 dark:hover:bg-success/10 hover:border-success/30 dark:hover:border-success/40">
                     + Image Gen
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => addTool('web_search_preview')} className="h-8 text-xs border-border text-foreground hover:bg-success/5 dark:hover:bg-success/10 hover:border-success/30 dark:hover:border-success/40">
-                    + Web Search
+                  <Button variant="outline" size="sm" onClick={() => addTool('agentic_search')} className="h-8 text-xs border-border text-foreground hover:bg-success/5 dark:hover:bg-success/10 hover:border-success/30 dark:hover:border-success/40">
+                    + Agentic Search
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => addTool('function')} className="h-8 text-xs border-border text-foreground hover:bg-success/5 dark:hover:bg-success/10 hover:border-success/30 dark:hover:border-success/40">
                     + Function
@@ -1245,54 +1750,58 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                         {tool.type === 'image_generation' && (
                           <div className="space-y-3">
                             <div>
-                              <Label className="text-sm font-medium mb-2 block">Model</Label>
+                              <Label className="text-sm font-medium mb-2 block">Provider</Label>
                               <Select 
-                                value={tool.model || 'gpt-image-1'} 
-                                onValueChange={(value) => updateTool(index, 'model', value)}
+                                value={tool.provider || 'openai'} 
+                                onValueChange={(value) => updateTool(index, 'provider', value)}
                               >
-                                                              <SelectTrigger className="h-9">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="bg-card border border-border">
-                                <SelectItem value="gpt-image-1" className="text-foreground hover:bg-accent">GPT Image 1</SelectItem>
-                                <SelectItem value="dall-e-3" className="text-foreground hover:bg-accent">DALL-E 3</SelectItem>
-                              </SelectContent>
+                                <SelectTrigger className="h-9">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-card border border-border">
+                                  <SelectItem value="openai" className="text-foreground hover:bg-accent">OpenAI</SelectItem>
+                                  <SelectItem value="gemini" className="text-foreground hover:bg-accent">Gemini</SelectItem>
+                                  <SelectItem value="togetherai" className="text-foreground hover:bg-accent">Together AI</SelectItem>
+                                  <SelectItem value="custom" className="text-foreground hover:bg-accent">Custom</SelectItem>
+                                </SelectContent>
                               </Select>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <Label className="text-sm font-medium mb-2 block">Size</Label>
-                                <Select 
-                                  value={tool.size || 'auto'} 
-                                  onValueChange={(value) => updateTool(index, 'size', value)}
-                                >
-                                                                  <SelectTrigger className="h-9">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="bg-card border border-border">
-                                  <SelectItem value="auto" className="text-foreground hover:bg-accent">Auto</SelectItem>
-                                  <SelectItem value="1024x1024" className="text-foreground hover:bg-accent">1024x1024</SelectItem>
-                                  <SelectItem value="1792x1024" className="text-foreground hover:bg-accent">1792x1024</SelectItem>
-                                  <SelectItem value="1024x1792" className="text-foreground hover:bg-accent">1024x1792</SelectItem>
-                                </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium mb-2 block">Quality</Label>
-                                <Select 
-                                  value={tool.quality || 'auto'} 
-                                  onValueChange={(value) => updateTool(index, 'quality', value)}
-                                >
-                                                                  <SelectTrigger className="h-9">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="bg-card border border-border">
-                                  <SelectItem value="auto" className="text-foreground hover:bg-accent">Auto</SelectItem>
-                                  <SelectItem value="standard" className="text-foreground hover:bg-accent">Standard</SelectItem>
-                                  <SelectItem value="hd" className="text-foreground hover:bg-accent">HD</SelectItem>
-                                </SelectContent>
-                                </Select>
-                              </div>
+                            <div>
+                              <Label className="text-sm font-medium mb-2 block">Model</Label>
+                              <Input
+                                value={tool.model || ''}
+                                onChange={(e) => updateTool(index, 'model', e.target.value)}
+                                placeholder="e.g., gpt-image-1 (openai), imagen-3.0-generate-002 (gemini), flux-1-schnell-free (togetherai)"
+                                className="h-9 font-mono"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Enter the model name for your selected provider
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium mb-2 block">
+                                Image Provider Key <span className="text-red-500">*</span>
+                              </Label>
+                              <Input
+                                value={tool.model_provider_key || ''}
+                                onChange={(e) => updateTool(index, 'model_provider_key', e.target.value)}
+                                placeholder="API key for the image provider (required)"
+                                type="password"
+                                className={`h-9 font-mono ${!tool.model_provider_key?.trim() ? 'border-red-300 focus:border-red-500' : ''}`}
+                                required
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {tool.provider === 'openai' && 'OpenAI API key for image generation (required)'}
+                                {tool.provider === 'gemini' && 'Google AI Studio API key for Gemini image models (required)'}
+                                {tool.provider === 'togetherai' && 'Together AI API key for image models (required)'}
+                                {tool.provider === 'custom' && 'API key for your custom image provider (required)'}
+                                {!tool.provider && 'API key for the selected image provider (required)'}
+                              </p>
+                              {!tool.model_provider_key?.trim() && (
+                                <p className="text-xs text-red-500 mt-1">
+                                  ⚠️ Image provider key is required for image generation
+                                </p>
+                              )}
                             </div>
                           </div>
                         )}
@@ -1338,6 +1847,28 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                         {tool.type === 'file_search' && (
                           <div className="space-y-3">
                             <div>
+                              <Label className="text-sm font-medium text-foreground mb-2 block">
+                                Alias {state.tools.filter(t => t.type === 'file_search').length > 1 && <span className="text-red-500">*</span>}
+                              </Label>
+                              <Input
+                                value={tool.alias || ''}
+                                onChange={(e) => updateTool(index, 'alias', e.target.value)}
+                                placeholder={state.tools.filter(t => t.type === 'file_search').length > 1 ? "Required for multiple file_search tools" : "Optional alias for this tool"}
+                                className={`h-9 ${state.tools.filter(t => t.type === 'file_search').length > 1 && !tool.alias?.trim() ? 'border-red-300 focus:border-red-500' : ''}`}
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {state.tools.filter(t => t.type === 'file_search').length > 1 
+                                  ? 'Unique alias required when multiple file_search tools are configured'
+                                  : 'Optional alias to identify this tool in responses'
+                                }
+                              </p>
+                              {state.tools.filter(t => t.type === 'file_search').length > 1 && !tool.alias?.trim() && (
+                                <p className="text-xs text-red-500 mt-1">
+                                  ⚠️ Alias is required when multiple file_search tools are present
+                                </p>
+                              )}
+                            </div>
+                            <div>
                               <Label className="text-sm font-medium text-foreground mb-2 block">Vector Store IDs</Label>
                               <Input
                                 value={Array.isArray(tool.vector_store_ids) ? tool.vector_store_ids.join(', ') : tool.vector_store_ids || ''}
@@ -1360,23 +1891,49 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                           </div>
                         )}
 
-                        {tool.type === 'web_search_preview' && (
+                        {tool.type === 'agentic_search' && (
                           <div className="space-y-3">
                             <div>
-                              <Label className="text-sm font-medium mb-2 block">Search Context Size</Label>
-                              <Select 
-                                value={tool.search_context_size || 'medium'} 
-                                onValueChange={(value) => updateTool(index, 'search_context_size', value)}
-                              >
-                                                              <SelectTrigger className="h-9">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="bg-card border border-border">
-                                <SelectItem value="small" className="text-foreground hover:bg-accent">Small</SelectItem>
-                                <SelectItem value="medium" className="text-foreground hover:bg-accent">Medium</SelectItem>
-                                <SelectItem value="large" className="text-foreground hover:bg-accent">Large</SelectItem>
-                              </SelectContent>
-                              </Select>
+                              <Label className="text-sm font-medium text-foreground mb-2 block">
+                                Alias {state.tools.filter(t => t.type === 'agentic_search').length > 1 && <span className="text-red-500">*</span>}
+                              </Label>
+                              <Input
+                                value={tool.alias || ''}
+                                onChange={(e) => updateTool(index, 'alias', e.target.value)}
+                                placeholder={state.tools.filter(t => t.type === 'agentic_search').length > 1 ? "Required for multiple agentic_search tools" : "Optional alias for this tool"}
+                                className={`h-9 ${state.tools.filter(t => t.type === 'agentic_search').length > 1 && !tool.alias?.trim() ? 'border-red-300 focus:border-red-500' : ''}`}
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {state.tools.filter(t => t.type === 'agentic_search').length > 1 
+                                  ? 'Unique alias required when multiple agentic_search tools are configured'
+                                  : 'Optional alias to identify this tool in responses'
+                                }
+                              </p>
+                              {state.tools.filter(t => t.type === 'agentic_search').length > 1 && !tool.alias?.trim() && (
+                                <p className="text-xs text-red-500 mt-1">
+                                  ⚠️ Alias is required when multiple agentic_search tools are present
+                                </p>
+                              )}
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium text-foreground mb-2 block">Vector Store IDs</Label>
+                              <Input
+                                value={Array.isArray(tool.vector_store_ids) ? tool.vector_store_ids.join(', ') : tool.vector_store_ids || ''}
+                                onChange={(e) => updateTool(index, 'vector_store_ids', e.target.value.split(',').map(id => id.trim()))}
+                                placeholder="vs_123, vs_456"
+                                className="h-9"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium text-foreground mb-2 block">Max Results</Label>
+                              <Input
+                                type="number"
+                                value={tool.max_num_results || 5}
+                                onChange={(e) => updateTool(index, 'max_num_results', parseInt(e.target.value) || 5)}
+                                min={1}
+                                max={50}
+                                className="h-9"
+                              />
                             </div>
                           </div>
                         )}
@@ -1431,19 +1988,59 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                       </div>
 
                       <div>
-                        <Label className="text-sm font-medium text-foreground mb-3 block">Service Tier</Label>
-                        <Select value={state.service_tier} onValueChange={(value) => updateState('service_tier', value)}>
-                          <SelectTrigger className="h-10">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-card border border-border">
-                            <SelectItem value="auto" className="text-foreground hover:bg-accent">Auto</SelectItem>
-                            <SelectItem value="default" className="text-foreground hover:bg-accent">Default</SelectItem>
-                            <SelectItem value="scale" className="text-foreground hover:bg-accent">Scale</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground mt-1">Choose the service tier for processing</p>
+                        <Label className="text-sm font-medium text-foreground mb-3 block">Top-P (Nucleus Sampling)</Label>
+                        <div className="space-y-4">
+                          <Slider
+                            value={[state.top_p]}
+                            onValueChange={([value]) => updateState('top_p', value)}
+                            max={1}
+                            min={0}
+                            step={0.1}
+                            className="w-full [&_[role=slider]]:bg-primary [&_[role=slider]]:border-primary [&_.relative]:bg-primary/20"
+                          />
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Focused (0)</span>
+                            <span className="font-mono px-2 py-1 bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light rounded border border-primary/20 dark:border-primary/30">
+                              {state.top_p}
+                            </span>
+                            <span>Diverse (1)</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Controls diversity by limiting token selection to the top cumulative probability mass
+                          </p>
+                        </div>
                       </div>
+
+                      <div>
+                        <Label className="text-sm font-medium text-foreground mb-3 block">Max Output Tokens</Label>
+                        <div className="space-y-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex-1 flex items-center space-x-2">
+                              <span className="text-xs text-muted-foreground font-mono px-2 py-1 bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light rounded border border-primary/20 dark:border-primary/30">
+                                {state.max_output_tokens}
+                              </span>
+                              <span className="text-xs text-muted-foreground">tokens</span>
+                            </div>
+                            <Input
+                              type="number"
+                              value={state.max_output_tokens}
+                              onChange={(e) => updateState('max_output_tokens', parseInt(e.target.value) || 2048)}
+                              min={1}
+                              placeholder="4096"
+                              className="w-24 h-9 text-sm font-mono"
+                            />
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Common values: 1K, 2K, 4K, 8K, 16K, 32K+</span>
+                            <span>Default: 2048</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Maximum number of tokens the model can generate. No upper limit - depends on your model's capabilities.
+                          </p>
+                        </div>
+                      </div>
+
+
 
                       <div>
                         <Label className="text-sm font-medium text-foreground mb-3 block">Previous Response ID</Label>
@@ -1511,23 +2108,21 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                               placeholder="Enter any model name..."
                               className="h-10 font-mono focus:border-primary dark:focus:border-primary-light"
                             />
-                            <p className="text-xs text-muted-foreground mt-1">Enter any model name (e.g., gpt-4o, claude-3-5-sonnet-20241022, gemini-1.5-pro)</p>
+                            <p className="text-xs text-muted-foreground mt-1">Enter any model name (e.g., gpt-4.1, claude-3-5-sonnet-20241022, gemini-2.5-pro)</p>
                           </div>
 
                           <div>
                             <Label className="text-sm font-medium text-foreground mb-2 block">Quick Model Selection</Label>
                             <div className="grid grid-cols-2 gap-2">
                               {[
-                                { name: 'GPT-4o', value: 'gpt-4o', provider: 'openai' },
-                                { name: 'GPT-4o Mini', value: 'gpt-4o-mini', provider: 'openai' },
+                                { name: 'GPT-4.1', value: 'gpt-4.1', provider: 'openai' },
+                                { name: 'GPT-4.1 Mini', value: 'gpt-4.1-mini', provider: 'openai' },
                                 { name: 'Claude 3.5 Sonnet', value: 'claude-3-5-sonnet-20241022', provider: 'claude' },
                                 { name: 'Claude 3.5 Haiku', value: 'claude-3-5-haiku-20241022', provider: 'claude' },
-                                { name: 'Gemini 1.5 Pro', value: 'gemini-1.5-pro', provider: 'gemini' },
-                                { name: 'Gemini 1.5 Flash', value: 'gemini-1.5-flash', provider: 'gemini' },
+                                { name: 'Gemini 2.5 Pro', value: 'gemini-2.5-pro', provider: 'gemini' },
+                                { name: 'Gemini 2.0 Flash', value: 'gemini-2.0-flash', provider: 'gemini' },
                                 { name: 'Llama 3.1 70B', value: 'llama-3.1-70b-versatile', provider: 'groq' },
-                                { name: 'DeepSeek Chat', value: 'deepseek-chat', provider: 'deepseek' },
-                                { name: 'Grok Beta', value: 'grok-beta', provider: 'xai' },
-                                { name: 'GPT-4 Turbo', value: 'gpt-4-turbo', provider: 'openai' }
+                                { name: 'DeepSeek Chat', value: 'deepseek-chat', provider: 'deepseek' }
                               ].map((model) => (
                                 <Button
                                   key={model.value}
@@ -1564,10 +2159,29 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                                 <SelectItem value="groq" className="text-foreground hover:bg-accent">Groq</SelectItem>
                                 <SelectItem value="deepseek" className="text-foreground hover:bg-accent">DeepSeek</SelectItem>
                                 <SelectItem value="xai" className="text-foreground hover:bg-accent">xAI (Grok)</SelectItem>
+                                <SelectItem value="custom" className="text-foreground hover:bg-accent">Custom Base URL</SelectItem>
                               </SelectContent>
                             </Select>
                             <p className="text-xs text-muted-foreground mt-1">The AI model provider for your requests</p>
                           </div>
+
+                          {state.modelProvider === 'custom' && (
+                            <div>
+                              <Label className="text-sm font-medium text-foreground mb-2 block">Custom Provider Base URL</Label>
+                              <Input
+                                value={state.customProviderUrl || ''}
+                                onChange={(e) => updateState('customProviderUrl', e.target.value)}
+                                placeholder="https://api.example.com/v1"
+                                className="h-10 font-mono focus:border-primary dark:focus:border-primary-light"
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Base endpoint for your custom provider (include up to /v1). Model format will be: &lt;base-endpoint&gt;@&lt;model&gt;
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                <strong>Example:</strong> https://api.openai.com/v1 → https://api.openai.com/v1@gpt-4
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1630,7 +2244,9 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                               toast.info('Testing connection...');
                               
                               const testBody = {
-                                model: `${state.modelProvider}@${state.model}`,
+                                model: state.modelProvider === 'custom' && state.customProviderUrl 
+                                  ? `${state.customProviderUrl}@${state.model}`
+                                  : `${state.modelProvider}@${state.model}`,
                                 input: 'ping',
                                 stream: false,
                                 store: false,
@@ -1819,6 +2435,23 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
           >
             <Trash2 className="h-4 w-4" />
           </Button>
+          {streamingEvents.length > 0 && (
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => setShowEventsModal(true)}
+              title={`View Streaming Events (${streamingEvents.length})`}
+              className="h-12 w-12 rounded-full shadow-lg bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary relative"
+            >
+              <Sparkles className="h-4 w-4" />
+              {isStreaming && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-success rounded-full animate-pulse"></div>
+              )}
+              <div className="absolute -bottom-1 -right-1 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-mono">
+                {streamingEvents.length > 99 ? '99+' : streamingEvents.length}
+              </div>
+            </Button>
+          )}
           {response && (
             <Button 
               variant="outline" 
@@ -1932,9 +2565,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                           </div>
                         </div>
                       ) : (
-                        <div className="whitespace-pre-wrap text-sm leading-relaxed break-words">
-                          {message.content}
-                        </div>
+                        renderMessageContent(message.content)
                       )}
                       {message.timestamp && (
                         <div className="text-xs mt-2 text-muted-foreground opacity-70">
@@ -2021,6 +2652,161 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                 <Button variant="outline" onClick={copyCurlToClipboard} className="border-border text-foreground hover:bg-accent">
                   <Copy className="h-4 w-4 mr-2" />
                   Copy to Clipboard
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Streaming Events Modal */}
+        <Dialog open={showEventsModal} onOpenChange={setShowEventsModal}>
+          <DialogContent className="max-w-6xl max-h-[90vh] bg-card border border-border">
+            <DialogHeader>
+              <DialogTitle className="flex items-center space-x-3 text-foreground">
+                <div className="w-8 h-8 bg-gradient-to-r from-primary to-success rounded-lg flex items-center justify-center">
+                  <Sparkles className="h-4 w-4 text-white" />
+                </div>
+                <span>Streaming Events Timeline</span>
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                  {streamingEvents.length} events
+                </Badge>
+              </DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="max-h-[70vh] pr-4">
+              <div className="space-y-3">
+                {streamingEvents.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                      <MessageSquare className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground">No streaming events captured yet</p>
+                  </div>
+                ) : (
+                  streamingEvents.map((event, index) => {
+                    const getEventIcon = (type: string) => {
+                      if (type.includes('created')) return <Play className="h-3 w-3" />;
+                      if (type.includes('delta')) return <div className="w-3 h-3 bg-primary rounded-full animate-pulse" />;
+                      if (type.includes('image_generation')) return <div className="w-3 h-3 bg-warning rounded-full" />;
+                      if (type.includes('file_search') || type.includes('agentic_search')) return <div className="w-3 h-3 bg-success rounded-full" />;
+                      if (type.includes('completed')) return <CheckCircle className="h-3 w-3" />;
+                      if (type.includes('error')) return <XCircle className="h-3 w-3" />;
+                      return <Info className="h-3 w-3" />;
+                    };
+
+                    const getEventColor = (type: string) => {
+                      if (type.includes('created')) return 'border-primary/30 bg-primary/5';
+                      if (type.includes('delta')) return 'border-primary/30 bg-primary/5';
+                      if (type.includes('image_generation')) return 'border-warning/30 bg-warning/5';
+                      if (type.includes('file_search') || type.includes('agentic_search')) return 'border-success/30 bg-success/5';
+                      if (type.includes('completed')) return 'border-success/30 bg-success/5';
+                      if (type.includes('error')) return 'border-error/30 bg-error/5';
+                      return 'border-border bg-muted/50';
+                    };
+
+                    const getEventTextColor = (type: string) => {
+                      if (type.includes('created')) return 'text-primary';
+                      if (type.includes('delta')) return 'text-primary';
+                      if (type.includes('image_generation')) return 'text-warning';
+                      if (type.includes('file_search') || type.includes('agentic_search')) return 'text-success';
+                      if (type.includes('completed')) return 'text-success';
+                      if (type.includes('error')) return 'text-error';
+                      return 'text-foreground';
+                    };
+
+                    return (
+                      <div
+                        key={event.id}
+                        className={`p-4 rounded-lg border transition-all duration-200 hover:shadow-sm ${getEventColor(event.type)}`}
+                      >
+                        <div className="flex items-start space-x-3">
+                          <div className="flex-shrink-0 mt-1">
+                            <div className={`p-2 rounded-full ${getEventColor(event.type)} ${getEventTextColor(event.type)}`}>
+                              {getEventIcon(event.type)}
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <h4 className={`text-sm font-semibold ${getEventTextColor(event.type)}`}>
+                                {event.type}
+                              </h4>
+                              <Badge variant="outline" className="text-xs font-mono">
+                                #{index + 1}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground font-mono">
+                                {new Date(event.timestamp).toLocaleTimeString()}
+                              </span>
+                            </div>
+                            
+                            {event.delta && (
+                              <div className="mb-2">
+                                <Label className="text-xs font-medium text-muted-foreground">Delta:</Label>
+                                <div className="bg-muted/50 p-2 rounded mt-1 font-mono text-xs break-all">
+                                  {JSON.stringify(event.delta)}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {event.text && (
+                              <div className="mb-2">
+                                <Label className="text-xs font-medium text-muted-foreground">Text:</Label>
+                                <div className="bg-muted/50 p-2 rounded mt-1 text-xs max-h-32 overflow-y-auto">
+                                  {event.text}
+                                </div>
+                              </div>
+                            )}
+                            
+                            <Collapsible>
+                              <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground">
+                                  <ChevronDown className="h-3 w-3 mr-1" />
+                                  Raw Event Data
+                                </Button>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <div className="bg-muted/80 p-3 rounded-lg mt-2 font-mono text-xs overflow-auto max-h-48">
+                                  <pre className="whitespace-pre-wrap break-all">
+                                    {JSON.stringify(event, null, 2)}
+                                  </pre>
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </ScrollArea>
+            <div className="flex justify-between items-center pt-4 border-t border-border">
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                <Sparkles className="h-4 w-4" />
+                <span>Real-time streaming events captured during API communication</span>
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(JSON.stringify(streamingEvents, null, 2));
+                    toast.success('Events copied to clipboard!');
+                  }}
+                  className="border-border text-foreground hover:bg-accent"
+                >
+                  <Copy className="h-3 w-3 mr-2" />
+                  Copy Events
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setStreamingEvents([])}
+                  className="border-border text-foreground hover:bg-accent"
+                >
+                  <Trash2 className="h-3 w-3 mr-2" />
+                  Clear Events
+                </Button>
+                <Button variant="outline" onClick={() => setShowEventsModal(false)} className="border-border text-foreground hover:bg-accent">
+                  Close
                 </Button>
               </div>
             </div>
