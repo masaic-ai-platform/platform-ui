@@ -32,7 +32,18 @@ import {
   RotateCcw,
   MessageSquare,
   Sparkles,
-  Send
+  Send,
+  Search,
+  Image,
+  FileText,
+  Zap,
+  Clock,
+  AlertCircle,
+  Activity,
+  Cpu,
+  Database,
+  Eye,
+  Palette
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -160,6 +171,7 @@ const ApiPlayground: React.FC = () => {
   const [streamingEvents, setStreamingEvents] = useState<any[]>([]);
   const [showEventsModal, setShowEventsModal] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   // Load settings from localStorage
   useEffect(() => {
@@ -529,17 +541,37 @@ const ApiPlayground: React.FC = () => {
     return body;
   };
 
+  const cancelRequest = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+      setIsLoading(false);
+      setIsStreaming(false);
+      toast.info('Request cancelled by user');
+    }
+  };
+
   const executeRequest = async (customChatHistory?: ChatMessage[]) => {
     if (!state.apiKey.trim()) {
       toast.error('Please set your API key');
       return;
     }
 
+    // Cancel any existing request
+    if (abortController) {
+      abortController.abort();
+    }
+
+    // Create new abort controller for this request
+    const newAbortController = new AbortController();
+    setAbortController(newAbortController);
+
     // Validate image generation tools have required model_provider_key
     const imageGenTools = state.tools.filter(tool => tool.type === 'image_generation');
     for (const tool of imageGenTools) {
       if (!tool.model_provider_key?.trim()) {
         toast.error(`Image generation tool requires a provider API key. Please configure the "Image Provider Key" field.`);
+        setAbortController(null);
         return;
       }
     }
@@ -554,6 +586,7 @@ const ApiPlayground: React.FC = () => {
       
       if (aliases.length !== fileSearchTools.length || aliases.length !== uniqueAliases.size) {
         toast.error(`Multiple file_search tools require unique aliases. Please ensure all file_search tools have unique alias values.`);
+        setAbortController(null);
         return;
       }
     }
@@ -564,6 +597,7 @@ const ApiPlayground: React.FC = () => {
       
       if (aliases.length !== agenticSearchTools.length || aliases.length !== uniqueAliases.size) {
         toast.error(`Multiple agentic_search tools require unique aliases. Please ensure all agentic_search tools have unique alias values.`);
+        setAbortController(null);
         return;
       }
     }
@@ -607,7 +641,8 @@ const ApiPlayground: React.FC = () => {
       const response = await fetch(`${state.baseUrl}/v1/responses`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        signal: newAbortController.signal
       });
 
       const endTime = Date.now();
@@ -796,6 +831,14 @@ const ApiPlayground: React.FC = () => {
 
     } catch (error: any) {
       console.error('API Error:', error);
+      
+      // Check if the error is due to abort
+      if (error.name === 'AbortError') {
+        console.log('Request was cancelled');
+        // Don't show error message for cancelled requests
+        return;
+      }
+      
       const errorMessage = `Error: ${error.message}`;
       
       // Add error message to chat history
@@ -828,6 +871,7 @@ const ApiPlayground: React.FC = () => {
     } finally {
       setIsLoading(false);
       setIsStreaming(false);
+      setAbortController(null);
     }
   };
 
@@ -2440,16 +2484,41 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
               variant="outline" 
               size="icon"
               onClick={() => setShowEventsModal(true)}
-              title={`View Streaming Events (${streamingEvents.length})`}
-              className="h-12 w-12 rounded-full shadow-lg bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary relative"
+              title={`View Streaming Events (${streamingEvents.length}) ${isStreaming ? '- Live' : ''}`}
+              className={`h-12 w-12 rounded-full shadow-lg relative transition-all duration-300 ${
+                isStreaming 
+                  ? 'bg-success hover:bg-success-light border-success text-white animate-pulse' 
+                  : 'bg-card hover:bg-accent border border-border text-muted-foreground hover:text-foreground'
+              }`}
             >
-              <Sparkles className="h-4 w-4" />
-              {isStreaming && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-success rounded-full animate-pulse"></div>
+              {isStreaming ? (
+                <Activity className="h-4 w-4 animate-pulse" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
               )}
-              <div className="absolute -bottom-1 -right-1 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-mono">
+              {isStreaming && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-sm">
+                  <div className="w-2 h-2 bg-success rounded-full animate-ping"></div>
+                </div>
+              )}
+              <div className={`absolute -bottom-2 -right-2 text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center font-mono px-1 shadow-sm border ${
+                isStreaming 
+                  ? 'bg-white text-success border-success' 
+                  : 'bg-primary text-primary-foreground border-background'
+              }`}>
                 {streamingEvents.length > 99 ? '99+' : streamingEvents.length}
               </div>
+            </Button>
+          )}
+          {isLoading && (
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={cancelRequest}
+              title="Cancel Request"
+              className="h-12 w-12 rounded-full shadow-lg bg-error hover:bg-error-light border-error text-white animate-pulse"
+            >
+              <XCircle className="h-4 w-4" />
             </Button>
           )}
           {response && (
@@ -2622,13 +2691,23 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                     className="flex-1 h-12 resize-none focus:border-primary dark:focus:border-primary-light py-3 leading-none"
                     disabled={isLoading}
                   />
-                  <Button 
-                    onClick={sendChatMessage}
-                    disabled={!currentMessage.trim() || isLoading}
-                    className="h-12 px-4 bg-success hover:bg-success-light dark:bg-success-light dark:hover:bg-success text-white shadow-sm border border-success/20 dark:border-success/30"
-                  >
-                    <Send className="h-4 w-4 text-white" />
-                  </Button>
+                  {isLoading ? (
+                    <Button 
+                      onClick={cancelRequest}
+                      className="h-12 px-4 bg-error hover:bg-error-light text-white shadow-sm border border-error/20 animate-pulse"
+                    >
+                      <XCircle className="h-4 w-4 text-white mr-2" />
+                      Cancel
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={sendChatMessage}
+                      disabled={!currentMessage.trim()}
+                      className="h-12 px-4 bg-success hover:bg-success-light dark:bg-success-light dark:hover:bg-success text-white shadow-sm border border-success/20 dark:border-success/30"
+                    >
+                      <Send className="h-4 w-4 text-white" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -2662,14 +2741,27 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
         <Dialog open={showEventsModal} onOpenChange={setShowEventsModal}>
           <DialogContent className="max-w-6xl max-h-[90vh] bg-card border border-border">
             <DialogHeader>
-              <DialogTitle className="flex items-center space-x-3 text-foreground">
-                <div className="w-8 h-8 bg-gradient-to-r from-primary to-success rounded-lg flex items-center justify-center">
-                  <Sparkles className="h-4 w-4 text-white" />
+              <DialogTitle className="flex items-center justify-between text-foreground">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <Sparkles className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Streaming Events Timeline</h2>
+                    <p className="text-sm text-muted-foreground">Real-time API communication events</p>
+                  </div>
                 </div>
-                <span>Streaming Events Timeline</span>
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-                  {streamingEvents.length} events
-                </Badge>
+                <div className="flex items-center space-x-3">
+                  {isStreaming && (
+                    <Badge variant="outline" className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700 animate-pulse">
+                      <Activity className="h-3 w-3 mr-1" />
+                      Live
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700 font-mono">
+                    {streamingEvents.length} events
+                  </Badge>
+                </div>
               </DialogTitle>
             </DialogHeader>
             <ScrollArea className="max-h-[70vh] pr-4">
@@ -2683,73 +2775,259 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                   </div>
                 ) : (
                   streamingEvents.map((event, index) => {
-                    const getEventIcon = (type: string) => {
-                      if (type.includes('created')) return <Play className="h-3 w-3" />;
-                      if (type.includes('delta')) return <div className="w-3 h-3 bg-primary rounded-full animate-pulse" />;
-                      if (type.includes('image_generation')) return <div className="w-3 h-3 bg-warning rounded-full" />;
-                      if (type.includes('file_search') || type.includes('agentic_search')) return <div className="w-3 h-3 bg-success rounded-full" />;
-                      if (type.includes('completed')) return <CheckCircle className="h-3 w-3" />;
-                      if (type.includes('error')) return <XCircle className="h-3 w-3" />;
-                      return <Info className="h-3 w-3" />;
+                    const getEventIcon = (type: string, isAnimated: boolean = false) => {
+                      // Response lifecycle events
+                      if (type.includes('response.created')) return <Play className="h-4 w-4" />;
+                      if (type.includes('response.in_progress')) return <Activity className={`h-4 w-4 ${isAnimated ? 'animate-pulse' : ''}`} />;
+                      if (type.includes('response.completed')) return <CheckCircle className="h-4 w-4" />;
+                      
+                      // Text streaming events
+                      if (type.includes('output_text.delta')) return <div className="w-4 h-4 bg-primary rounded-full animate-pulse" />;
+                      if (type.includes('output_text.done')) return <FileText className="h-4 w-4" />;
+                      
+                      // Image generation events
+                      if (type.includes('image_generation.in_progress')) return <Palette className={`h-4 w-4 ${isAnimated ? 'animate-spin' : ''}`} />;
+                      if (type.includes('image_generation.executing')) return <Image className={`h-4 w-4 ${isAnimated ? 'animate-bounce' : ''}`} />;
+                      if (type.includes('image_generation.completed')) return <Image className="h-4 w-4" />;
+                      
+                      // File search events
+                      if (type.includes('file_search.in_progress')) return <Search className={`h-4 w-4 ${isAnimated ? 'animate-pulse' : ''}`} />;
+                      if (type.includes('file_search.executing')) return <Database className={`h-4 w-4 ${isAnimated ? 'animate-pulse' : ''}`} />;
+                      if (type.includes('file_search.completed')) return <FileText className="h-4 w-4" />;
+                      
+                      // Agentic search events
+                      if (type.includes('agentic_search.in_progress')) return <Cpu className={`h-4 w-4 ${isAnimated ? 'animate-pulse' : ''}`} />;
+                      if (type.includes('agentic_search.executing')) return <Zap className={`h-4 w-4 ${isAnimated ? 'animate-pulse' : ''}`} />;
+                      if (type.includes('agentic_search.completed')) return <Eye className="h-4 w-4" />;
+                      
+                      // Generic events
+                      if (type.includes('error')) return <XCircle className="h-4 w-4" />;
+                      if (type.includes('completed')) return <CheckCircle className="h-4 w-4" />;
+                      
+                      return <Info className="h-4 w-4" />;
+                    };
+
+                    const getEventLogo = (type: string) => {
+                      // Main tool logos with gradients
+                      if (type.includes('image_generation')) {
+                        return (
+                          <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-pink-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <Image className="h-5 w-5 text-white" />
+                          </div>
+                        );
+                      }
+                      
+                      if (type.includes('file_search')) {
+                        return (
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <Search className="h-5 w-5 text-white" />
+                          </div>
+                        );
+                      }
+                      
+                      if (type.includes('agentic_search')) {
+                        return (
+                          <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <Cpu className="h-5 w-5 text-white" />
+                          </div>
+                        );
+                      }
+                      
+                      if (type.includes('output_text')) {
+                        return (
+                          <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-lg flex items-center justify-center shadow-sm">
+                            <FileText className="h-5 w-5 text-white" />
+                          </div>
+                        );
+                      }
+                      
+                      if (type.includes('response.created')) {
+                        return (
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+                            <Play className="h-5 w-5 text-white" />
+                          </div>
+                        );
+                      }
+                      
+                      if (type.includes('response.completed')) {
+                        return (
+                          <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center shadow-sm">
+                            <CheckCircle className="h-5 w-5 text-white" />
+                          </div>
+                        );
+                      }
+                      
+                      if (type.includes('error')) {
+                        return (
+                          <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center shadow-sm">
+                            <XCircle className="h-5 w-5 text-white" />
+                          </div>
+                        );
+                      }
+                      
+                      // Default logo
+                      return (
+                        <div className="w-10 h-10 bg-gradient-to-br from-gray-400 to-gray-500 rounded-lg flex items-center justify-center shadow-sm">
+                          <Info className="h-5 w-5 text-white" />
+                        </div>
+                      );
                     };
 
                     const getEventColor = (type: string) => {
-                      if (type.includes('created')) return 'border-primary/30 bg-primary/5';
-                      if (type.includes('delta')) return 'border-primary/30 bg-primary/5';
-                      if (type.includes('image_generation')) return 'border-warning/30 bg-warning/5';
-                      if (type.includes('file_search') || type.includes('agentic_search')) return 'border-success/30 bg-success/5';
-                      if (type.includes('completed')) return 'border-success/30 bg-success/5';
-                      if (type.includes('error')) return 'border-error/30 bg-error/5';
-                      return 'border-border bg-muted/50';
+                      if (type.includes('response.created')) return 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30';
+                      if (type.includes('response.in_progress')) return 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30';
+                      if (type.includes('output_text')) return 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30';
+                      if (type.includes('image_generation')) return 'border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30';
+                      if (type.includes('file_search')) return 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30';
+                      if (type.includes('agentic_search')) return 'border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/30';
+                      if (type.includes('response.completed')) return 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/30';
+                      if (type.includes('error')) return 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30';
+                      return 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-950/30';
                     };
 
                     const getEventTextColor = (type: string) => {
-                      if (type.includes('created')) return 'text-primary';
-                      if (type.includes('delta')) return 'text-primary';
-                      if (type.includes('image_generation')) return 'text-warning';
-                      if (type.includes('file_search') || type.includes('agentic_search')) return 'text-success';
-                      if (type.includes('completed')) return 'text-success';
-                      if (type.includes('error')) return 'text-error';
-                      return 'text-foreground';
+                      if (type.includes('response.created')) return 'text-blue-700 dark:text-blue-300';
+                      if (type.includes('response.in_progress')) return 'text-blue-700 dark:text-blue-300';
+                      if (type.includes('output_text')) return 'text-green-700 dark:text-green-300';
+                      if (type.includes('image_generation')) return 'text-orange-700 dark:text-orange-300';
+                      if (type.includes('file_search')) return 'text-blue-700 dark:text-blue-300';
+                      if (type.includes('agentic_search')) return 'text-purple-700 dark:text-purple-300';
+                      if (type.includes('response.completed')) return 'text-green-700 dark:text-green-300';
+                      if (type.includes('error')) return 'text-red-700 dark:text-red-300';
+                      return 'text-gray-700 dark:text-gray-300';
+                    };
+
+                    const getStatusBadge = (type: string) => {
+                      if (type.includes('in_progress') || type.includes('executing')) {
+                        return (
+                          <Badge variant="outline" className="text-xs bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700 animate-pulse">
+                            <Clock className="h-3 w-3 mr-1" />
+                            In Progress
+                          </Badge>
+                        );
+                      }
+                      
+                      if (type.includes('completed')) {
+                        return (
+                          <Badge variant="outline" className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Completed
+                          </Badge>
+                        );
+                      }
+                      
+                      if (type.includes('error')) {
+                        return (
+                          <Badge variant="outline" className="text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            Error
+                          </Badge>
+                        );
+                      }
+                      
+                      if (type.includes('created')) {
+                        return (
+                          <Badge variant="outline" className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700">
+                            <Play className="h-3 w-3 mr-1" />
+                            Started
+                          </Badge>
+                        );
+                      }
+                      
+                      return (
+                        <Badge variant="outline" className="text-xs bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700">
+                          <Info className="h-3 w-3 mr-1" />
+                          Event
+                        </Badge>
+                      );
+                    };
+
+                    const isActiveEvent = (type: string) => {
+                      return type.includes('in_progress') || type.includes('executing') || type.includes('delta');
+                    };
+
+                    const getEventDescription = (type: string) => {
+                      const descriptions: Record<string, string> = {
+                        'response.created': 'Response session initiated',
+                        'response.in_progress': 'Processing your request',
+                        'response.output_text.delta': 'Streaming text response',
+                        'response.output_text.done': 'Text response completed',
+                        'response.image_generation.in_progress': 'Starting image generation',
+                        'response.image_generation.executing': 'Creating your image',
+                        'response.image_generation.completed': 'Image generation finished',
+                        'response.file_search.in_progress': 'Searching documents',
+                        'response.file_search.executing': 'Analyzing search results',
+                        'response.file_search.completed': 'Document search finished',
+                        'response.agentic_search.in_progress': 'Performing intelligent search',
+                        'response.agentic_search.executing': 'Processing search query',
+                        'response.agentic_search.completed': 'Agentic search finished',
+                        'response.completed': 'Request completed successfully'
+                      };
+                      
+                      return descriptions[type] || type.replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                     };
 
                     return (
                       <div
                         key={event.id}
-                        className={`p-4 rounded-lg border transition-all duration-200 hover:shadow-sm ${getEventColor(event.type)}`}
+                        className={`p-5 rounded-xl border transition-all duration-300 hover:shadow-lg hover:scale-[1.02] ${getEventColor(event.type)} ${
+                          isActiveEvent(event.type) ? 'ring-2 ring-blue-200 dark:ring-blue-800 shadow-md' : ''
+                        }`}
                       >
-                        <div className="flex items-start space-x-3">
-                          <div className="flex-shrink-0 mt-1">
-                            <div className={`p-2 rounded-full ${getEventColor(event.type)} ${getEventTextColor(event.type)}`}>
-                              {getEventIcon(event.type)}
+                        <div className="flex items-start space-x-4">
+                          <div className="flex-shrink-0">
+                            <div className={`relative ${isActiveEvent(event.type) ? 'animate-pulse' : ''}`}>
+                              {getEventLogo(event.type)}
+                              {isActiveEvent(event.type) && (
+                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                  <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <h4 className={`text-sm font-semibold ${getEventTextColor(event.type)}`}>
-                                {event.type}
-                              </h4>
-                              <Badge variant="outline" className="text-xs font-mono">
-                                #{index + 1}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground font-mono">
-                                {new Date(event.timestamp).toLocaleTimeString()}
-                              </span>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center space-x-3">
+                                <h4 className={`text-base font-bold ${getEventTextColor(event.type)}`}>
+                                  {getEventDescription(event.type)}
+                                </h4>
+                                {getStatusBadge(event.type)}
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <Badge variant="outline" className="text-xs font-mono bg-gray-100 dark:bg-gray-800">
+                                  #{index + 1}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                                  {new Date(event.timestamp).toLocaleTimeString()}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="mb-3">
+                              <p className="text-sm text-muted-foreground font-mono bg-gray-50 dark:bg-gray-900/50 px-3 py-2 rounded-lg border">
+                                <span className="font-semibold">Event Type:</span> {event.type}
+                              </p>
                             </div>
                             
                             {event.delta && (
-                              <div className="mb-2">
-                                <Label className="text-xs font-medium text-muted-foreground">Delta:</Label>
-                                <div className="bg-muted/50 p-2 rounded mt-1 font-mono text-xs break-all">
+                              <div className="mb-4">
+                                <Label className="text-sm font-semibold text-foreground mb-2 block flex items-center">
+                                  <Zap className="h-4 w-4 mr-2 text-blue-500" />
+                                  Streaming Delta
+                                </Label>
+                                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3 rounded-lg font-mono text-sm break-all">
                                   {JSON.stringify(event.delta)}
                                 </div>
                               </div>
                             )}
                             
                             {event.text && (
-                              <div className="mb-2">
-                                <Label className="text-xs font-medium text-muted-foreground">Text:</Label>
-                                <div className="bg-muted/50 p-2 rounded mt-1 text-xs max-h-32 overflow-y-auto">
+                              <div className="mb-4">
+                                <Label className="text-sm font-semibold text-foreground mb-2 block flex items-center">
+                                  <FileText className="h-4 w-4 mr-2 text-green-500" />
+                                  Response Text
+                                </Label>
+                                <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3 rounded-lg text-sm max-h-32 overflow-y-auto">
                                   {event.text}
                                 </div>
                               </div>
@@ -2757,14 +3035,15 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                             
                             <Collapsible>
                               <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground">
-                                  <ChevronDown className="h-3 w-3 mr-1" />
-                                  Raw Event Data
+                                <Button variant="outline" size="sm" className="h-8 px-3 text-xs bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                  <Code2 className="h-3 w-3 mr-2" />
+                                  View Raw Event Data
+                                  <ChevronDown className="h-3 w-3 ml-2" />
                                 </Button>
                               </CollapsibleTrigger>
                               <CollapsibleContent>
-                                <div className="bg-muted/80 p-3 rounded-lg mt-2 font-mono text-xs overflow-auto max-h-48">
-                                  <pre className="whitespace-pre-wrap break-all">
+                                <div className="bg-gray-900 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 p-4 rounded-lg mt-3 font-mono text-xs overflow-auto max-h-64">
+                                  <pre className="whitespace-pre-wrap break-all text-green-400">
                                     {JSON.stringify(event, null, 2)}
                                   </pre>
                                 </div>
@@ -2778,12 +3057,17 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                 )}
               </div>
             </ScrollArea>
-            <div className="flex justify-between items-center pt-4 border-t border-border">
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                <Sparkles className="h-4 w-4" />
-                <span>Real-time streaming events captured during API communication</span>
+            <div className="flex justify-between items-center pt-6 border-t border-border bg-gray-50 dark:bg-gray-900/50 -mx-6 -mb-6 px-6 py-4 rounded-b-lg">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
+                  <Activity className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Live Event Monitoring</p>
+                  <p className="text-xs text-muted-foreground">Real-time streaming events captured during API communication</p>
+                </div>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex space-x-3">
                 <Button
                   variant="outline"
                   size="sm"
@@ -2791,7 +3075,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                     navigator.clipboard.writeText(JSON.stringify(streamingEvents, null, 2));
                     toast.success('Events copied to clipboard!');
                   }}
-                  className="border-border text-foreground hover:bg-accent"
+                  className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <Copy className="h-3 w-3 mr-2" />
                   Copy Events
@@ -2800,12 +3084,16 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                   variant="outline"
                   size="sm"
                   onClick={() => setStreamingEvents([])}
-                  className="border-border text-foreground hover:bg-accent"
+                  className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <Trash2 className="h-3 w-3 mr-2" />
                   Clear Events
                 </Button>
-                <Button variant="outline" onClick={() => setShowEventsModal(false)} className="border-border text-foreground hover:bg-accent">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowEventsModal(false)} 
+                  className="bg-blue-500 hover:bg-blue-600 border-blue-500 text-white transition-colors"
+                >
                   Close
                 </Button>
               </div>
