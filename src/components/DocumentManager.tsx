@@ -81,6 +81,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
   const [viewingFile, setViewingFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
   const [loadingFileContent, setLoadingFileContent] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     if (apiKey && baseUrl) {
@@ -606,6 +607,25 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
                       </div>
                     </div>
                     <div className="flex items-center space-x-2 flex-shrink-0">
+                      {/* Add to Vector Store Dropdown */}
+                      {vectorStores.length > 0 && (
+                        <div className="relative">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenDropdown(openDropdown === file.id ? null : file.id);
+                            }}
+                            className="border-success/30 dark:border-success/40 text-success dark:text-success-light hover:bg-success/5 dark:hover:bg-success/10"
+                            title="Add to vector store"
+                          >
+                            <Database className="h-3 w-3 mr-1" />
+                            Add to Store
+                          </Button>
+                        </div>
+                      )}
+                      
                       <Button
                         variant="outline"
                         size="sm"
@@ -615,7 +635,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
                       >
                         <Eye className="h-3 w-3" />
                       </Button>
-                        <Button
+                      <Button
                         variant="outline"
                         size="sm"
                           onClick={() => setDeleteDialog({
@@ -786,7 +806,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
                       <div className="flex items-center space-x-4 mt-2">
                         <span className="text-xs text-muted-foreground flex items-center">
                           <FileText className="h-3 w-3 mr-1" />
-                          {store.file_count || 0} files
+                          {vectorStoreFiles[store.id]?.length || 0} files
                         </span>
                         <span className="text-xs text-muted-foreground flex items-center">
                           <Clock className="h-3 w-3 mr-1" />
@@ -846,6 +866,71 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
                     </Button>
                   </div>
                 </div>
+                
+                {/* Vector Store Files List */}
+                {vectorStoreFiles[store.id] && vectorStoreFiles[store.id].length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <div className="flex items-center justify-between mb-3">
+                      <h5 className="text-sm font-medium text-foreground flex items-center">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Files in Store ({vectorStoreFiles[store.id].length})
+                      </h5>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => loadVectorStoreFiles(store.id)}
+                        className="border-border text-foreground hover:bg-accent"
+                        title="Refresh files"
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {vectorStoreFiles[store.id].map((file) => {
+                        const originalFile = documents.find(doc => file.id.includes(doc.id));
+                        const filename = file.attributes?.filename || originalFile?.filename || 'Unknown file';
+                        
+                        return (
+                          <div key={file.id} className="flex items-center justify-between p-2 bg-muted rounded-lg border border-border">
+                            <div className="flex items-center space-x-2 flex-1 min-w-0">
+                              <div className={`w-2 h-2 rounded-full ${
+                                file.status === 'completed' ? 'bg-success' : 
+                                file.status === 'in_progress' ? 'bg-warning animate-pulse' : 
+                                'bg-error'
+                              }`} />
+                              <FileText className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                              <span className="text-xs font-medium text-foreground truncate">{filename}</span>
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                file.status === 'completed' ? 'bg-success/10 text-success dark:text-success-light' :
+                                file.status === 'in_progress' ? 'bg-warning/10 text-warning dark:text-warning-light' :
+                                'bg-error/10 text-error dark:text-error-light'
+                              }`}>
+                                {file.status === 'in_progress' ? 'Processing...' : 
+                                 file.status === 'completed' ? 'Ready' : 
+                                 file.status}
+                              </span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setDeleteDialog({
+                                isOpen: true,
+                                type: 'fileFromVectorStore',
+                                itemId: file.id,
+                                vectorStoreId: store.id,
+                                itemName: filename
+                              })}
+                              className="border-error/30 dark:border-error/40 text-error dark:text-error-light hover:bg-error/5 dark:hover:bg-error/10"
+                              title="Remove from store"
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}
@@ -890,6 +975,108 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Add to Vector Store Dropdown Portal */}
+      {openDropdown && (
+        <>
+          {/* Backdrop to close dropdown */}
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => setOpenDropdown(null)}
+          />
+          {/* Dropdown menu - Large Modal Style */}
+          <div className="fixed z-50 bg-card border border-border rounded-xl shadow-2xl w-96 max-w-[90vw]" 
+               style={{
+                 top: '50%',
+                 left: '50%',
+                 transform: 'translate(-50%, -50%)'
+               }}>
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-border">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-success/10 dark:bg-success/20 rounded-lg flex items-center justify-center">
+                  <Database className="h-5 w-5 text-success dark:text-success-light" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Add to Vector Store</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Select a store to add "{documents.find(f => f.id === openDropdown)?.filename || 'this file'}"
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setOpenDropdown(null)}
+                className="border-border text-foreground hover:bg-accent"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {/* Content */}
+            <div className="p-6 space-y-3 max-h-64 overflow-y-auto">
+              {vectorStores.map((store) => {
+                const isInStore = isFileInVectorStore(openDropdown, store.id);
+                return (
+                  <button
+                    key={store.id}
+                    onClick={() => {
+                      if (!isInStore) {
+                        addFileToVectorStore(openDropdown, store.id);
+                        setOpenDropdown(null);
+                      }
+                    }}
+                    disabled={isInStore || isLoading}
+                    className={`w-full text-left p-4 rounded-lg border transition-all duration-200 ${
+                      isInStore
+                        ? 'bg-success/5 border-success/20 cursor-not-allowed'
+                        : 'hover:bg-accent border-border hover:border-success/50 hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                          isInStore ? 'bg-success/10 dark:bg-success/20' : 'bg-muted'
+                        }`}>
+                          <Database className={`h-4 w-4 ${
+                            isInStore ? 'text-success dark:text-success-light' : 'text-muted-foreground'
+                          }`} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-foreground truncate">{store.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {vectorStoreFiles[store.id]?.length || 0} files • Created {store.created_at ? new Date(store.created_at * 1000).toLocaleDateString() : 'Unknown'}
+                          </p>
+                        </div>
+                      </div>
+                      {isInStore ? (
+                        <div className="flex items-center space-x-2 text-success dark:text-success-light">
+                          <Check className="h-4 w-4" />
+                          <span className="text-xs font-medium">Added</span>
+                        </div>
+                      ) : (
+                        <Plus className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            
+            {/* Footer */}
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-border bg-muted/30">
+              <Button
+                variant="outline"
+                onClick={() => setOpenDropdown(null)}
+                className="border-border text-foreground hover:bg-accent"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Delete Confirmation Dialog - Enhanced with Geist UI */}
