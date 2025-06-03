@@ -550,46 +550,20 @@ const ImageGenerator: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* GitHub Star Banner */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2">
-        <div className="flex items-center justify-center space-x-2 text-sm">
-          <Star className="h-4 w-4 fill-current" />
-          <span>Like this project? Star us on GitHub!</span>
-          <a 
-            href="https://github.com/masaic-ai-platform/open-responses" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="inline-flex items-center space-x-1 bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition-colors duration-200"
-          >
-            <span className="font-medium">⭐ Star</span>
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        </div>
-      </div>
+    <div className="flex flex-col h-full bg-gray-50 relative">
 
-      {/* Header */}
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">OpenResponses Chat</h1>
-          <p className="text-sm text-gray-500">
-            Chat with AI and generate images using OpenResponses API
-            {selectedVectorStore && (
-              <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                📁 File Search Enabled
-              </span>
-            )}
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={resetConversation}
-            title="Reset conversation"
-          >
-            <Trash className="h-4 w-4" />
-          </Button>
+      {/* Floating Action Buttons */}
+      <div className="fixed right-4 top-40 z-50 flex flex-col space-y-3">
+        <Button 
+          variant="outline" 
+          size="icon"
+          onClick={resetConversation}
+          title="Reset conversation"
+          className="h-12 w-12 rounded-full shadow-lg bg-white hover:bg-gray-50 border-2"
+        >
+          <Trash className="h-4 w-4" />
+        </Button>
+        <div className="flex flex-col space-y-3">
           <DocumentModal
             apiKey={apiKey}
             baseUrl={baseUrl}
@@ -622,7 +596,7 @@ const ImageGenerator: React.FC = () => {
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <Card className="p-8 text-center max-w-2xl">
-              <h2 className="text-xl font-semibold mb-4">Welcome to OpenResponses Chat</h2>
+              <h2 className="text-xl font-semibold mb-4">Get Started</h2>
               
               <div className="mb-6 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
                 <h3 className="text-lg font-semibold mb-3 text-blue-800">Prerequisites:</h3>

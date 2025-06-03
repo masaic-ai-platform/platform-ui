@@ -165,7 +165,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon" className="shrink-0">
+        <Button variant="outline" size="icon" className="h-12 w-12 rounded-full shadow-lg bg-white hover:bg-gray-50 border-2" title="Settings">
           <Settings className="h-4 w-4" />
         </Button>
       </DialogTrigger>

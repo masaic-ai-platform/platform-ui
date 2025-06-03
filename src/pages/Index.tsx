@@ -1,8 +1,10 @@
 
-import ImageGenerator from '@/components/ImageGenerator';
+import React from 'react';
+import Chat from './Chat';
 
+// Legacy redirect to Chat page
 const Index = () => {
-  return <ImageGenerator />;
+  return <Chat />;
 };
 
 export default Index;
