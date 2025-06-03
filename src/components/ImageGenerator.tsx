@@ -678,13 +678,13 @@ const ImageGenerator: React.FC = () => {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Ask me anything or describe an image you want to generate..."
-                              className="flex-1 min-h-[60px] resize-none focus:ring-0 transition-colors duration-200"
+              className="flex-1 h-12 resize-none focus:ring-0 transition-colors duration-200 py-3 leading-none"
               disabled={isLoading}
             />
             <Button 
               type="submit" 
               disabled={!inputValue.trim() || isLoading}
-              className="self-end bg-primary hover:bg-primary-light dark:hover:bg-primary-dark text-white font-medium px-6 py-3 transition-colors duration-200 shadow-sm hover:shadow-md"
+              className="h-12 bg-success hover:bg-success-light dark:hover:bg-success-dark text-white font-medium px-6 transition-colors duration-200 shadow-sm hover:shadow-md"
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

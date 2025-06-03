@@ -1974,7 +1974,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
             <div className="max-w-4xl mx-auto">
               <div className="flex space-x-3">
                 <Select value={currentMessageRole} onValueChange={(value: 'user' | 'system') => setCurrentMessageRole(value)}>
-                  <SelectTrigger className="w-20 h-10">
+                  <SelectTrigger className="w-20 h-12">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-card border border-border">
@@ -1988,13 +1988,13 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                     onChange={(e) => setCurrentMessage(e.target.value)}
                     onKeyPress={handleChatKeyPress}
                     placeholder="Type your message..."
-                    className="flex-1 min-h-[40px] max-h-[120px] resize-none focus:border-primary dark:focus:border-primary-light"
+                    className="flex-1 h-12 resize-none focus:border-primary dark:focus:border-primary-light py-3 leading-none"
                     disabled={isLoading}
                   />
                   <Button 
                     onClick={sendChatMessage}
                     disabled={!currentMessage.trim() || isLoading}
-                    className="h-10 px-4 bg-primary hover:bg-primary-light dark:bg-primary-light dark:hover:bg-primary text-white shadow-sm border border-primary/20 dark:border-primary/30"
+                    className="h-12 px-4 bg-success hover:bg-success-light dark:bg-success-light dark:hover:bg-success text-white shadow-sm border border-success/20 dark:border-success/30"
                   >
                     <Send className="h-4 w-4 text-white" />
                   </Button>
