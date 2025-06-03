@@ -9,13 +9,15 @@ interface DocumentModalProps {
   baseUrl: string;
   selectedVectorStore?: string;
   onVectorStoreSelect?: (vectorStoreId: string) => void;
+  variant?: 'floating' | 'inline';
 }
 
 const DocumentModal: React.FC<DocumentModalProps> = ({
   apiKey,
   baseUrl,
   selectedVectorStore,
-  onVectorStoreSelect
+  onVectorStoreSelect,
+  variant = 'floating'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const isFileSearchEnabled = selectedVectorStore && selectedVectorStore.length > 0;
@@ -23,22 +25,42 @@ const DocumentModal: React.FC<DocumentModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="icon" 
-          className={`h-12 w-12 rounded-lg shadow-md border transition-all duration-200 ${
-            isFileSearchEnabled 
-              ? 'border-success bg-success/5 dark:bg-success/10 hover:bg-success/10 dark:hover:bg-success/20 border-success/30 dark:border-success/40' 
-              : 'border-border bg-card hover:bg-accent hover:border-ring'
-          }`} 
-          title={isFileSearchEnabled ? "File Search Enabled - Manage Documents" : "Manage Documents"}
-        >
-          <FileText className={`h-4 w-4 ${
-            isFileSearchEnabled 
-              ? 'text-success dark:text-success-light' 
-              : 'text-muted-foreground'
-          }`} />
-        </Button>
+        {variant === 'floating' ? (
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className={`h-12 w-12 rounded-lg shadow-md border transition-all duration-200 ${
+              isFileSearchEnabled 
+                ? 'border-success bg-success/5 dark:bg-success/10 hover:bg-success/10 dark:hover:bg-success/20 border-success/30 dark:border-success/40' 
+                : 'border-border bg-card hover:bg-accent hover:border-ring'
+            }`} 
+            title={isFileSearchEnabled ? "File Search Enabled - Manage Documents" : "Manage Documents"}
+          >
+            <FileText className={`h-4 w-4 ${
+              isFileSearchEnabled 
+                ? 'text-success dark:text-success-light' 
+                : 'text-muted-foreground'
+            }`} />
+          </Button>
+        ) : (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className={`h-9 px-3 border transition-all duration-200 ${
+              isFileSearchEnabled 
+                ? 'border-success bg-success/5 dark:bg-success/10 hover:bg-success/10 dark:hover:bg-success/20 border-success/30 dark:border-success/40 text-success dark:text-success-light' 
+                : 'border-border bg-card hover:bg-accent hover:border-ring text-muted-foreground'
+            }`} 
+            title={isFileSearchEnabled ? "File Search Enabled - Manage Documents" : "Manage Documents"}
+          >
+            <FileText className={`h-3 w-3 mr-2 ${
+              isFileSearchEnabled 
+                ? 'text-success dark:text-success-light' 
+                : 'text-muted-foreground'
+            }`} />
+            {isFileSearchEnabled ? 'Manage Docs' : 'Select Store'}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-5xl max-h-[85vh] overflow-hidden flex flex-col bg-card border border-border">
         <DialogHeader className="shrink-0 pb-6 border-b border-border">

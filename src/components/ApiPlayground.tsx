@@ -46,6 +46,7 @@ import {
   Palette
 } from 'lucide-react';
 import { toast } from 'sonner';
+import DocumentModal from './DocumentModal';
 
 interface Tool {
   type: string;
@@ -172,12 +173,14 @@ const ApiPlayground: React.FC = () => {
   const [showEventsModal, setShowEventsModal] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [selectedVectorStore, setSelectedVectorStore] = useState<string>('');
 
   // Load settings from localStorage
   useEffect(() => {
     const savedApiKey = localStorage.getItem('imageGen_apiKey') || '';
     const savedBaseUrl = localStorage.getItem('imageGen_baseUrl') || 'http://localhost:8080';
     const savedModelProvider = localStorage.getItem('imageGen_modelProvider') || 'openai';
+    const savedSelectedVectorStore = localStorage.getItem('imageGen_selectedVectorStore') || '';
     const savedPresets = localStorage.getItem('apiPlayground_presets');
     
     setState(prev => ({
@@ -186,6 +189,8 @@ const ApiPlayground: React.FC = () => {
       baseUrl: savedBaseUrl,
       modelProvider: savedModelProvider
     }));
+    
+    setSelectedVectorStore(savedSelectedVectorStore);
 
     if (savedPresets) {
       try {
@@ -341,7 +346,7 @@ const ApiPlayground: React.FC = () => {
     // Add default configurations for specific tools
     switch (toolType) {
       case 'file_search':
-        newTool.vector_store_ids = [''];
+        newTool.vector_store_ids = selectedVectorStore ? [selectedVectorStore] : [''];
         newTool.max_num_results = 5;
         // Generate default alias for multiple instances
         const fileSearchCount = state.tools.filter(t => t.type === 'file_search').length;
@@ -354,7 +359,7 @@ const ApiPlayground: React.FC = () => {
         newTool.model_provider_key = 'YOUR_IMAGE_PROVIDER_KEY';
         break;
       case 'agentic_search':
-        newTool.vector_store_ids = [''];
+        newTool.vector_store_ids = selectedVectorStore ? [selectedVectorStore] : [''];
         newTool.max_num_results = 5;
         // Generate default alias for multiple instances
         const agenticSearchCount = state.tools.filter(t => t.type === 'agentic_search').length;
@@ -1103,6 +1108,18 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
 
   const closeConfigPanel = () => {
     setActiveConfigPanel(null);
+  };
+
+  const handleVectorStoreSelect = (vectorStoreId: string | null) => {
+    const storeId = vectorStoreId || '';
+    setSelectedVectorStore(storeId);
+    localStorage.setItem('imageGen_selectedVectorStore', storeId);
+    
+    if (vectorStoreId) {
+      toast.success('Vector store selected for file search');
+    } else {
+      toast.success('Vector store deselected');
+    }
   };
 
   // Image rendering functions (adapted from ChatMessage component)
@@ -1914,12 +1931,53 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                             </div>
                             <div>
                               <Label className="text-sm font-medium text-foreground mb-2 block">Vector Store IDs</Label>
-                              <Input
-                                value={Array.isArray(tool.vector_store_ids) ? tool.vector_store_ids.join(', ') : tool.vector_store_ids || ''}
-                                onChange={(e) => updateTool(index, 'vector_store_ids', e.target.value.split(',').map(id => id.trim()))}
-                                placeholder="vs_123, vs_456"
-                                className="h-9"
-                              />
+                              <div className="space-y-3">
+                                <div className="flex space-x-2">
+                                  <Input
+                                    value={Array.isArray(tool.vector_store_ids) ? tool.vector_store_ids.join(', ') : tool.vector_store_ids || ''}
+                                    onChange={(e) => updateTool(index, 'vector_store_ids', e.target.value.split(',').map(id => id.trim()))}
+                                    placeholder="vs_123, vs_456"
+                                    className="h-9 flex-1"
+                                  />
+                                  <DocumentModal
+                                    apiKey={state.apiKey}
+                                    baseUrl={state.baseUrl}
+                                    selectedVectorStore={selectedVectorStore}
+                                    onVectorStoreSelect={handleVectorStoreSelect}
+                                    variant="inline"
+                                  />
+                                </div>
+                                {selectedVectorStore && (
+                                  <div className="flex items-center justify-between p-3 bg-success/5 dark:bg-success/10 border border-success/20 dark:border-success/30 rounded-lg">
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-2 h-2 bg-success rounded-full"></div>
+                                      <span className="text-sm font-medium text-success dark:text-success-light">
+                                        Selected Vector Store: {selectedVectorStore}
+                                      </span>
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const currentIds = Array.isArray(tool.vector_store_ids) ? tool.vector_store_ids : [];
+                                        if (!currentIds.includes(selectedVectorStore)) {
+                                          updateTool(index, 'vector_store_ids', [...currentIds.filter(id => id.trim()), selectedVectorStore]);
+                                          toast.success('Vector store ID added to tool');
+                                        } else {
+                                          toast.info('Vector store ID already added');
+                                        }
+                                      }}
+                                      className="h-7 px-3 text-xs bg-success/10 dark:bg-success/20 text-success dark:text-success-light border-success/30 dark:border-success/40 hover:bg-success/20 dark:hover:bg-success/30"
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" />
+                                      Use Selected
+                                    </Button>
+                                  </div>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                  Enter vector store IDs manually or use the document manager to select and add them automatically
+                                </p>
+                              </div>
                             </div>
                             <div>
                               <Label className="text-sm font-medium text-foreground mb-2 block">Max Results</Label>
@@ -1961,12 +2019,53 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                             </div>
                             <div>
                               <Label className="text-sm font-medium text-foreground mb-2 block">Vector Store IDs</Label>
-                              <Input
-                                value={Array.isArray(tool.vector_store_ids) ? tool.vector_store_ids.join(', ') : tool.vector_store_ids || ''}
-                                onChange={(e) => updateTool(index, 'vector_store_ids', e.target.value.split(',').map(id => id.trim()))}
-                                placeholder="vs_123, vs_456"
-                                className="h-9"
-                              />
+                              <div className="space-y-3">
+                                <div className="flex space-x-2">
+                                  <Input
+                                    value={Array.isArray(tool.vector_store_ids) ? tool.vector_store_ids.join(', ') : tool.vector_store_ids || ''}
+                                    onChange={(e) => updateTool(index, 'vector_store_ids', e.target.value.split(',').map(id => id.trim()))}
+                                    placeholder="vs_123, vs_456"
+                                    className="h-9 flex-1"
+                                  />
+                                  <DocumentModal
+                                    apiKey={state.apiKey}
+                                    baseUrl={state.baseUrl}
+                                    selectedVectorStore={selectedVectorStore}
+                                    onVectorStoreSelect={handleVectorStoreSelect}
+                                    variant="inline"
+                                  />
+                                </div>
+                                {selectedVectorStore && (
+                                  <div className="flex items-center justify-between p-3 bg-success/5 dark:bg-success/10 border border-success/20 dark:border-success/30 rounded-lg">
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-2 h-2 bg-success rounded-full"></div>
+                                      <span className="text-sm font-medium text-success dark:text-success-light">
+                                        Selected Vector Store: {selectedVectorStore}
+                                      </span>
+                                    </div>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const currentIds = Array.isArray(tool.vector_store_ids) ? tool.vector_store_ids : [];
+                                        if (!currentIds.includes(selectedVectorStore)) {
+                                          updateTool(index, 'vector_store_ids', [...currentIds.filter(id => id.trim()), selectedVectorStore]);
+                                          toast.success('Vector store ID added to tool');
+                                        } else {
+                                          toast.info('Vector store ID already added');
+                                        }
+                                      }}
+                                      className="h-7 px-3 text-xs bg-success/10 dark:bg-success/20 text-success dark:text-success-light border-success/30 dark:border-success/40 hover:bg-success/20 dark:hover:bg-success/30"
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" />
+                                      Use Selected
+                                    </Button>
+                                  </div>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                  Enter vector store IDs manually or use the document manager to select and add them automatically
+                                </p>
+                              </div>
                             </div>
                             <div>
                               <Label className="text-sm font-medium text-foreground mb-2 block">Max Results</Label>
@@ -2479,6 +2578,12 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
           >
             <Trash2 className="h-4 w-4" />
           </Button>
+          <DocumentModal
+            apiKey={state.apiKey}
+            baseUrl={state.baseUrl}
+            selectedVectorStore={selectedVectorStore}
+            onVectorStoreSelect={handleVectorStoreSelect}
+          />
           {streamingEvents.length > 0 && (
             <Button 
               variant="outline" 
