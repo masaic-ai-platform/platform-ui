@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, FileText, Database, Trash2, Plus, Loader2, Check, X, AlertTriangle } from 'lucide-react';
+import { Upload, FileText, Database, Trash2, Plus, Loader2, Check, X, AlertTriangle, Clock, CheckCircle, Eye, Copy, RefreshCw, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -75,6 +75,12 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
     itemId: '',
     itemName: ''
   });
+  const [showCreateVectorStore, setShowCreateVectorStore] = useState(false);
+  const [newVectorStoreExpires, setNewVectorStoreExpires] = useState('7');
+  const [newVectorStoreDescription, setNewVectorStoreDescription] = useState('');
+  const [viewingFile, setViewingFile] = useState<string | null>(null);
+  const [fileContent, setFileContent] = useState<string>('');
+  const [loadingFileContent, setLoadingFileContent] = useState(false);
 
   useEffect(() => {
     if (apiKey && baseUrl) {
@@ -443,276 +449,499 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
     return files.some(file => file.id.includes(fileId));
   };
 
+  const viewFileContent = async (fileId: string) => {
+    setViewingFile(fileId);
+    setLoadingFileContent(true);
+    setFileContent('');
+
+    try {
+      const response = await fetch(`${baseUrl}/v1/files/${fileId}/content`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+        },
+      });
+
+      if (response.ok) {
+        const content = await response.text();
+        setFileContent(content);
+      } else {
+        setFileContent('Failed to load file content');
+      }
+    } catch (error) {
+      console.error('Error loading file content:', error);
+      setFileContent('Error loading file content');
+    } finally {
+      setLoadingFileContent(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Confirmation Dialog */}
-      <AlertDialog 
-        open={deleteDialog.isOpen} 
-        onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, isOpen: open })}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center">
-              <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
-              Confirm Delete
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteDialog.type === 'file' && (
-                <>Are you sure you want to delete <strong>{deleteDialog.itemName}</strong>?</>
-              )}
-              {deleteDialog.type === 'vectorStore' && (
-                <>Are you sure you want to delete the vector store <strong>{deleteDialog.itemName}</strong>?</>
-              )}
-              {deleteDialog.type === 'fileFromVectorStore' && (
-                <>Are you sure you want to remove <strong>{deleteDialog.itemName}</strong> from this vector store?</>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteConfirm}
-              className="bg-red-500 hover:bg-red-600"
-              disabled={isLoading}
-            >
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Document Upload Section */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <Upload className="mr-2 h-5 w-5" />
-          Upload Documents
-        </h3>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="file-upload">Choose File</Label>
-            <Input
-              id="file-upload"
-              type="file"
-              accept=".pdf,.txt,.doc,.docx,.md"
-              onChange={handleFileUpload}
-              disabled={uploadingFile}
-            />
-            {uploadingFile && (
-              <div className="mt-2 flex items-center text-sm text-gray-600">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Uploading document...
-              </div>
-            )}
+    <div className="space-y-8">
+      {/* Header Section with Geist UI styling */}
+      <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-success/5 dark:from-primary/10 dark:via-primary/20 dark:to-success/10 p-6 rounded-xl border border-primary/20 dark:border-primary/30">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-primary/10 dark:bg-primary/20 rounded-lg flex items-center justify-center">
+              <Database className="h-6 w-6 text-primary dark:text-primary-light" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-foreground dark:text-white">Document Library</h2>
+              <p className="text-sm text-accentGray-5 dark:text-accentGray-4 mt-1">
+                Upload files and organize them into searchable vector stores
+              </p>
+            </div>
           </div>
-          <p className="text-sm text-gray-600">
-            Supported formats: PDF, TXT, DOC, DOCX, MD
-          </p>
-        </div>
-      </Card>
-
-      {/* Vector Stores Section */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <Database className="mr-2 h-5 w-5" />
-          Vector Stores
-        </h3>
-        
-        {/* Create New Vector Store */}
-        <div className="space-y-4 mb-6">
-          <div className="flex space-x-2">
-            <Input
-              placeholder="Enter vector store name..."
-              value={newVectorStoreName}
-              onChange={(e) => setNewVectorStoreName(e.target.value)}
-              disabled={isLoading}
-            />
-            <Button 
-              onClick={createVectorStore}
-              disabled={isLoading || !newVectorStoreName.trim()}
+          <div className="flex items-center space-x-3">
+            <Button
+              onClick={loadVectorStores}
+              variant="outline"
               size="sm"
+              disabled={isLoading}
+              className="border-accentGray-2 dark:border-accentGray-6 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6"
             >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Plus className="h-4 w-4" />
-              )}
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Refresh
             </Button>
           </div>
         </div>
 
-        {/* Vector Stores List */}
-        <div className="space-y-2">
-          {vectorStores.map((store) => (
-            <div
-              key={store.id}
-              className={`p-3 border rounded-lg transition-colors ${
-                selectedVectorStore === store.id
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="flex justify-between items-center">
-                <div 
-                  className="flex-grow cursor-pointer"
-                  onClick={() => {
-                    if (selectedVectorStore === store.id) {
-                      onVectorStoreSelect?.(null); // Deselect if already selected
-                    } else {
-                      onVectorStoreSelect?.(store.id); // Select if not selected
-                    }
-                  }}
-                >
-                  <p className="font-medium">{store.name}</p>
-                  <p className="text-sm text-gray-600">
-                    {store.file_count} files • Created {new Date(store.created_at * 1000).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {selectedVectorStore === store.id && (
-                    <div className="text-blue-600 text-sm font-medium mr-2">
-                      Selected
-                    </div>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => setDeleteDialog({
-                      isOpen: true,
-                      type: 'vectorStore',
-                      itemId: store.id,
-                      itemName: store.name
-                    })}
-                    disabled={isLoading}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+        {/* Quick Stats - New Geist UI section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+          <div className="bg-background1/50 dark:bg-accentGray-8/50 backdrop-blur-sm rounded-lg p-4 border border-accentGray-2/50 dark:border-accentGray-6/50">
+            <div className="flex items-center space-x-3">
+              <FileText className="h-5 w-5 text-primary dark:text-primary-light" />
+              <div>
+                <p className="text-xs font-medium text-accentGray-5 dark:text-accentGray-4">Files Uploaded</p>
+                <p className="text-lg font-semibold text-foreground dark:text-white">{documents.length}</p>
               </div>
-
-              {/* List files in this vector store if it has any */}
-              {vectorStoreFiles[store.id] && vectorStoreFiles[store.id].length > 0 && (
-                <div className="mt-3 pt-3 border-t">
-                  <p className="text-sm font-medium mb-2">Files in this store:</p>
-                  <div className="space-y-2">
-                    {vectorStoreFiles[store.id].map(file => (
-                      <div key={file.id} className="flex justify-between items-center text-sm bg-gray-50 p-2 rounded">
-                        <div className="flex items-center">
-                          <span>{file.attributes.filename}</span>
-                          {file.status === 'in_progress' && (
-                            <div className="ml-2 flex items-center text-orange-600">
-                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                              <span className="text-xs">Processing...</span>
-                            </div>
-                          )}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-red-500 hover:text-red-700 h-7 w-7"
-                          onClick={() => setDeleteDialog({
-                            isOpen: true,
-                            type: 'fileFromVectorStore',
-                            itemId: file.id,
-                            vectorStoreId: store.id,
-                            itemName: file.attributes.filename
-                          })}
-                          disabled={isLoading}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
-          ))}
-          {vectorStores.length === 0 && (
-            <p className="text-gray-500 text-center py-4">
-              No vector stores created yet. Create one to get started.
-            </p>
+          </div>
+          <div className="bg-background1/50 dark:bg-accentGray-8/50 backdrop-blur-sm rounded-lg p-4 border border-accentGray-2/50 dark:border-accentGray-6/50">
+            <div className="flex items-center space-x-3">
+              <Database className="h-5 w-5 text-success dark:text-success-light" />
+              <div>
+                <p className="text-xs font-medium text-accentGray-5 dark:text-accentGray-4">Vector Stores</p>
+                <p className="text-lg font-semibold text-foreground dark:text-white">{vectorStores.length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-background1/50 dark:bg-accentGray-8/50 backdrop-blur-sm rounded-lg p-4 border border-accentGray-2/50 dark:border-accentGray-6/50">
+            <div className="flex items-center space-x-3">
+              <Search className="h-5 w-5 text-warning dark:text-warning-light" />
+              <div>
+                <p className="text-xs font-medium text-accentGray-5 dark:text-accentGray-4">Active Store</p>
+                <p className="text-sm font-medium text-foreground dark:text-white truncate">
+                  {selectedVectorStore ? vectorStores.find(vs => vs.id === selectedVectorStore)?.name || 'Unknown' : 'None'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* File Upload Section - Redesigned with Geist UI */}
+      <Card className="p-6 bg-background1 dark:bg-accentGray-7 border border-accentGray-2 dark:border-accentGray-6">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="w-8 h-8 bg-warning/10 dark:bg-warning/20 rounded-lg flex items-center justify-center">
+            <Upload className="h-4 w-4 text-warning dark:text-warning-light" />
+          </div>
+          <h3 className="text-lg font-semibold text-foreground dark:text-white">Upload Documents</h3>
+        </div>
+
+        <div className="space-y-6">
+          <div className="border-2 border-dashed border-accentGray-2 dark:border-accentGray-6 rounded-lg p-6 hover:border-primary/50 dark:hover:border-primary/50 transition-colors duration-200">
+            <div className="text-center">
+              <Upload className="mx-auto h-8 w-8 text-accentGray-4 dark:text-accentGray-5 mb-3" />
+              <h4 className="text-sm font-medium text-foreground dark:text-white mb-2">Choose files to upload</h4>
+              <p className="text-xs text-accentGray-5 dark:text-accentGray-4 mb-4">
+                Supports PDF, TXT, DOCX, MD and other text formats
+              </p>
+              <label className="inline-block">
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileUpload}
+                  className="hidden"
+                  accept=".pdf,.txt,.docx,.md,.json"
+                />
+                <span className="inline-flex items-center justify-center h-10 px-4 py-2 bg-primary hover:bg-primary-light text-white font-medium cursor-pointer rounded-lg transition-colors disabled:opacity-50">
+                  {uploadingFile ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Select Files
+                    </>
+                  )}
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* File List with enhanced Geist UI styling */}
+          {documents.length > 0 && (
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium text-foreground dark:text-white flex items-center">
+                <FileText className="h-4 w-4 mr-2" />
+                Uploaded Files ({documents.length})
+              </h4>
+              <div className="max-h-48 overflow-y-auto space-y-2 border border-accentGray-2 dark:border-accentGray-6 rounded-lg p-3 bg-background2 dark:bg-accentGray-8">
+                {documents.map((file) => (
+                  <div key={file.id} className="flex items-center justify-between p-3 bg-background1 dark:bg-accentGray-7 rounded-lg border border-accentGray-2 dark:border-accentGray-6 hover:shadow-sm transition-shadow">
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <FileText className="h-4 w-4 text-primary dark:text-primary-light flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground dark:text-white truncate">{file.filename}</p>
+                        <div className="flex items-center space-x-4 mt-1">
+                          <span className="text-xs text-accentGray-5 dark:text-accentGray-4">
+                            {Math.round(file.bytes / 1024)} KB
+                          </span>
+                          <span className="text-xs text-accentGray-5 dark:text-accentGray-4">
+                            {file.created_at ? new Date(file.created_at * 1000).toLocaleDateString() : 'Unknown date'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 flex-shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => viewFileContent(file.id)}
+                        className="border-accentGray-2 dark:border-accentGray-6 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6"
+                        title="View content"
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeleteDialog({
+                          isOpen: true,
+                          type: 'file',
+                          itemId: file.id,
+                          itemName: file.filename
+                        })}
+                        className="border-error/30 dark:border-error/40 text-error dark:text-error-light hover:bg-error/5 dark:hover:bg-error/10"
+                        title="Delete file"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       </Card>
 
-      {/* Documents Section */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <FileText className="mr-2 h-5 w-5" />
-          Uploaded Documents
-        </h3>
-        
-        <div className="space-y-2">
-          {documents.map((doc) => (
-            <div key={doc.id} className="p-3 border rounded-lg">
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="flex items-center">
-                    <p className="font-medium">{doc.filename}</p>
+      {/* Vector Store Management - Redesigned with Geist UI */}
+      <Card className="p-6 bg-background1 dark:bg-accentGray-7 border border-accentGray-2 dark:border-accentGray-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-success/10 dark:bg-success/20 rounded-lg flex items-center justify-center">
+              <Database className="h-4 w-4 text-success dark:text-success-light" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground dark:text-white">Vector Stores</h3>
+          </div>
+          <Button
+            onClick={() => setShowCreateVectorStore(true)}
+            className="bg-success hover:bg-success-light text-white font-medium"
+            disabled={documents.length === 0}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Store
+          </Button>
+        </div>
+
+        {/* Create Vector Store Form */}
+        {showCreateVectorStore && (
+          <div className="mb-6 p-6 bg-background2 dark:bg-accentGray-8 border border-accentGray-2 dark:border-accentGray-6 rounded-lg">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-6 h-6 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center">
+                <Plus className="h-3 w-3 text-primary dark:text-primary-light" />
+              </div>
+              <h4 className="text-base font-semibold text-foreground dark:text-white">Create New Vector Store</h4>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="vectorStoreName" className="text-sm font-medium text-foreground dark:text-white">Store Name</Label>
+                  <Input
+                    id="vectorStoreName"
+                    type="text"
+                    placeholder="My Document Store"
+                    value={newVectorStoreName}
+                    onChange={(e) => setNewVectorStoreName(e.target.value)}
+                    className="bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5 focus:border-primary dark:focus:border-primary-light"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-foreground dark:text-white">Expiration</Label>
+                  <select
+                    value={newVectorStoreExpires}
+                    onChange={(e) => setNewVectorStoreExpires(e.target.value)}
+                    className="w-full px-3 py-2 bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white rounded-lg focus:border-primary dark:focus:border-primary-light focus:ring-1 focus:ring-primary/20 dark:focus:ring-primary/30"
+                  >
+                    <option value="1">1 day</option>
+                    <option value="7">7 days</option>
+                    <option value="30">30 days</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="vectorStoreDesc" className="text-sm font-medium text-foreground dark:text-white">Description (Optional)</Label>
+                <Textarea
+                  id="vectorStoreDesc"
+                  placeholder="Describe what documents this store contains..."
+                  value={newVectorStoreDescription}
+                  onChange={(e) => setNewVectorStoreDescription(e.target.value)}
+                  rows={3}
+                  className="resize-none bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5 focus:border-primary dark:focus:border-primary-light"
+                />
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-accentGray-2 dark:border-accentGray-6">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCreateVectorStore(false);
+                    setNewVectorStoreName('');
+                    setNewVectorStoreDescription('');
+                  }}
+                  className="border-accentGray-2 dark:border-accentGray-6 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={createVectorStore}
+                  disabled={!newVectorStoreName.trim() || isLoading}
+                  className="bg-primary hover:bg-primary-light text-white font-medium"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Create Store
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Vector Store List */}
+        <div className="space-y-3">
+          {vectorStores.length === 0 ? (
+            <div className="text-center py-12 border-2 border-dashed border-accentGray-2 dark:border-accentGray-6 rounded-lg">
+              <Database className="mx-auto h-12 w-12 text-accentGray-4 dark:text-accentGray-5 mb-4" />
+              <h4 className="text-sm font-medium text-foreground dark:text-white mb-2">No vector stores yet</h4>
+              <p className="text-xs text-accentGray-5 dark:text-accentGray-4 mb-4">
+                Create your first vector store to organize and search through your documents
+              </p>
+              <Button
+                onClick={() => setShowCreateVectorStore(true)}
+                disabled={documents.length === 0}
+                className="bg-success hover:bg-success-light text-white font-medium"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Store
+              </Button>
+            </div>
+          ) : (
+            vectorStores.map((store) => (
+              <div key={store.id} className={`p-4 rounded-lg border transition-all duration-200 ${
+                selectedVectorStore === store.id
+                  ? 'border-success bg-success/5 dark:bg-success/10 shadow-sm'
+                  : 'border-accentGray-2 dark:border-accentGray-6 bg-background1 dark:bg-accentGray-7 hover:shadow-sm'
+              }`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      selectedVectorStore === store.id
+                        ? 'bg-success/10 dark:bg-success/20'
+                        : 'bg-accentGray-1 dark:bg-accentGray-6'
+                    }`}>
+                      <Database className={`h-5 w-5 ${
+                        selectedVectorStore === store.id
+                          ? 'text-success dark:text-success-light'
+                          : 'text-accentGray-5 dark:text-accentGray-4'
+                      }`} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-base font-semibold text-foreground dark:text-white truncate">{store.name}</h4>
+                      {store.metadata?.description && (
+                        <p className="text-sm text-accentGray-5 dark:text-accentGray-4 mt-1 line-clamp-2">{store.metadata.description}</p>
+                      )}
+                      <div className="flex items-center space-x-4 mt-2">
+                        <span className="text-xs text-accentGray-5 dark:text-accentGray-4 flex items-center">
+                          <FileText className="h-3 w-3 mr-1" />
+                          {store.file_count || 0} files
+                        </span>
+                        <span className="text-xs text-accentGray-5 dark:text-accentGray-4 flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Created {store.created_at ? new Date(store.created_at * 1000).toLocaleDateString() : 'Unknown'}
+                        </span>
+                        {selectedVectorStore === store.id && (
+                          <span className="text-xs font-medium text-success dark:text-success-light bg-success/10 dark:bg-success/20 px-2 py-1 rounded-full flex items-center">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Active
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 flex-shrink-0">
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-red-500 hover:text-red-700 ml-2 h-7 w-7"
-                      onClick={() => setDeleteDialog({
-                        isOpen: true,
-                        type: 'file',
-                        itemId: doc.id,
-                        itemName: doc.filename
-                      })}
-                      disabled={isLoading}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(store.id);
+                        toast.success('Store ID copied to clipboard');
+                      }}
+                      className="border-accentGray-2 dark:border-accentGray-6 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6"
+                      title="Copy ID"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant={selectedVectorStore === store.id ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => onVectorStoreSelect && onVectorStoreSelect(selectedVectorStore === store.id ? '' : store.id)}
+                      className={selectedVectorStore === store.id 
+                        ? "border-success text-success dark:text-success-light hover:bg-success/5 dark:hover:bg-success/10"
+                        : "bg-primary hover:bg-primary-light text-white"
+                      }
+                    >
+                      {selectedVectorStore === store.id ? (
+                        <>
+                          <X className="h-3 w-3 mr-1" />
+                          Deselect
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-3 w-3 mr-1" />
+                          Select
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deleteVectorStore(store.id)}
+                      className="border-error/30 dark:border-error/40 text-error dark:text-error-light hover:bg-error/5 dark:hover:bg-error/10"
+                      title="Delete store"
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
-                  <p className="text-sm text-gray-600">
-                    {formatFileSize(doc.bytes)} • Uploaded {new Date(doc.created_at * 1000).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="flex space-x-2">
-                  {vectorStores.map((store) => {
-                    const isAdded = isFileInVectorStore(doc.id, store.id);
-                    
-                    return (
-                      <Button
-                        key={store.id}
-                        variant={isAdded ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => !isAdded 
-                          ? addFileToVectorStore(doc.id, store.id)
-                          : setDeleteDialog({
-                              isOpen: true,
-                              type: 'fileFromVectorStore',
-                              itemId: doc.id,
-                              vectorStoreId: store.id,
-                              itemName: doc.filename
-                            })
-                        }
-                        disabled={isLoading}
-                        className={isAdded ? "bg-green-500 hover:bg-green-600" : ""}
-                      >
-                        {isAdded ? (
-                          <>
-                            <Check className="h-4 w-4 mr-1" />
-                            Added to {store.name}
-                          </>
-                        ) : (
-                          <>Add to {store.name}</>
-                        )}
-                      </Button>
-                    );
-                  })}
                 </div>
               </div>
-            </div>
-          ))}
-          {documents.length === 0 && (
-            <p className="text-gray-500 text-center py-4">
-              No documents uploaded yet. Upload some documents to get started.
-            </p>
+            ))
           )}
         </div>
       </Card>
+
+      {/* File Content Modal - Enhanced with Geist UI */}
+      {viewingFile && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-background1 dark:bg-accentGray-7 rounded-xl shadow-xl max-w-4xl w-full max-h-[80vh] flex flex-col border border-accentGray-2 dark:border-accentGray-6">
+            <div className="flex items-center justify-between p-6 border-b border-accentGray-2 dark:border-accentGray-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-primary/10 dark:bg-primary/20 rounded-lg flex items-center justify-center">
+                  <Eye className="h-4 w-4 text-primary dark:text-primary-light" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground dark:text-white">File Content</h3>
+                  <p className="text-sm text-accentGray-5 dark:text-accentGray-4">
+                    {documents.find(f => f.id === viewingFile)?.filename || 'Unknown file'}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setViewingFile(null)}
+                className="border-accentGray-2 dark:border-accentGray-6 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingFileContent ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary dark:text-primary-light" />
+                </div>
+              ) : (
+                <pre className="whitespace-pre-wrap text-sm font-mono text-foreground dark:text-white bg-background2 dark:bg-accentGray-8 p-4 rounded-lg border border-accentGray-2 dark:border-accentGray-6 max-h-96 overflow-y-auto">
+                  {fileContent || 'No content available'}
+                </pre>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog - Enhanced with Geist UI */}
+      <AlertDialog open={deleteDialog.isOpen} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, isOpen: open })}>
+        <AlertDialogContent className="bg-background1 dark:bg-accentGray-7 border border-accentGray-2 dark:border-accentGray-6">
+          <AlertDialogHeader>
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-10 h-10 bg-error/10 dark:bg-error/20 rounded-lg flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-error dark:text-error-light" />
+              </div>
+              <div>
+                <AlertDialogTitle className="text-lg font-semibold text-foreground dark:text-white">
+                  Confirm Deletion
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-sm text-accentGray-5 dark:text-accentGray-4 mt-1">
+                  This action cannot be undone
+                </AlertDialogDescription>
+              </div>
+            </div>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-foreground dark:text-white">
+              {deleteDialog.type === 'file' 
+                ? 'Are you sure you want to delete this file? It will be removed from all vector stores.'
+                : 'Are you sure you want to delete this vector store? All associated file associations will be lost.'
+              }
+            </p>
+          </div>
+          <AlertDialogFooter className="flex gap-3">
+            <AlertDialogCancel className="border-accentGray-2 dark:border-accentGray-6 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className="bg-error hover:bg-error-light text-white font-medium"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete {deleteDialog.type === 'file' ? 'File' : 'Store'}
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

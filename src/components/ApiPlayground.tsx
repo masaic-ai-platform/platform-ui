@@ -744,37 +744,37 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
   };
 
   return (
-    <div className="flex h-full bg-gray-50 relative">
-        {/* Left Panel - Main Configuration */}
-        <div className="w-[380px] bg-white border-r flex flex-col shadow-sm">
+    <div className="flex h-full bg-background1 dark:bg-accentGray-8 relative">
+        {/* Left Panel - Main Configuration - Redesigned with Geist UI */}
+        <div className="w-[380px] bg-background1 dark:bg-accentGray-7 border-r border-accentGray-2 dark:border-accentGray-6 flex flex-col shadow-xs">
           {/* Header */}
-          <div className="px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Settings className="h-4 w-4 text-white" />
+          <div className="px-6 py-5 border-b border-accentGray-2 dark:border-accentGray-6 bg-background2 dark:bg-accentGray-8">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-xs">
+                <Settings className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Configuration</h2>
-                <p className="text-xs text-gray-500">API Playground Settings</p>
+                <h2 className="text-lg font-semibold text-foreground dark:text-white">Configuration</h2>
+                <p className="text-xs text-accentGray-5 dark:text-accentGray-4">API Playground Settings</p>
               </div>
             </div>
           </div>
 
           {/* Preset Management */}
-          <div className="px-6 py-4 border-b bg-gray-50/50">
-            <div className="space-y-3">
+          <div className="px-6 py-5 border-b border-accentGray-2 dark:border-accentGray-6 bg-background2/50 dark:bg-accentGray-8/50">
+            <div className="space-y-4">
               <div className="flex items-center space-x-2">
-                <Save className="h-4 w-4 text-gray-600" />
-                <Label className="text-sm font-semibold text-gray-900">Presets</Label>
+                <Save className="h-4 w-4 text-accentGray-6 dark:text-accentGray-3" />
+                <Label className="text-sm font-semibold text-foreground dark:text-white">Presets</Label>
               </div>
               {Object.keys(presets).length > 0 && (
                 <Select onValueChange={loadPreset}>
-                  <SelectTrigger className="h-9 bg-white">
+                  <SelectTrigger className="h-10 bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white">
                     <SelectValue placeholder="Load a preset..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-background1 dark:bg-accentGray-7 border border-accentGray-2 dark:border-accentGray-6">
                     {Object.keys(presets).map((name) => (
-                      <SelectItem key={name} value={name}>{name}</SelectItem>
+                      <SelectItem key={name} value={name} className="text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">{name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -784,10 +784,10 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                   value={presetName}
                   onChange={(e) => setPresetName(e.target.value)}
                   placeholder="Enter preset name..."
-                  className="flex-1 h-9 bg-white"
+                  className="flex-1 h-10 bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5"
                 />
-                <Button variant="outline" size="sm" onClick={savePreset} className="px-3">
-                  <Save className="h-3 w-3 mr-1" />
+                <Button variant="outline" size="sm" onClick={savePreset} className="px-4 border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">
+                  <Save className="h-3 w-3 mr-2" />
                   Save
                 </Button>
               </div>
@@ -795,103 +795,103 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
           </div>
 
           <ScrollArea className="flex-1">
-            <div className="px-6 py-4 space-y-6">
+            <div className="px-6 py-6 space-y-8">
               {/* API Configuration */}
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <button
                   onClick={() => openConfigPanel('api')}
-                  className="flex items-center justify-between w-full text-left group hover:bg-purple-50 p-3 rounded-lg transition-colors"
+                  className="flex items-center justify-between w-full text-left group hover:bg-primary/5 dark:hover:bg-primary/10 p-4 rounded-lg transition-colors duration-200 border border-transparent hover:border-primary/20 dark:hover:border-primary/30"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-primary rounded-full"></div>
                     <div>
-                      <Label className="text-base font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">API & Model Configuration</Label>
-                      <p className="text-xs text-gray-500">Endpoint, authentication & model settings</p>
+                      <Label className="text-base font-semibold text-foreground dark:text-white group-hover:text-primary dark:group-hover:text-primary-light transition-colors">API & Model Configuration</Label>
+                      <p className="text-xs text-accentGray-5 dark:text-accentGray-4">Endpoint, authentication & model settings</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     {state.apiKey && (
-                      <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                      <span className="px-2 py-1 bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light text-xs font-medium rounded border border-primary/20 dark:border-primary/30">
                         Configured
-                      </Badge>
+                      </span>
                     )}
-                    <Settings className="h-4 w-4 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                    <Settings className="h-4 w-4 text-accentGray-4 dark:text-accentGray-5 group-hover:text-primary dark:group-hover:text-primary-light transition-colors" />
                   </div>
                 </button>
                 
                 {/* Quick Model Selection */}
-                <div className="ml-6 space-y-2">
+                <div className="ml-6 space-y-3">
                   <div>
-                    <Label className="text-sm font-medium text-gray-700 mb-2 block">Model</Label>
+                    <Label className="text-sm font-medium text-foreground dark:text-white mb-2 block">Model</Label>
                     <Input
                       value={state.model}
                       onChange={(e) => updateState('model', e.target.value)}
                       placeholder="gpt-4o, claude-3-5-sonnet-20241022, gemini-1.5-pro..."
-                      className="h-9 bg-white border-gray-200 hover:border-purple-300 transition-colors font-mono text-sm"
+                      className="h-10 bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 hover:border-primary/50 dark:hover:border-primary/50 transition-colors font-mono text-sm text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Enter any model name (provider will be auto-detected or set in advanced settings)</p>
+                    <p className="text-xs text-accentGray-5 dark:text-accentGray-4 mt-2">Enter any model name (provider will be auto-detected)</p>
                   </div>
                 </div>
               </div>
 
               {/* System Instructions */}
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <button
                   onClick={() => openConfigPanel('system')}
-                  className="flex items-center justify-between w-full text-left group hover:bg-green-50 p-3 rounded-lg transition-colors"
+                  className="flex items-center justify-between w-full text-left group hover:bg-success/5 dark:hover:bg-success/10 p-4 rounded-lg transition-colors duration-200 border border-transparent hover:border-success/20 dark:hover:border-success/30"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-success rounded-full"></div>
                     <div>
-                      <Label className="text-base font-semibold text-gray-900 group-hover:text-green-600 transition-colors">System Instructions</Label>
-                      <p className="text-xs text-gray-500">Define AI behavior and personality</p>
+                      <Label className="text-base font-semibold text-foreground dark:text-white group-hover:text-success dark:group-hover:text-success-light transition-colors">System Instructions</Label>
+                      <p className="text-xs text-accentGray-5 dark:text-accentGray-4">Define AI behavior and personality</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     {state.instructions && (
-                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                      <span className="px-2 py-1 bg-success/10 dark:bg-success/20 text-success dark:text-success-light text-xs font-medium rounded border border-success/20 dark:border-success/30">
                         Configured
-                      </Badge>
+                      </span>
                     )}
-                    <Settings className="h-4 w-4 text-gray-400 group-hover:text-green-600 transition-colors" />
+                    <Settings className="h-4 w-4 text-accentGray-4 dark:text-accentGray-5 group-hover:text-success dark:group-hover:text-success-light transition-colors" />
                   </div>
                 </button>
               </div>
 
               {/* Temperature */}
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <button
                   onClick={() => toggleSection('temperature')}
-                  className="flex items-center justify-between w-full text-left group"
+                  className="flex items-center justify-between w-full text-left group hover:bg-warning/5 dark:hover:bg-warning/10 p-2 rounded-lg transition-colors duration-200"
                 >
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                    <Label className="text-base font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">Temperature</Label>
-                    <Badge variant="outline" className="text-xs font-mono bg-orange-50 text-orange-700 border-orange-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-2 h-2 bg-warning rounded-full"></div>
+                    <Label className="text-base font-semibold text-foreground dark:text-white group-hover:text-warning dark:group-hover:text-warning-light transition-colors">Temperature</Label>
+                    <span className="px-2 py-1 bg-warning/10 dark:bg-warning/20 text-warning dark:text-warning-light text-xs font-mono rounded border border-warning/20 dark:border-warning/30">
                       {state.temperature}
-                    </Badge>
+                    </span>
                   </div>
-                  {expandedSections.temperature ? 
-                    <ChevronDown className="h-4 w-4 text-gray-400 group-hover:text-orange-600 transition-colors" /> : 
-                    <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-orange-600 transition-colors" />
+                                     {expandedSections.temperature ? 
+                    <ChevronDown className="h-4 w-4 text-accentGray-4 dark:text-accentGray-5 group-hover:text-warning dark:group-hover:text-warning-light transition-colors" /> : 
+                    <ChevronRight className="h-4 w-4 text-accentGray-4 dark:text-accentGray-5 group-hover:text-warning dark:group-hover:text-warning-light transition-colors" />
                   }
                 </button>
                 {expandedSections.temperature && (
-                  <div className="ml-4 space-y-3">
+                  <div className="ml-5 space-y-4">
                     <Slider
                       value={[state.temperature]}
                       onValueChange={([value]) => updateState('temperature', value)}
                       max={2}
                       min={0}
                       step={0.1}
-                      className="w-full"
+                      className="w-full [&_[role=slider]]:bg-warning [&_[role=slider]]:border-warning [&_.relative]:bg-warning/20"
                     />
-                    <div className="flex justify-between text-xs text-gray-500">
+                    <div className="flex justify-between text-xs text-accentGray-5 dark:text-accentGray-4">
                       <span>Focused (0)</span>
                       <span>Balanced (1)</span>
                       <span>Creative (2)</span>
                     </div>
-                    <p className="text-xs text-gray-500 ml-1">Controls randomness in responses</p>
+                    <p className="text-xs text-accentGray-5 dark:text-accentGray-4">Controls randomness in responses</p>
                   </div>
                 )}
               </div>
@@ -1782,15 +1782,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
         )}
 
         {/* Floating Action Buttons */}
-        <div className="fixed right-4 top-40 z-50 flex flex-col space-y-3">
-          <Button 
-            onClick={executeRequest}
-            disabled={isLoading}
-            title="Run Request"
-            className="h-12 w-12 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white border-2 border-blue-600"
-          >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-          </Button>
+        <div className="fixed right-4 top-1/2 -translate-y-1/2 z-50 flex flex-col space-y-3">
           <Button 
             variant="outline" 
             size="icon"

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Settings } from 'lucide-react';
+import { Settings, Check, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface SettingsModalProps {
@@ -165,171 +165,247 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon" className="h-12 w-12 rounded-full shadow-lg bg-white hover:bg-gray-50 border-2" title="Settings">
-          <Settings className="h-4 w-4" />
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="h-12 w-12 rounded-lg shadow-md bg-background1 dark:bg-accentGray-7 hover:bg-background2 dark:hover:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-6 hover:border-accentGray-3 dark:hover:border-accentGray-5 transition-all duration-200" 
+          title="Settings"
+        >
+          <Settings className="h-4 w-4 text-accentGray-6 dark:text-accentGray-3" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
-        <DialogHeader className="shrink-0">
-          <DialogTitle>API Settings</DialogTitle>
-          <DialogDescription>
-            Configure your OpenResponses API settings
-          </DialogDescription>
+      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col bg-background1 dark:bg-accentGray-7 border border-accentGray-2 dark:border-accentGray-6">
+        <DialogHeader className="shrink-0 pb-6 border-b border-accentGray-2 dark:border-accentGray-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-primary/10 dark:bg-primary/20 rounded-lg flex items-center justify-center">
+              <Settings className="h-5 w-5 text-primary dark:text-primary-light" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-semibold text-foreground dark:text-white">API Settings</DialogTitle>
+              <DialogDescription className="text-sm text-accentGray-5 dark:text-accentGray-4 mt-1">
+                Configure your OpenResponses API settings
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto pr-2 space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="baseUrl">Base URL</Label>
-            <div className="flex items-center border rounded-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+
+        <div className="flex-1 overflow-y-auto pr-2 space-y-8 py-6">
+          {/* Base URL Section - Redesigned with Geist UI */}
+          <div className="space-y-3">
+            <Label htmlFor="baseUrl" className="text-base font-medium text-foreground dark:text-white">Base URL</Label>
+            <div className="flex items-center border border-accentGray-2 dark:border-accentGray-5 rounded-lg focus-within:ring-2 focus-within:ring-primary/20 dark:focus-within:ring-primary/30 focus-within:border-primary dark:focus-within:border-primary-light transition-colors duration-200">
               <Input
                 id="baseUrl"
                 type="text"
                 placeholder="http://localhost:8080"
                 value={tempBaseUrl}
                 onChange={(e) => setTempBaseUrl(e.target.value)}
-                className="border-0 rounded-r-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                className="border-0 rounded-r-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5"
               />
-              <div className="bg-gray-50 px-3 py-2 text-sm text-gray-600 font-mono border-l">
+              <div className="bg-background2 dark:bg-accentGray-6 px-4 py-2 text-sm text-accentGray-6 dark:text-accentGray-3 font-mono border-l border-accentGray-2 dark:border-accentGray-5 rounded-r-lg">
                 /v1
               </div>
             </div>
-            <p className="text-xs text-gray-500">The /v1 path will be automatically appended</p>
+            <p className="text-xs text-accentGray-5 dark:text-accentGray-4">The /v1 path will be automatically appended</p>
           </div>
           
-          {/* Chat Model Provider, Model and Key Section */}
-          <div className="space-y-4 border-t pt-4">
-            <h3 className="text-sm font-medium text-gray-900">Chat Model Provider, Model and Key</h3>
-            <div className="space-y-2">
-              <Label htmlFor="apiKey">Chat API Key</Label>
+          {/* Chat Model Provider Section - Redesigned with Geist UI */}
+          <div className="space-y-6 border-t border-accentGray-2 dark:border-accentGray-6 pt-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-3 h-3 bg-primary rounded-full"></div>
+              <h3 className="text-lg font-semibold text-foreground dark:text-white">Chat Model Configuration</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label htmlFor="modelProvider" className="text-sm font-medium text-foreground dark:text-white">Provider</Label>
+                <Select value={tempModelProvider} onValueChange={setTempModelProvider}>
+                  <SelectTrigger className="bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white hover:border-primary/50 dark:hover:border-primary/50 transition-colors">
+                    <SelectValue placeholder="Select provider" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background1 dark:bg-accentGray-7 border border-accentGray-2 dark:border-accentGray-6">
+                    <SelectItem value="openai" className="text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">OpenAI</SelectItem>
+                    <SelectItem value="claude" className="text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">Anthropic (Claude)</SelectItem>
+                    <SelectItem value="groq" className="text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">Groq</SelectItem>
+                    <SelectItem value="gemini" className="text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">Google (Gemini)</SelectItem>
+                    <SelectItem value="deepseek" className="text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">DeepSeek</SelectItem>
+                    <SelectItem value="ollama" className="text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">Ollama</SelectItem>
+                    <SelectItem value="xai" className="text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">xAI (Grok)</SelectItem>
+                    <SelectItem value="custom" className="text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="modelName" className="text-sm font-medium text-foreground dark:text-white">Model Name</Label>
+                <Input
+                  id="modelName"
+                  type="text"
+                  placeholder="gpt-4o, claude-3-5-sonnet-20241022..."
+                  value={tempModelName}
+                  onChange={(e) => setTempModelName(e.target.value)}
+                  className="bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5 font-mono text-sm focus:border-primary dark:focus:border-primary-light"
+                />
+              </div>
+            </div>
+
+            {tempModelProvider === 'custom' && (
+              <div className="space-y-3 p-4 bg-warning/5 dark:bg-warning/10 border border-warning/20 dark:border-warning/30 rounded-lg">
+                <Label htmlFor="customChatProvider" className="text-sm font-medium text-foreground dark:text-white">Custom Provider Name</Label>
+                <Input
+                  id="customChatProvider"
+                  type="text"
+                  placeholder="your-custom-provider"
+                  value={customChatProvider}
+                  onChange={(e) => setCustomChatProvider(e.target.value)}
+                  className="bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5"
+                />
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <Label htmlFor="apiKey" className="text-sm font-medium text-foreground dark:text-white">API Key</Label>
               <Input
                 id="apiKey"
                 type="password"
-                placeholder="Enter your chat API key"
+                placeholder="Enter your API key"
                 value={tempApiKey}
                 onChange={(e) => setTempApiKey(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="modelProvider">Chat Model Provider</Label>
-              <Select
-                value={tempModelProvider}
-                onValueChange={(value) => setTempModelProvider(value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select provider" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="openai">openai</SelectItem>
-                  <SelectItem value="claude">claude</SelectItem>
-                  <SelectItem value="anthropic">anthropic</SelectItem>
-                  <SelectItem value="groq">groq</SelectItem>
-                  <SelectItem value="togetherai">togetherai</SelectItem>
-                  <SelectItem value="gemini">gemini</SelectItem>
-                  <SelectItem value="google">google</SelectItem>
-                  <SelectItem value="deepseek">deepseek</SelectItem>
-                  <SelectItem value="ollama">ollama</SelectItem>
-                  <SelectItem value="xai">xai</SelectItem>
-                  <SelectItem value="custom">custom</SelectItem>
-                </SelectContent>
-              </Select>
-              {tempModelProvider === 'custom' && (
-                <Input
-                  type="text"
-                  placeholder="Enter custom provider"
-                  value={customChatProvider}
-                  onChange={(e) => setCustomChatProvider(e.target.value)}
-                />
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="modelName">Chat Model Name</Label>
-              <Input
-                id="modelName"
-                type="text"
-                placeholder="gpt-4.1-mini"
-                value={tempModelName}
-                onChange={(e) => setTempModelName(e.target.value)}
+                className="bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5 font-mono focus:border-primary dark:focus:border-primary-light"
               />
             </div>
           </div>
 
-          {/* Image Model Configuration Section */}
-          <div className="space-y-4 border-t pt-4">
-            <h3 className="text-sm font-medium text-gray-900">Image Model Configuration</h3>
-            <div className="space-y-2">
-              <Label htmlFor="imageProviderKey">Image Provider Key</Label>
+          {/* Image Model Provider Section - Redesigned with Geist UI */}
+          <div className="space-y-6 border-t border-accentGray-2 dark:border-accentGray-6 pt-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-3 h-3 bg-success rounded-full"></div>
+              <h3 className="text-lg font-semibold text-foreground dark:text-white">Image Generation Configuration</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label htmlFor="imageProvider" className="text-sm font-medium text-foreground dark:text-white">Provider</Label>
+                <Select value={tempImageModelProvider} onValueChange={setTempImageModelProvider}>
+                  <SelectTrigger className="bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white hover:border-success/50 dark:hover:border-success/50 transition-colors">
+                    <SelectValue placeholder="Select provider" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background1 dark:bg-accentGray-7 border border-accentGray-2 dark:border-accentGray-6">
+                    <SelectItem value="openai" className="text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">OpenAI (DALL-E)</SelectItem>
+                    <SelectItem value="gemini" className="text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">Google (Imagen)</SelectItem>
+                    <SelectItem value="togetherai" className="text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">Together AI</SelectItem>
+                    <SelectItem value="custom" className="text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="imageModelName" className="text-sm font-medium text-foreground dark:text-white">Model Name</Label>
+                <Input
+                  id="imageModelName"
+                  type="text"
+                  placeholder="dall-e-3, imagen-3.0-generate-002..."
+                  value={tempImageModelName}
+                  onChange={(e) => setTempImageModelName(e.target.value)}
+                  className="bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5 font-mono text-sm focus:border-success dark:focus:border-success-light"
+                />
+              </div>
+            </div>
+
+            {tempImageModelProvider === 'custom' && (
+              <div className="space-y-3 p-4 bg-warning/5 dark:bg-warning/10 border border-warning/20 dark:border-warning/30 rounded-lg">
+                <Label htmlFor="customImageProvider" className="text-sm font-medium text-foreground dark:text-white">Custom Provider Name</Label>
+                <Input
+                  id="customImageProvider"
+                  type="text"
+                  placeholder="your-custom-image-provider"
+                  value={customImageProvider}
+                  onChange={(e) => setCustomImageProvider(e.target.value)}
+                  className="bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5"
+                />
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <Label htmlFor="imageProviderKey" className="text-sm font-medium text-foreground dark:text-white">Image Provider API Key</Label>
               <Input
                 id="imageProviderKey"
                 type="password"
-                placeholder="Enter your image provider key"
+                placeholder="Optional: Separate key for image generation"
                 value={tempImageProviderKey}
                 onChange={(e) => setTempImageProviderKey(e.target.value)}
+                className="bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5 font-mono focus:border-success dark:focus:border-success-light"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="imageModelProvider">Image Model Provider</Label>
-              <Select
-                value={tempImageModelProvider}
-                onValueChange={(value) => setTempImageModelProvider(value)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select provider" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="openai">openai</SelectItem>
-                  <SelectItem value="togetherai">togetherai</SelectItem>
-                  <SelectItem value="gemini">gemini</SelectItem>
-                  <SelectItem value="google">google</SelectItem>
-                  <SelectItem value="custom">custom</SelectItem>
-                </SelectContent>
-              </Select>
-              {tempImageModelProvider === 'custom' && (
-                <Input
-                  type="text"
-                  placeholder="Enter custom provider"
-                  value={customImageProvider}
-                  onChange={(e) => setCustomImageProvider(e.target.value)}
-                />
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="imageModelName">Image Model Name</Label>
-              <Input
-                id="imageModelName"
-                type="text"
-                placeholder="imagen-3.0-generate-002"
-                value={tempImageModelName}
-                onChange={(e) => setTempImageModelName(e.target.value)}
-              />
+              <p className="text-xs text-accentGray-5 dark:text-accentGray-4">Leave empty to use the main API key</p>
             </div>
           </div>
 
-          <div className="space-y-4 border-t pt-4">
-            <h3 className="text-sm font-medium text-gray-900">Instructions</h3>
-            <div className="space-y-2">
-              <Label htmlFor="instructions">Model Instructions</Label>
+          {/* System Instructions Section - Redesigned with Geist UI */}
+          <div className="space-y-6 border-t border-accentGray-2 dark:border-accentGray-6 pt-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-3 h-3 bg-warning rounded-full"></div>
+              <h3 className="text-lg font-semibold text-foreground dark:text-white">System Instructions</h3>
+            </div>
+            
+            <div className="space-y-3">
+              <Label htmlFor="instructions" className="text-sm font-medium text-foreground dark:text-white">AI Instructions</Label>
               <Textarea
                 id="instructions"
+                placeholder="Define how the AI should behave..."
                 value={tempInstructions}
                 onChange={(e) => setTempInstructions(e.target.value)}
-                placeholder="Enter instructions for the model behavior..."
-                className="min-h-[80px] resize-none"
+                rows={4}
+                className="resize-none bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5 focus:border-warning dark:focus:border-warning-light"
               />
-              <p className="text-xs text-gray-500">
-                These instructions guide how the AI behaves when file search is enabled
+              <p className="text-xs text-accentGray-5 dark:text-accentGray-4">
+                These instructions guide the AI's behavior throughout conversations
               </p>
             </div>
           </div>
+
+          {/* Connection Status - New Geist UI section */}
+          <div className="p-4 bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/30 rounded-lg">
+            <div className="flex items-center space-x-3">
+              {tempApiKey && tempBaseUrl ? (
+                <>
+                  <Check className="h-4 w-4 text-success" />
+                  <span className="text-sm font-medium text-success dark:text-success-light">Ready to connect</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-4 w-4 text-warning" />
+                  <span className="text-sm font-medium text-warning dark:text-warning-light">Configuration incomplete</span>
+                </>
+              )}
+            </div>
+            <p className="text-xs text-accentGray-5 dark:text-accentGray-4 mt-2">
+              {!tempApiKey && !tempBaseUrl 
+                ? "Please configure both Base URL and API Key"
+                : !tempApiKey 
+                ? "API Key is required"
+                : !tempBaseUrl 
+                ? "Base URL is required"
+                : "All required settings are configured"
+              }
+            </p>
+          </div>
         </div>
 
-        <div className="shrink-0 border-t pt-4 mt-4">
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave}>
-              Save
-            </Button>
-          </div>
+        {/* Footer with Geist UI styling */}
+        <div className="shrink-0 flex justify-end gap-3 pt-6 border-t border-accentGray-2 dark:border-accentGray-6">
+          <Button 
+            variant="outline" 
+            onClick={handleCancel}
+            className="border-accentGray-2 dark:border-accentGray-6 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6"
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleSave}
+            className="bg-primary hover:bg-primary-light text-white font-medium px-6"
+          >
+            Save Settings
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

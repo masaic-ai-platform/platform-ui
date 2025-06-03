@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Code, Copy, Check, X } from 'lucide-react';
+import { Code, Copy, Check, X, User, Bot, AlertTriangle } from 'lucide-react';
 
 interface ChatMessageProps {
   role: 'user' | 'assistant';
@@ -53,10 +53,10 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     return key.substring(0, 4) + '*'.repeat(key.length - 8) + key.substring(key.length - 4);
   };
 
-  // Function to parse content with think tags
+  // Function to parse content with think tags - redesigned with Geist UI
   const parseContentWithThinkTags = (content: string) => {
     if (!hasThinkTags || !content.includes('<think>')) {
-      return <p className="whitespace-pre-wrap">{content}</p>;
+      return <p className="whitespace-pre-wrap leading-relaxed text-foreground dark:text-white">{content}</p>;
     }
 
     const parts = [];
@@ -72,7 +72,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         const remainingContent = content.substring(currentIndex);
         if (remainingContent.trim()) {
           parts.push(
-            <p key={partKey++} className="whitespace-pre-wrap">
+            <p key={partKey++} className="whitespace-pre-wrap leading-relaxed text-foreground dark:text-white">
               {remainingContent}
             </p>
           );
@@ -85,7 +85,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         const beforeThink = content.substring(currentIndex, thinkStart);
         if (beforeThink.trim()) {
           parts.push(
-            <p key={partKey++} className="whitespace-pre-wrap">
+            <p key={partKey++} className="whitespace-pre-wrap leading-relaxed text-foreground dark:text-white">
               {beforeThink}
             </p>
           );
@@ -95,17 +95,17 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
       // Find the closing think tag
       const thinkEnd = content.indexOf('</think>', thinkStart);
       if (thinkEnd === -1) {
-        // No closing tag found, treat rest as think content (but don't show the opening tag)
-        const thinkContent = content.substring(thinkStart + 7); // Skip '<think>'
+        // No closing tag found, treat rest as think content
+        const thinkContent = content.substring(thinkStart + 7);
         if (thinkContent.trim()) {
           parts.push(
-            <div key={partKey++} className="my-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg shadow-sm">
+            <div key={partKey++} className="my-4 p-4 bg-warning/5 dark:bg-warning/10 border-l-4 border-warning rounded-r-lg shadow-xs">
               <div className="flex items-center mb-2">
-                <span className="text-xs font-medium text-yellow-700 uppercase tracking-wide">
+                <span className="text-xs font-medium text-warning dark:text-warning-light uppercase tracking-wide">
                   🤔 AI Thinking #{thinkBlockNumber}
                 </span>
               </div>
-              <p className="text-sm text-yellow-800 italic whitespace-pre-wrap">
+              <p className="text-sm text-warning-dark dark:text-warning-light italic whitespace-pre-wrap leading-relaxed">
                 {thinkContent}
               </p>
             </div>
@@ -114,17 +114,17 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         break;
       }
 
-      // Add think content (exclude the tags themselves)
-      const thinkContent = content.substring(thinkStart + 7, thinkEnd); // Skip '<think>' and '</think>'
+      // Add think content
+      const thinkContent = content.substring(thinkStart + 7, thinkEnd);
       if (thinkContent.trim()) {
         parts.push(
-          <div key={partKey++} className="my-3 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg shadow-sm">
+          <div key={partKey++} className="my-4 p-4 bg-warning/5 dark:bg-warning/10 border-l-4 border-warning rounded-r-lg shadow-xs">
             <div className="flex items-center mb-2">
-              <span className="text-xs font-medium text-yellow-700 uppercase tracking-wide">
+              <span className="text-xs font-medium text-warning dark:text-warning-light uppercase tracking-wide">
                 🤔 AI Thinking #{thinkBlockNumber}
               </span>
             </div>
-            <p className="text-sm text-yellow-800 italic whitespace-pre-wrap">
+            <p className="text-sm text-warning-dark dark:text-warning-light italic whitespace-pre-wrap leading-relaxed">
               {thinkContent}
             </p>
           </div>
@@ -132,10 +132,10 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         thinkBlockNumber++;
       }
 
-      currentIndex = thinkEnd + 8; // Skip '</think>'
+      currentIndex = thinkEnd + 8;
     }
 
-    return <div className="space-y-2">{parts}</div>;
+    return <div className="space-y-3">{parts}</div>;
   };
 
   // Function to check if content looks like a base64 image
@@ -198,74 +198,47 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     console.log('Base64 validation:', {
       originalLength: base64Content.length,
       cleanLength: cleanBase64.length,
+      paddingNeeded,
       isValidBase64,
-      issues,
-      firstChars: cleanBase64.substring(0, 30),
-      lastChars: cleanBase64.substring(-20)
+      issues
     });
     
     return {
-      isValid: isValidBase64 && cleanBase64.length >= 100,
+      isValid: isValidBase64 && issues.length <= 1, // Allow padding issues only
       cleanBase64,
       issues
     };
   };
 
-  // Function to detect image format from base64 content
+  // Function to detect image format from base64 data
   const detectImageFormat = (base64Content: string): string => {
-    // Remove any data URL prefix if present
-    const cleanBase64 = base64Content.replace(/^data:image\/[^;]+;base64,/, '');
+    const cleanContent = base64Content.replace(/^data:image\/[^;]+;base64,/, '').trim();
     
-    // Check common image format signatures
-    // JPEG signatures
-    if (cleanBase64.startsWith('/9j/') || cleanBase64.startsWith('FFD8') || cleanBase64.startsWith('/9j')) {
+    if (cleanContent.startsWith('/9j/') || cleanContent.startsWith('/9j') || cleanContent.startsWith('FFD8')) {
       return 'jpeg';
-    } 
-    // PNG signatures
-    else if (cleanBase64.startsWith('iVBORw0KGgo') || cleanBase64.startsWith('89504E47') || cleanBase64.startsWith('iVBORw')) {
+    } else if (cleanContent.startsWith('iVBORw0KGgo') || cleanContent.startsWith('iVBORw') || cleanContent.startsWith('89504E47')) {
       return 'png';
-    } 
-    // WebP signatures - WebP files start with "RIFF" and contain "WEBP"
-    else if (cleanBase64.startsWith('UklGR') || cleanBase64.includes('V0VCUCg') || cleanBase64.startsWith('UklGRg') || cleanBase64.includes('V0VCUFZQOCg')) {
+    } else if (cleanContent.startsWith('UklGR') || cleanContent.startsWith('UklGRg')) {
       return 'webp';
-    }
-    // GIF signatures
-    else if (cleanBase64.startsWith('R0lGODlh') || cleanBase64.startsWith('R0lGODdh') || cleanBase64.startsWith('R0lGOD')) {
+    } else if (cleanContent.startsWith('R0lGODlh') || cleanContent.startsWith('R0lGODdh') || cleanContent.startsWith('R0lGOD')) {
       return 'gif';
     }
     
-    // If we can't detect the format, try to guess based on common patterns
-    // Many image generation APIs default to specific formats
-    if (cleanBase64.length > 0) {
-      // Log the first few characters to help with debugging
-      console.log('Image format detection - first 20 chars:', cleanBase64.substring(0, 20));
-      
-      // If it looks like a valid base64 image but we can't detect format,
-      // try each format in order of likelihood
-      return 'jpeg'; // Most common for AI-generated images
-    }
-    
-    // Fallback
-    return 'png';
+    return 'png'; // Default to PNG
   };
 
-  // Generate cURL code example
   const generateCurlCode = () => {
-    const modelString = `${modelProvider}@${modelName}`;
-    
     const requestBody: any = {
-      model: modelString,
+      model: `${modelProvider}@${modelName}`,
+      input: content,
       store: true,
       tools: [{
         type: "image_generation",
         model: `${imageModelProvider}@${imageModelName}`,
         model_provider_key: imageProviderKey || "YOUR_IMAGE_PROVIDER_KEY"
-      }],
-      input: content,
-      stream: true
+      }]
     };
 
-    // Add file_search tool if vector store is selected
     if (selectedVectorStore) {
       requestBody.tools.push({
         type: "file_search",
@@ -277,39 +250,28 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           value: "en"
         }
       });
-      requestBody.instructions = instructions;
     }
 
-    // Mask the API key in the request body for display
-    const displayRequestBody = {
-      ...requestBody,
-      tools: requestBody.tools.map((tool: any) => ({
-        ...tool,
-        model_provider_key: tool.model_provider_key ? maskApiKey(tool.model_provider_key) : undefined
-      }))
-    };
-
-    return `curl -X POST "${baseUrl}/v1/responses" \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer ${maskApiKey(apiKey || 'YOUR_API_KEY')}" \\
-  -H "Accept: text/event-stream" \\
-  -d '${JSON.stringify(displayRequestBody, null, 2).replace(/'/g, "'\\''")}' \\
-  --no-buffer`;
+    return `curl --location '${baseUrl}/v1/responses' \\
+--header 'Content-Type: application/json' \\
+--header 'Authorization: Bearer ${maskApiKey(apiKey || 'YOUR_API_KEY')}' \\
+--data '${JSON.stringify(requestBody, null, 2).replace(/'/g, "'\"'\"'")}'`;
   };
 
-  // Generate Python code example
   const generatePythonCode = () => {
-    const modelString = `${modelProvider}@${modelName}`;
-    
-    const tools: any[] = [{
+    const requestBody: any = {
+      model: `${modelProvider}@${modelName}`,
+      input: content,
+      store: true,
+      tools: [{
       type: "image_generation",
       model: `${imageModelProvider}@${imageModelName}`,
       model_provider_key: imageProviderKey || "YOUR_IMAGE_PROVIDER_KEY"
-    }];
+      }]
+    };
 
-    // Add file_search tool if vector store is selected
     if (selectedVectorStore) {
-      tools.push({
+      requestBody.tools.push({
         type: "file_search",
         vector_store_ids: [selectedVectorStore],
         max_num_results: 5,
@@ -321,37 +283,19 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
       });
     }
 
-    // Mask API keys for display
-    const displayTools = tools.map(tool => ({
-      ...tool,
-      model_provider_key: tool.model_provider_key ? maskApiKey(tool.model_provider_key) : undefined
-    }));
+    return `import requests
+import json
 
-    const maskedApiKey = apiKey ? maskApiKey(apiKey) : 'os.environ.get("OPENAI_API_KEY")';
+url = "${baseUrl}/v1/responses"
+headers = {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer ${maskApiKey(apiKey || 'YOUR_API_KEY')}"
+}
 
-    const pythonCode = `import os
-from openai import OpenAI
+data = ${JSON.stringify(requestBody, null, 4)}
 
-client = OpenAI(
-    base_url="${baseUrl}",
-    api_key="${maskedApiKey}"
-)
-
-response = client.responses.create(
-    model="${modelString}",
-    store=True,
-    tools=${JSON.stringify(displayTools, null, 4).replace(/"/g, '"')},${selectedVectorStore ? `
-    instructions="${instructions}",` : ''}
-    input="${content.replace(/"/g, '\\"')}",
-    stream=True
-)
-
-# Handle streaming response
-for chunk in response:
-    if hasattr(chunk, 'delta') and chunk.delta:
-        print(chunk.delta, end='', flush=True)`;
-
-    return pythonCode;
+response = requests.post(url, headers=headers, json=data)
+print(response.json())`;
   };
 
   const copyToClipboard = async (text: string, type: 'curl' | 'python') => {
@@ -365,202 +309,252 @@ for chunk in response:
         setTimeout(() => setCopiedPython(false), 2000);
       }
     } catch (err) {
-      console.error('Failed to copy text: ', err);
+      console.error('Failed to copy: ', err);
     }
   };
 
   const renderImage = () => {
+    // Check if this is a text message that contains <image> tags
+    if (type === 'text' && content.includes('<image>')) {
+      const parts = content.split(/<image>|<\/image>/);
+      const elements = [];
+      
+      for (let i = 0; i < parts.length; i++) {
+        if (i % 2 === 0) {
+          // Text part
+          if (parts[i].trim()) {
+            elements.push(
+              <div key={i} className="mb-4">
+                {parseContentWithThinkTags(parts[i])}
+              </div>
+            );
+          }
+        } else {
+          // Image part
+          const imageData = parts[i].trim();
+          if (imageData && isImageContent(imageData)) {
+            const validation = validateAndCleanBase64(imageData);
+            const imageFormat = detectImageFormat(imageData);
+            const dataUrl = validation.cleanBase64.startsWith('data:') 
+              ? validation.cleanBase64 
+              : `data:image/${imageFormat};base64,${validation.cleanBase64}`;
+            
+            elements.push(
+              <div key={i} className="mb-6">
+                <div className="relative inline-block bg-background2 dark:bg-accentGray-7 p-2 rounded-lg shadow-sm">
+                  <img 
+                    src={dataUrl}
+                    alt="Generated"
+                    className="max-w-full h-auto rounded-md shadow-sm"
+                    style={{ maxHeight: '512px' }}
+                    onError={(e) => {
+                      console.error('Image failed to load');
+                      console.log('Validation issues:', validation.issues);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                  {validation.issues.length > 0 && (
+                    <div className="mt-2 text-xs text-warning dark:text-warning-light">
+                      Issues: {validation.issues.join(', ')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+        }
+      }
+      
+      return <div className="space-y-4">{elements}</div>;
+    }
+    
+    // Handle pure image content
+    if (type === 'image' || isImageContent(content)) {
     const validation = validateAndCleanBase64(content);
     
     if (!validation.isValid) {
-      console.error('Invalid base64 image data:', validation.issues);
       return (
-        <div className="space-y-2">
-          <p className="text-sm opacity-75">Generated image (validation failed):</p>
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-700 text-sm">
-              Image data appears to be incomplete or corrupted.
-            </p>
-            <details className="mt-2">
-              <summary className="text-xs text-red-600 cursor-pointer">Debug info</summary>
-              <pre className="text-xs mt-1 text-red-600">
-                {JSON.stringify(validation.issues, null, 2)}
-              </pre>
-            </details>
-          </div>
+          <div className="p-4 bg-error/5 dark:bg-error/10 border border-error/20 dark:border-error/30 rounded-lg">
+            <div className="flex items-center space-x-2 mb-2">
+              <AlertTriangle className="h-4 w-4 text-error" />
+              <span className="text-sm font-medium text-error">Image Error</span>
+            </div>
+            <p className="text-sm text-error-dark dark:text-error-light">Invalid image data detected.</p>
+            {validation.issues.length > 0 && (
+              <ul className="mt-2 text-xs text-error-dark dark:text-error-light">
+                {validation.issues.map((issue, index) => (
+                  <li key={index}>• {issue}</li>
+                ))}
+              </ul>
+            )}
         </div>
       );
     }
     
     const imageFormat = detectImageFormat(content);
+      const dataUrl = validation.cleanBase64.startsWith('data:') 
+        ? validation.cleanBase64 
+        : `data:image/${imageFormat};base64,${validation.cleanBase64}`;
     
     return (
-      <div className="space-y-2">
-        <p className="text-sm opacity-75">Generated image:</p>
+        <div className="relative inline-block bg-background2 dark:bg-accentGray-7 p-2 rounded-lg shadow-sm">
         <img 
-          src={`data:image/${imageFormat};base64,${validation.cleanBase64}`}
-          alt="Generated image" 
-          className="rounded-lg max-w-full h-auto"
+            src={dataUrl}
+            alt="Generated"
+            className="max-w-full h-auto rounded-md shadow-sm"
+            style={{ maxHeight: '512px' }}
           onError={(e) => {
-            console.error('Image failed to load with format:', imageFormat);
-            const target = e.target as HTMLImageElement;
-            
-            // Try different formats as fallback
-            if (target.src.includes('jpeg')) {
-              console.log('Trying PNG format...');
-              target.src = `data:image/png;base64,${validation.cleanBase64}`;
-            } else if (target.src.includes('png')) {
-              console.log('Trying WebP format...');
-              target.src = `data:image/webp;base64,${validation.cleanBase64}`;
-            } else if (target.src.includes('webp')) {
-              console.log('Trying JPEG format...');
-              target.src = `data:image/jpeg;base64,${validation.cleanBase64}`;
-            } else {
-              console.error('All image formats failed. Content preview:', validation.cleanBase64.substring(0, 50) + '...');
-            }
-          }}
-          onLoad={() => {
-            console.log('Image loaded successfully with format:', imageFormat);
-          }}
-        />
+              console.error('Image failed to load');
+              console.log('Validation issues:', validation.issues);
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+          {validation.issues.length > 0 && (
+            <div className="mt-2 text-xs text-warning dark:text-warning-light">
+              Issues: {validation.issues.join(', ')}
+            </div>
+          )}
       </div>
     );
+    }
+
+    // Default text rendering
+    return parseContentWithThinkTags(content);
   };
 
   return (
     <>
-      <div className={`flex ${role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
-        <div className="max-w-3xl">
-          <div className={`px-4 py-3 rounded-lg ${
+      <div className={`flex mb-6 ${role === 'user' ? 'justify-end' : 'justify-start'}`}>
+        <div className={`max-w-3xl ${role === 'user' ? 'ml-12' : 'mr-12'}`}>
+          <Card className={`p-6 shadow-sm hover:shadow-md transition-shadow duration-200 ${
             role === 'user' 
-              ? 'bg-blue-500 text-white' 
-              : 'bg-gray-100 text-gray-800'
+              ? 'bg-primary text-white dark:bg-primary-light dark:text-accentGray-8 border-primary/20' 
+              : 'bg-background1 dark:bg-accentGray-7 text-foreground dark:text-white border border-accentGray-2 dark:border-accentGray-6'
           }`}>
-                      {isImageContent(content) ? renderImage() : parseContentWithThinkTags(content)}
-            <p className={`text-xs mt-2 opacity-75`}>
-              {timestamp.toLocaleTimeString()}
-            </p>
+            {/* Message Header */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                  role === 'user' 
+                    ? 'bg-white/20 text-white' 
+                    : 'bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light'
+                }`}>
+                  {role === 'user' ? <User className="h-3 w-3" /> : <Bot className="h-3 w-3" />}
+                </div>
+                <span className={`text-xs font-medium uppercase tracking-wide ${
+                  role === 'user' 
+                    ? 'text-white/80' 
+                    : 'text-accentGray-5 dark:text-accentGray-4'
+                }`}>
+                  {role === 'user' ? 'You' : 'Assistant'}
+                </span>
           </div>
           
-          {/* Show Code button for user messages */}
+              {/* Code generation button for user messages */}
           {role === 'user' && (
-            <div className="mt-2 flex justify-end">
               <Button
-                variant="outline"
+                  variant="ghost"
                 size="sm"
                 onClick={() => setShowCodeModal(true)}
-                className="text-xs"
+                  className="h-6 w-6 p-0 text-white/60 hover:text-white hover:bg-white/10"
               >
-                <Code className="h-3 w-3 mr-1" />
-                Show Code
+                  <Code className="h-3 w-3" />
               </Button>
+              )}
             </div>
-          )}
+
+            {/* Message Content */}
+            <div className="text-sm leading-relaxed">
+              {renderImage()}
+            </div>
+
+            {/* Timestamp */}
+            <div className={`mt-3 text-xs ${
+              role === 'user' 
+                ? 'text-white/60' 
+                : 'text-accentGray-4 dark:text-accentGray-5'
+            }`}>
+              {timestamp.toLocaleTimeString()}
+            </div>
+          </Card>
         </div>
       </div>
 
-      {/* Code Modal */}
+      {/* Code Modal - redesigned with Geist UI */}
       {showCodeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <Card className="bg-background1 dark:bg-accentGray-8 max-w-4xl w-full max-h-[80vh] overflow-hidden shadow-xl border border-accentGray-2 dark:border-accentGray-7">
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold text-gray-900">API Code Examples</h3>
+            <div className="flex justify-between items-center p-6 border-b border-accentGray-2 dark:border-accentGray-7">
+              <h2 className="text-lg font-semibold text-foreground dark:text-white">Generate API Code</h2>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowCodeModal(false)}
-                className="h-8 w-8 p-0"
+                className="h-8 w-8 p-0 text-accentGray-5 hover:text-foreground dark:text-accentGray-4 dark:hover:text-white"
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex border-b">
+            <div className="flex border-b border-accentGray-2 dark:border-accentGray-7">
               <button
-                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'curl'
-                    ? 'border-blue-500 text-blue-600 bg-blue-50'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                }`}
                 onClick={() => setActiveTab('curl')}
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors duration-200 ${
+                  activeTab === 'curl'
+                    ? 'border-primary text-primary dark:text-primary-light bg-primary/5 dark:bg-primary/10'
+                    : 'border-transparent text-accentGray-5 hover:text-foreground dark:text-accentGray-4 dark:hover:text-white'
+                }`}
               >
                 cURL
               </button>
               <button
-                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'python'
-                    ? 'border-blue-500 text-blue-600 bg-blue-50'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                }`}
                 onClick={() => setActiveTab('python')}
+                className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors duration-200 ${
+                  activeTab === 'python'
+                    ? 'border-primary text-primary dark:text-primary-light bg-primary/5 dark:bg-primary/10'
+                    : 'border-transparent text-accentGray-5 hover:text-foreground dark:text-accentGray-4 dark:hover:text-white'
+                }`}
               >
                 Python
               </button>
             </div>
 
-            {/* Tab Content */}
-            <div className="p-4 overflow-y-auto max-h-[calc(90vh-140px)]">
-              {activeTab === 'curl' && (
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-gray-700">cURL Command</h4>
+            {/* Code Content */}
+            <div className="p-6 max-h-96 overflow-y-auto">
+              <div className="relative">
+                <pre className="bg-accentGray-8 dark:bg-accentGray-1 text-success dark:text-success-light text-sm p-4 rounded-lg font-mono overflow-x-auto border border-accentGray-3 dark:border-accentGray-7">
+                  {activeTab === 'curl' ? generateCurlCode() : generatePythonCode()}
+                </pre>
                     <Button
+                  onClick={() => copyToClipboard(
+                    activeTab === 'curl' ? generateCurlCode() : generatePythonCode(),
+                    activeTab
+                  )}
+                  className="absolute top-3 right-3 h-8 w-8 p-0 bg-accentGray-7 hover:bg-accentGray-6 dark:bg-accentGray-2 dark:hover:bg-accentGray-3"
                       variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(generateCurlCode(), 'curl')}
-                      className="h-8 px-3"
-                    >
-                      {copiedCurl ? (
-                        <>
-                          <Check className="h-3 w-3 mr-1 text-green-500" />
-                          Copied!
-                        </>
+                >
+                  {(activeTab === 'curl' ? copiedCurl : copiedPython) ? (
+                    <Check className="h-3 w-3 text-success" />
                       ) : (
-                        <>
-                          <Copy className="h-3 w-3 mr-1" />
-                          Copy
-                        </>
+                    <Copy className="h-3 w-3" />
                       )}
                     </Button>
                   </div>
-                  <pre className="text-xs bg-gray-900 text-green-400 p-4 rounded overflow-x-auto">
-                    <code>{generateCurlCode()}</code>
-                  </pre>
                 </div>
-              )}
 
-              {activeTab === 'python' && (
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-gray-700">Python Code</h4>
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-accentGray-2 dark:border-accentGray-7 flex justify-end">
                     <Button
+                onClick={() => setShowCodeModal(false)}
                       variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(generatePythonCode(), 'python')}
-                      className="h-8 px-3"
-                    >
-                      {copiedPython ? (
-                        <>
-                          <Check className="h-3 w-3 mr-1 text-green-500" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3 w-3 mr-1" />
-                          Copy
-                        </>
-                      )}
+                className="border-accentGray-2 dark:border-accentGray-6 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-7"
+              >
+                Close
                     </Button>
-                  </div>
-                  <pre className="text-xs bg-gray-900 text-green-400 p-4 rounded overflow-x-auto">
-                    <code>{generatePythonCode()}</code>
-                  </pre>
-                </div>
-              )}
             </div>
-          </div>
+          </Card>
         </div>
       )}
     </>

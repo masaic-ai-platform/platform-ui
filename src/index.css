@@ -1,92 +1,116 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist+Sans:wght@400;500;600&family=Geist+Mono:wght@400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Vercel-like Color System - Light Mode */
+    --background: 0 0% 100%;                    /* #ffffff - pure white */
+    --foreground: 0 0% 9%;                      /* #171717 - very dark gray */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;                          /* #ffffff */
+    --card-foreground: 0 0% 9%;                 /* #171717 */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;                       /* #ffffff */
+    --popover-foreground: 0 0% 9%;              /* #171717 */
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Subtle primary - very muted */
+    --primary: 0 0% 9%;                         /* #171717 - almost black */
+    --primary-foreground: 0 0% 100%;            /* #ffffff */
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Very subtle secondary */
+    --secondary: 0 0% 96%;                      /* #f5f5f5 - very light gray */
+    --secondary-foreground: 0 0% 9%;            /* #171717 */
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted backgrounds */
+    --muted: 0 0% 96%;                          /* #f5f5f5 */
+    --muted-foreground: 0 0% 45%;               /* #737373 */
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent - subtle gray */
+    --accent: 0 0% 96%;                         /* #f5f5f5 */
+    --accent-foreground: 0 0% 9%;               /* #171717 */
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Minimal destructive - muted red */
+    --destructive: 0 84% 60%;                   /* #ef4444 */
+    --destructive-foreground: 0 0% 100%;        /* #ffffff */
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Very subtle borders */
+    --border: 0 0% 90%;                         /* #e5e5e5 - light gray border */
+    --input: 0 0% 90%;                          /* #e5e5e5 */
+    --ring: 0 0% 20%;                           /* #333333 - focus ring */
 
-    --radius: 0.5rem;
+    --radius: 8px;                              /* Slightly rounded for modern look */
 
-    --sidebar-background: 0 0% 98%;
+    /* Custom Vercel-like grays */
+    --gray-50: 0 0% 98%;                        /* #fafafa */
+    --gray-100: 0 0% 96%;                       /* #f5f5f5 */
+    --gray-200: 0 0% 90%;                       /* #e5e5e5 */
+    --gray-300: 0 0% 83%;                       /* #d4d4d4 */
+    --gray-400: 0 0% 64%;                       /* #a3a3a3 */
+    --gray-500: 0 0% 45%;                       /* #737373 */
+    --gray-600: 0 0% 32%;                       /* #525252 */
+    --gray-700: 0 0% 25%;                       /* #404040 */
+    --gray-800: 0 0% 15%;                       /* #262626 */
+    --gray-900: 0 0% 9%;                        /* #171717 */
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Sidebar colors for light mode */
+    --sidebar-background: 0 0% 98%;             /* #fafafa */
+    --sidebar-foreground: 0 0% 15%;             /* #262626 */
+    --sidebar-primary: 0 0% 9%;                 /* #171717 */
+    --sidebar-primary-foreground: 0 0% 100%;    /* #ffffff */
+    --sidebar-accent: 0 0% 96%;                 /* #f5f5f5 */
+    --sidebar-accent-foreground: 0 0% 15%;      /* #262626 */
+    --sidebar-border: 0 0% 90%;                 /* #e5e5e5 */
+    --sidebar-ring: 0 0% 20%;                   /* #333333 */
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Vercel-like Color System - Dark Mode */
+    --background: 0 0% 7%;                      /* #111111 - very dark */
+    --foreground: 0 0% 98%;                     /* #fafafa - very light */
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 7%;                            /* #111111 */
+    --card-foreground: 0 0% 98%;                /* #fafafa */
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 7%;                         /* #111111 */
+    --popover-foreground: 0 0% 98%;             /* #fafafa */
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    /* Primary in dark mode */
+    --primary: 0 0% 98%;                        /* #fafafa - very light */
+    --primary-foreground: 0 0% 9%;              /* #171717 */
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    /* Dark mode secondary */
+    --secondary: 0 0% 10%;                      /* #1a1a1a - very dark gray */
+    --secondary-foreground: 0 0% 98%;           /* #fafafa */
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    /* Dark mode muted */
+    --muted: 0 0% 10%;                          /* #1a1a1a */
+    --muted-foreground: 0 0% 64%;               /* #a3a3a3 */
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    /* Dark mode accent */
+    --accent: 0 0% 10%;                         /* #1a1a1a */
+    --accent-foreground: 0 0% 98%;              /* #fafafa */
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    /* Dark mode destructive */
+    --destructive: 0 62% 30%;                   /* #991b1b */
+    --destructive-foreground: 0 0% 98%;         /* #fafafa */
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Dark mode borders */
+    --border: 0 0% 15%;                         /* #262626 */
+    --input: 0 0% 15%;                          /* #262626 */
+    --ring: 0 0% 83%;                           /* #d4d4d4 */
+
+    /* Dark sidebar colors */
+    --sidebar-background: 0 0% 4%;              /* #0a0a0a */
+    --sidebar-foreground: 0 0% 98%;             /* #fafafa */
+    --sidebar-primary: 0 0% 98%;                /* #fafafa */
+    --sidebar-primary-foreground: 0 0% 9%;      /* #171717 */
+    --sidebar-accent: 0 0% 10%;                 /* #1a1a1a */
+    --sidebar-accent-foreground: 0 0% 98%;      /* #fafafa */
+    --sidebar-border: 0 0% 15%;                 /* #262626 */
+    --sidebar-ring: 0 0% 83%;                   /* #d4d4d4 */
   }
 }
 
@@ -96,6 +120,24 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
   }
+  
+  /* Ensure Geist fonts are properly applied */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-sans;
+  }
+  
+  code, pre {
+    @apply font-mono;
+  }
+}
+
+@layer utilities {
+  /* Vercel-like utility classes */
+  .vercel-shadow-sm { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+  .vercel-shadow { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); }
+  .vercel-shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+  .vercel-shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+  .vercel-shadow-xl { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
 }
