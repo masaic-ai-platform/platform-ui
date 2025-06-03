@@ -565,7 +565,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
                   className="hidden"
                   accept=".pdf,.txt,.docx,.md,.json"
                 />
-                <span className="inline-flex items-center justify-center h-10 px-4 py-2 bg-primary hover:bg-primary-light text-white font-medium cursor-pointer rounded-lg transition-colors disabled:opacity-50">
+                <span className="inline-flex items-center justify-center h-10 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium cursor-pointer rounded-lg transition-colors disabled:opacity-50 dark:bg-primary dark:hover:bg-primary/90 dark:text-primary-foreground">
                   {uploadingFile ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -741,7 +741,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
                 <Button
                   onClick={createVectorStore}
                   disabled={!newVectorStoreName.trim() || isLoading}
-                  className="bg-primary hover:bg-primary-light text-white font-medium"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium dark:bg-primary dark:hover:bg-primary/90 dark:text-primary-foreground"
                 >
                   {isLoading ? (
                     <>
@@ -772,7 +772,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
               <Button
                 onClick={() => setShowCreateVectorStore(true)}
                 disabled={documents.length === 0}
-                className="bg-success hover:bg-success-light text-white font-medium"
+                className="bg-success hover:bg-success/90 text-white font-medium dark:bg-success dark:hover:bg-success/90 dark:text-white"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Your First Store
@@ -840,7 +840,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
                       onClick={() => onVectorStoreSelect && onVectorStoreSelect(selectedVectorStore === store.id ? '' : store.id)}
                       className={selectedVectorStore === store.id 
                         ? "border-success text-success dark:text-success-light hover:bg-success/5 dark:hover:bg-success/10"
-                        : "bg-primary hover:bg-primary-light text-white"
+                        : "bg-primary hover:bg-primary/90 text-primary-foreground dark:bg-primary dark:hover:bg-primary/90 dark:text-primary-foreground"
                       }
                     >
                       {selectedVectorStore === store.id ? (
