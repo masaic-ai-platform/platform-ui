@@ -33,7 +33,47 @@ const config: Config = {
 				ring: "hsl(var(--ring))",
 				background: "hsl(var(--background))",
 				foreground: "hsl(var(--foreground))",
-				// Vercel-like grayscale palette
+				
+				// Geist UI Color System - mapped to existing Vercel colors
+				background1: "hsl(var(--background))",
+				background2: "hsl(var(--muted))",
+				
+				// Accent Gray Scale (Geist UI) - mapped to existing gray scale
+				accentGray: {
+					1: "hsl(var(--gray-50))",   
+					2: "hsl(var(--gray-100))",  
+					3: "hsl(var(--gray-200))",  
+					4: "hsl(var(--gray-300))",  
+					5: "hsl(var(--gray-400))",  
+					6: "hsl(var(--gray-500))",  
+					7: "hsl(var(--gray-600))",  
+					8: "hsl(var(--gray-700))",  
+				},
+				
+				// Semantic Colors (Geist UI)
+				primary: {
+					DEFAULT: "hsl(var(--primary))",
+					foreground: "hsl(var(--primary-foreground))",
+					light: "hsl(var(--gray-400))",
+					dark: "hsl(var(--gray-600))",
+				},
+				success: {
+					DEFAULT: "#22c55e",
+					light: "#16a34a",
+					dark: "#15803d",
+				},
+				warning: {
+					DEFAULT: "#eab308",
+					light: "#ca8a04",
+					dark: "#a16207",
+				},
+				error: {
+					DEFAULT: "hsl(var(--destructive))",
+					light: "#dc2626",
+					dark: "#b91c1c",
+				},
+				
+				// Original Vercel-like grayscale palette
 				gray: {
 					50: "hsl(var(--gray-50))",   // #fafafa
 					100: "hsl(var(--gray-100))", // #f5f5f5
@@ -45,10 +85,6 @@ const config: Config = {
 					700: "hsl(var(--gray-700))", // #404040
 					800: "hsl(var(--gray-800))", // #262626
 					900: "hsl(var(--gray-900))", // #171717
-				},
-				primary: {
-					DEFAULT: "hsl(var(--primary))",
-					foreground: "hsl(var(--primary-foreground))",
 				},
 				secondary: {
 					DEFAULT: "hsl(var(--secondary))",

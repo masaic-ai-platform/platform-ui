@@ -744,49 +744,49 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
   };
 
   return (
-    <div className="flex h-full bg-background1 dark:bg-accentGray-8 relative">
+    <div className="flex h-full bg-background relative">
         {/* Left Panel - Main Configuration - Redesigned with Geist UI */}
-        <div className="w-[380px] bg-background1 dark:bg-accentGray-7 border-r border-accentGray-2 dark:border-accentGray-6 flex flex-col shadow-xs">
+        <div className="w-[380px] bg-card border-r border-border flex flex-col shadow-xs">
           {/* Header */}
-          <div className="px-6 py-5 border-b border-accentGray-2 dark:border-accentGray-6 bg-background2 dark:bg-accentGray-8">
+          <div className="px-6 py-5 border-b border-border bg-muted">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-xs">
+              <div className="w-10 h-10 bg-success rounded-lg flex items-center justify-center shadow-xs">
                 <Settings className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-foreground dark:text-white">Configuration</h2>
-                <p className="text-xs text-accentGray-5 dark:text-accentGray-4">API Playground Settings</p>
+                <h2 className="text-lg font-semibold text-foreground">Configuration</h2>
+                <p className="text-xs text-muted-foreground">API Playground Settings</p>
               </div>
             </div>
           </div>
 
           {/* Preset Management */}
-          <div className="px-6 py-5 border-b border-accentGray-2 dark:border-accentGray-6 bg-background2/50 dark:bg-accentGray-8/50">
+          <div className="px-6 py-5 border-b border-border bg-muted/50">
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
-                <Save className="h-4 w-4 text-accentGray-6 dark:text-accentGray-3" />
-                <Label className="text-sm font-semibold text-foreground dark:text-white">Presets</Label>
+                                  <Save className="h-4 w-4 text-muted-foreground" />
+                <Label className="text-sm font-semibold text-foreground">Presets</Label>
               </div>
               {Object.keys(presets).length > 0 && (
                 <Select onValueChange={loadPreset}>
-                  <SelectTrigger className="h-10 bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white">
+                  <SelectTrigger className="h-10">
                     <SelectValue placeholder="Load a preset..." />
                   </SelectTrigger>
-                  <SelectContent className="bg-background1 dark:bg-accentGray-7 border border-accentGray-2 dark:border-accentGray-6">
+                  <SelectContent className="bg-card border border-border">
                     {Object.keys(presets).map((name) => (
-                      <SelectItem key={name} value={name} className="text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">{name}</SelectItem>
+                      <SelectItem key={name} value={name} className="text-foreground hover:bg-accent">{name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               )}
               <div className="flex space-x-2">
-                <Input
-                  value={presetName}
-                  onChange={(e) => setPresetName(e.target.value)}
-                  placeholder="Enter preset name..."
-                  className="flex-1 h-10 bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5"
-                />
-                <Button variant="outline" size="sm" onClick={savePreset} className="px-4 border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">
+                                  <Input
+                    value={presetName}
+                    onChange={(e) => setPresetName(e.target.value)}
+                    placeholder="Enter preset name..."
+                    className="flex-1 h-10"
+                  />
+                <Button variant="outline" size="sm" onClick={savePreset} className="px-4 border-border text-foreground hover:bg-accent">
                   <Save className="h-3 w-3 mr-2" />
                   Save
                 </Button>
@@ -805,8 +805,8 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                   <div className="flex items-center space-x-3">
                     <div className="w-3 h-3 bg-primary rounded-full"></div>
                     <div>
-                      <Label className="text-base font-semibold text-foreground dark:text-white group-hover:text-primary dark:group-hover:text-primary-light transition-colors">API & Model Configuration</Label>
-                      <p className="text-xs text-accentGray-5 dark:text-accentGray-4">Endpoint, authentication & model settings</p>
+                      <Label className="text-base font-semibold text-foreground group-hover:text-primary dark:group-hover:text-primary-light transition-colors">API & Model Configuration</Label>
+                      <p className="text-xs text-muted-foreground">Endpoint, authentication & model settings</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -815,21 +815,21 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                         Configured
                       </span>
                     )}
-                    <Settings className="h-4 w-4 text-accentGray-4 dark:text-accentGray-5 group-hover:text-primary dark:group-hover:text-primary-light transition-colors" />
+                    <Settings className="h-4 w-4 text-muted-foreground group-hover:text-primary dark:group-hover:text-primary-light transition-colors" />
                   </div>
                 </button>
                 
                 {/* Quick Model Selection */}
                 <div className="ml-6 space-y-3">
                   <div>
-                    <Label className="text-sm font-medium text-foreground dark:text-white mb-2 block">Model</Label>
+                    <Label className="text-sm font-medium text-foreground mb-2 block">Model</Label>
                     <Input
                       value={state.model}
                       onChange={(e) => updateState('model', e.target.value)}
                       placeholder="gpt-4o, claude-3-5-sonnet-20241022, gemini-1.5-pro..."
-                      className="h-10 bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 hover:border-primary/50 dark:hover:border-primary/50 transition-colors font-mono text-sm text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5"
+                      className="h-10 font-mono hover:border-primary/50 dark:hover:border-primary/50 transition-colors"
                     />
-                    <p className="text-xs text-accentGray-5 dark:text-accentGray-4 mt-2">Enter any model name (provider will be auto-detected)</p>
+                    <p className="text-xs text-muted-foreground mt-2">Enter any model name (provider will be auto-detected)</p>
                   </div>
                 </div>
               </div>
@@ -843,8 +843,8 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                   <div className="flex items-center space-x-3">
                     <div className="w-3 h-3 bg-success rounded-full"></div>
                     <div>
-                      <Label className="text-base font-semibold text-foreground dark:text-white group-hover:text-success dark:group-hover:text-success-light transition-colors">System Instructions</Label>
-                      <p className="text-xs text-accentGray-5 dark:text-accentGray-4">Define AI behavior and personality</p>
+                      <Label className="text-base font-semibold text-foreground group-hover:text-success dark:group-hover:text-success-light transition-colors">System Instructions</Label>
+                      <p className="text-xs text-muted-foreground">Define AI behavior and personality</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -853,7 +853,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                         Configured
                       </span>
                     )}
-                    <Settings className="h-4 w-4 text-accentGray-4 dark:text-accentGray-5 group-hover:text-success dark:group-hover:text-success-light transition-colors" />
+                    <Settings className="h-4 w-4 text-muted-foreground group-hover:text-success dark:group-hover:text-success-light transition-colors" />
                   </div>
                 </button>
               </div>
@@ -866,14 +866,14 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                 >
                   <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-warning rounded-full"></div>
-                    <Label className="text-base font-semibold text-foreground dark:text-white group-hover:text-warning dark:group-hover:text-warning-light transition-colors">Temperature</Label>
+                    <Label className="text-base font-semibold text-foreground group-hover:text-warning dark:group-hover:text-warning-light transition-colors">Temperature</Label>
                     <span className="px-2 py-1 bg-warning/10 dark:bg-warning/20 text-warning dark:text-warning-light text-xs font-mono rounded border border-warning/20 dark:border-warning/30">
                       {state.temperature}
                     </span>
                   </div>
                                      {expandedSections.temperature ? 
-                    <ChevronDown className="h-4 w-4 text-accentGray-4 dark:text-accentGray-5 group-hover:text-warning dark:group-hover:text-warning-light transition-colors" /> : 
-                    <ChevronRight className="h-4 w-4 text-accentGray-4 dark:text-accentGray-5 group-hover:text-warning dark:group-hover:text-warning-light transition-colors" />
+                    <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-warning dark:group-hover:text-warning-light transition-colors" /> : 
+                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-warning dark:group-hover:text-warning-light transition-colors" />
                   }
                 </button>
                 {expandedSections.temperature && (
@@ -886,12 +886,12 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                       step={0.1}
                       className="w-full [&_[role=slider]]:bg-warning [&_[role=slider]]:border-warning [&_.relative]:bg-warning/20"
                     />
-                    <div className="flex justify-between text-xs text-accentGray-5 dark:text-accentGray-4">
+                    <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Focused (0)</span>
                       <span>Balanced (1)</span>
                       <span>Creative (2)</span>
                     </div>
-                    <p className="text-xs text-accentGray-5 dark:text-accentGray-4">Controls randomness in responses</p>
+                    <p className="text-xs text-muted-foreground">Controls randomness in responses</p>
                   </div>
                 )}
               </div>
@@ -902,29 +902,29 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
               <div className="space-y-3">
                 <button
                   onClick={() => openConfigPanel('advanced')}
-                  className="flex items-center justify-between w-full text-left group hover:bg-red-50 p-3 rounded-lg transition-colors"
+                  className="flex items-center justify-between w-full text-left group hover:bg-error/5 dark:hover:bg-error/10 p-3 rounded-lg transition-colors border border-transparent hover:border-error/20 dark:hover:border-error/30"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-error rounded-full"></div>
                     <div>
-                      <Label className="text-base font-semibold text-gray-900 group-hover:text-red-600 transition-colors">Advanced Parameters</Label>
-                      <p className="text-xs text-gray-500">Fine-tune model behavior</p>
+                      <Label className="text-base font-semibold text-foreground group-hover:text-error dark:group-hover:text-error-light transition-colors">Advanced Parameters</Label>
+                      <p className="text-xs text-muted-foreground">Fine-tune model behavior</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <div className="flex space-x-1">
                       {state.stream && (
-                        <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                        <Badge variant="outline" className="text-xs bg-error/10 dark:bg-error/20 text-error dark:text-error-light border-error/20 dark:border-error/30">
                           Stream
                         </Badge>
                       )}
                       {state.top_p !== 1.0 && (
-                        <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                        <Badge variant="outline" className="text-xs bg-error/10 dark:bg-error/20 text-error dark:text-error-light border-error/20 dark:border-error/30">
                           Top-P: {state.top_p}
                         </Badge>
                       )}
                     </div>
-                    <Settings className="h-4 w-4 text-gray-400 group-hover:text-red-600 transition-colors" />
+                    <Settings className="h-4 w-4 text-muted-foreground group-hover:text-error dark:group-hover:text-error-light transition-colors" />
                   </div>
                 </button>
               </div>
@@ -933,35 +933,35 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
               <div className="space-y-3">
                 <button
                   onClick={() => openConfigPanel('tools')}
-                  className="flex items-center justify-between w-full text-left group hover:bg-cyan-50 p-3 rounded-lg transition-colors"
+                  className="flex items-center justify-between w-full text-left group hover:bg-success/5 dark:hover:bg-success/10 p-3 rounded-lg transition-colors border border-transparent hover:border-success/20 dark:hover:border-success/30"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-cyan-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-success rounded-full"></div>
                     <div>
-                      <Label className="text-base font-semibold text-gray-900 group-hover:text-cyan-600 transition-colors">Tools</Label>
-                      <p className="text-xs text-gray-500">Extend AI capabilities</p>
+                      <Label className="text-base font-semibold text-foreground group-hover:text-success dark:group-hover:text-success-light transition-colors">Tools</Label>
+                      <p className="text-xs text-muted-foreground">Extend AI capabilities</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Badge variant="outline" className="text-xs bg-cyan-50 text-cyan-700 border-cyan-200">
+                    <Badge variant="outline" className="text-xs bg-success/10 dark:bg-success/20 text-success dark:text-success-light border-success/20 dark:border-success/30">
                       {state.tools.length} {state.tools.length === 1 ? 'tool' : 'tools'}
                     </Badge>
-                    <Settings className="h-4 w-4 text-gray-400 group-hover:text-cyan-600 transition-colors" />
+                    <Settings className="h-4 w-4 text-muted-foreground group-hover:text-success dark:group-hover:text-success-light transition-colors" />
                   </div>
                 </button>
                 
                 {/* Quick Add Tools */}
                 <div className="ml-6 grid grid-cols-2 gap-2">
-                  <Button variant="outline" size="sm" onClick={() => addTool('file_search')} className="h-8 text-xs hover:bg-cyan-50 hover:border-cyan-300">
+                  <Button variant="outline" size="sm" onClick={() => addTool('file_search')} className="h-8 text-xs border-border text-foreground hover:bg-success/5 dark:hover:bg-success/10 hover:border-success/30 dark:hover:border-success/40">
                     + File Search
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => addTool('image_generation')} className="h-8 text-xs hover:bg-cyan-50 hover:border-cyan-300">
+                  <Button variant="outline" size="sm" onClick={() => addTool('image_generation')} className="h-8 text-xs border-border text-foreground hover:bg-success/5 dark:hover:bg-success/10 hover:border-success/30 dark:hover:border-success/40">
                     + Image Gen
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => addTool('web_search_preview')} className="h-8 text-xs hover:bg-cyan-50 hover:border-cyan-300">
+                  <Button variant="outline" size="sm" onClick={() => addTool('web_search_preview')} className="h-8 text-xs border-border text-foreground hover:bg-success/5 dark:hover:bg-success/10 hover:border-success/30 dark:hover:border-success/40">
                     + Web Search
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => addTool('function')} className="h-8 text-xs hover:bg-cyan-50 hover:border-cyan-300">
+                  <Button variant="outline" size="sm" onClick={() => addTool('function')} className="h-8 text-xs border-border text-foreground hover:bg-success/5 dark:hover:bg-success/10 hover:border-success/30 dark:hover:border-success/40">
                     + Function
                   </Button>
                 </div>
@@ -971,34 +971,34 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
               <div className="space-y-3">
                 <button
                   onClick={() => openConfigPanel('output')}
-                  className="flex items-center justify-between w-full text-left group hover:bg-indigo-50 p-3 rounded-lg transition-colors"
+                  className="flex items-center justify-between w-full text-left group hover:bg-primary/5 dark:hover:bg-primary/10 p-3 rounded-lg transition-colors border border-transparent hover:border-primary/20 dark:hover:border-primary/30"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-primary rounded-full"></div>
                     <div>
-                      <Label className="text-base font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">Output Format</Label>
-                      <p className="text-xs text-gray-500">Control response structure</p>
+                      <Label className="text-base font-semibold text-foreground group-hover:text-primary dark:group-hover:text-primary-light transition-colors">Output Format</Label>
+                      <p className="text-xs text-muted-foreground">Control response structure</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200">
+                    <Badge variant="outline" className="text-xs bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light border-primary/20 dark:border-primary/30">
                       {state.text_format_type === 'text' ? 'Text' : 
                        state.text_format_type === 'json_object' ? 'JSON' : 'Schema'}
                     </Badge>
-                    <Settings className="h-4 w-4 text-gray-400 group-hover:text-indigo-600 transition-colors" />
+                    <Settings className="h-4 w-4 text-muted-foreground group-hover:text-primary dark:group-hover:text-primary-light transition-colors" />
                   </div>
                 </button>
                 
                 {/* Quick Format Selection */}
                 <div className="ml-6 space-y-2">
-                  <Select value={state.text_format_type} onValueChange={(value) => updateState('text_format_type', value)}>
-                    <SelectTrigger className="h-9 bg-white border-gray-200 hover:border-indigo-300 transition-colors">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="text">Plain Text</SelectItem>
-                      <SelectItem value="json_object">JSON Object</SelectItem>
-                      <SelectItem value="json_schema">JSON Schema</SelectItem>
+                                      <Select value={state.text_format_type} onValueChange={(value) => updateState('text_format_type', value)}>
+                      <SelectTrigger className="h-9 hover:border-primary/50 dark:hover:border-primary/50 transition-colors">
+                        <SelectValue />
+                      </SelectTrigger>
+                    <SelectContent className="bg-card border border-border">
+                      <SelectItem value="text" className="text-foreground hover:bg-accent">Plain Text</SelectItem>
+                      <SelectItem value="json_object" className="text-foreground hover:bg-accent">JSON Object</SelectItem>
+                      <SelectItem value="json_schema" className="text-foreground hover:bg-accent">JSON Schema</SelectItem>
                     </SelectContent>
                   </Select>
                   
@@ -1007,7 +1007,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                       variant="outline"
                       size="sm"
                       onClick={() => openConfigPanel('json-schema')}
-                      className="w-full h-8 text-xs bg-white hover:bg-indigo-50 border-indigo-300"
+                      className="w-full h-8 text-xs bg-card border-border text-foreground hover:bg-primary/5 dark:hover:bg-primary/10 hover:border-primary/30 dark:hover:border-primary/40"
                     >
                       <Code2 className="h-3 w-3 mr-1" />
                       Edit JSON Schema
@@ -1021,26 +1021,26 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
 
         {/* Secondary Configuration Panel */}
         {activeConfigPanel && (
-          <div className="w-[500px] bg-white border-r shadow-lg flex flex-col">
+          <div className="w-[500px] bg-card border-r border-border shadow-lg flex flex-col">
             {/* Secondary Panel Header */}
-            <div className="px-6 py-4 border-b bg-gradient-to-r from-gray-50 to-slate-50">
+            <div className="px-6 py-4 border-b border-border bg-muted">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <div className="w-6 h-6 bg-gray-600 rounded-md flex items-center justify-center">
+                  <div className="w-6 h-6 bg-success rounded-md flex items-center justify-center">
                     <Settings className="h-3 w-3 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-base font-semibold text-gray-900 capitalize">
+                    <h3 className="text-base font-semibold text-foreground capitalize">
                       {activeConfigPanel === 'json-schema' ? 'JSON Schema Editor' : `${activeConfigPanel} Configuration`}
                     </h3>
-                    <p className="text-xs text-gray-500">Advanced settings and detailed configuration</p>
+                    <p className="text-xs text-muted-foreground">Advanced settings and detailed configuration</p>
                   </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={closeConfigPanel}
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground dark:hover:text-white hover:bg-accent"
                 >
                   <XCircle className="h-4 w-4" />
                 </Button>
@@ -1053,20 +1053,20 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                 {activeConfigPanel === 'system' && (
                   <div className="space-y-6">
                     <div>
-                      <Label className="text-base font-semibold text-gray-900 mb-3 block">System Instructions</Label>
+                      <Label className="text-base font-semibold text-foreground mb-3 block">System Instructions</Label>
                       <Textarea
                         value={state.instructions}
                         onChange={(e) => updateState('instructions', e.target.value)}
                         placeholder="You are a helpful assistant. You can define the AI's personality, behavior, and capabilities here. Be specific about how the AI should respond, what tone to use, and any special instructions for handling different types of requests."
-                        className="min-h-[200px] text-sm resize-none bg-white border-gray-200 focus:border-green-400 focus:ring-green-400"
+                        className="min-h-[200px] text-sm resize-none focus:border-success dark:focus:border-success-light focus:ring-1 focus:ring-success/20 dark:focus:ring-success/30"
                       />
-                      <p className="text-sm text-gray-600 mt-2">
+                      <p className="text-sm text-muted-foreground mt-2">
                         System instructions define the AI's role and behavior. These instructions are always active and influence all responses.
                       </p>
                     </div>
                     
                     <div className="space-y-4">
-                      <Label className="text-base font-semibold text-gray-900">Quick Templates</Label>
+                      <Label className="text-base font-semibold text-foreground">Quick Templates</Label>
                       <div className="grid gap-3">
                         {[
                           {
@@ -1089,12 +1089,12 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                           <Button
                             key={template.name}
                             variant="outline"
-                            className="h-auto p-3 text-left justify-start hover:bg-green-50 hover:border-green-300"
+                            className="h-auto p-3 text-left justify-start bg-card border-border text-foreground hover:bg-success/5 dark:hover:bg-success/10 hover:border-success/30 dark:hover:border-success/40 transition-colors"
                             onClick={() => updateState('instructions', template.content)}
                           >
                             <div className="w-full">
-                              <div className="font-medium text-sm text-gray-900 mb-2">{template.name}</div>
-                              <div className="text-xs text-gray-500 leading-relaxed whitespace-normal">
+                              <div className="font-medium text-sm text-foreground mb-2">{template.name}</div>
+                              <div className="text-xs text-muted-foreground leading-relaxed whitespace-normal">
                                 {template.content}
                               </div>
                             </div>
@@ -1108,25 +1108,25 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                 {activeConfigPanel === 'json-schema' && (
                   <div className="space-y-6">
                     <div>
-                      <Label className="text-base font-semibold text-gray-900 mb-3 block">JSON Schema Editor</Label>
+                      <Label className="text-base font-semibold text-foreground mb-3 block">JSON Schema Editor</Label>
                       <div className="space-y-4">
                         <div>
-                          <Label className="text-sm font-medium text-gray-700 mb-2 block">Schema Name</Label>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">Schema Name</Label>
                           <Input
                             value={state.json_schema_name}
                             onChange={(e) => updateState('json_schema_name', e.target.value)}
                             placeholder="response_schema"
-                            className="h-10 bg-white border-gray-200 focus:border-indigo-400 focus:ring-indigo-400"
+                            className="h-10 focus:border-primary dark:focus:border-primary-light focus:ring-1 focus:ring-primary/20 dark:focus:ring-primary/30"
                           />
                         </div>
                         
                         <div>
-                          <Label className="text-sm font-medium text-gray-700 mb-2 block">Description</Label>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">Description</Label>
                           <Input
                             value={state.json_schema_description}
                             onChange={(e) => updateState('json_schema_description', e.target.value)}
                             placeholder="Describe what this schema represents..."
-                            className="h-10 bg-white border-gray-200 focus:border-indigo-400 focus:ring-indigo-400"
+                            className="h-10 focus:border-primary dark:focus:border-primary-light focus:ring-1 focus:ring-primary/20 dark:focus:ring-primary/30"
                           />
                         </div>
 
@@ -1142,14 +1142,14 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                         </div>
 
                         <div>
-                          <Label className="text-sm font-medium text-gray-700 mb-2 block">JSON Schema</Label>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">JSON Schema</Label>
                           <Textarea
                             value={state.json_schema}
                             onChange={(e) => updateState('json_schema', e.target.value)}
                             placeholder='{\n  "type": "object",\n  "properties": {\n    "name": {\n      "type": "string",\n      "description": "The name field"\n    },\n    "age": {\n      "type": "number",\n      "minimum": 0\n    }\n  },\n  "required": ["name"]\n}'
-                            className="min-h-[300px] font-mono text-sm bg-white border-gray-200 focus:border-indigo-400 focus:ring-indigo-400"
+                            className="min-h-[300px] font-mono text-sm focus:border-primary dark:focus:border-primary-light focus:ring-1 focus:ring-primary/20 dark:focus:ring-primary/30"
                           />
-                          <p className="text-sm text-gray-600 mt-2">
+                          <p className="text-sm text-muted-foreground mt-2">
                             Define the structure and validation rules for JSON responses. Use standard JSON Schema format.
                           </p>
                         </div>
@@ -1157,7 +1157,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                     </div>
 
                     <div className="space-y-4">
-                      <Label className="text-base font-semibold text-gray-900">Schema Templates</Label>
+                      <Label className="text-base font-semibold text-foreground">Schema Templates</Label>
                       <div className="grid gap-3">
                         {[
                           {
@@ -1204,12 +1204,12 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                           <Button
                             key={template.name}
                             variant="outline"
-                            className="h-auto p-3 text-left justify-start hover:bg-indigo-50 hover:border-indigo-300"
+                            className="h-auto p-3 text-left justify-start bg-card border-border text-foreground hover:bg-primary/5 dark:hover:bg-primary/10 hover:border-primary/30 dark:hover:border-primary/40 transition-colors"
                             onClick={() => updateState('json_schema', JSON.stringify(template.schema, null, 2))}
                           >
                             <div>
-                              <div className="font-medium text-sm">{template.name}</div>
-                              <div className="text-xs text-gray-500 mt-1">Click to use this schema template</div>
+                              <div className="font-medium text-sm text-foreground">{template.name}</div>
+                              <div className="text-xs text-muted-foreground mt-1">Click to use this schema template</div>
                             </div>
                           </Button>
                         ))}
@@ -1221,16 +1221,16 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                 {activeConfigPanel === 'tools' && (
                   <div className="space-y-6">
                     <div>
-                      <Label className="text-base font-semibold text-gray-900 mb-3 block">Tools Configuration</Label>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <Label className="text-base font-semibold text-foreground mb-3 block">Tools Configuration</Label>
+                      <p className="text-sm text-muted-foreground mb-4">
                         Configure and manage AI tools that extend the model's capabilities.
                       </p>
                     </div>
 
                     {state.tools.map((tool, index) => (
-                      <div key={index} className="p-4 border rounded-lg bg-gradient-to-r from-cyan-50 to-blue-50 border-cyan-200">
+                      <div key={index} className="p-4 border border-border rounded-lg bg-success/5 dark:bg-success/10">
                         <div className="flex items-center justify-between mb-3">
-                          <Badge variant="outline" className="bg-white text-cyan-700 border-cyan-300">{tool.type}</Badge>
+                          <Badge variant="outline" className="text-success dark:text-success-light border-success/20 dark:border-success/30">{tool.type}</Badge>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1250,13 +1250,13 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                                 value={tool.model || 'gpt-image-1'} 
                                 onValueChange={(value) => updateTool(index, 'model', value)}
                               >
-                                <SelectTrigger className="h-9">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="gpt-image-1">GPT Image 1</SelectItem>
-                                  <SelectItem value="dall-e-3">DALL-E 3</SelectItem>
-                                </SelectContent>
+                                                              <SelectTrigger className="h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-card border border-border">
+                                <SelectItem value="gpt-image-1" className="text-foreground hover:bg-accent">GPT Image 1</SelectItem>
+                                <SelectItem value="dall-e-3" className="text-foreground hover:bg-accent">DALL-E 3</SelectItem>
+                              </SelectContent>
                               </Select>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
@@ -1266,15 +1266,15 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                                   value={tool.size || 'auto'} 
                                   onValueChange={(value) => updateTool(index, 'size', value)}
                                 >
-                                  <SelectTrigger className="h-9">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="auto">Auto</SelectItem>
-                                    <SelectItem value="1024x1024">1024x1024</SelectItem>
-                                    <SelectItem value="1792x1024">1792x1024</SelectItem>
-                                    <SelectItem value="1024x1792">1024x1792</SelectItem>
-                                  </SelectContent>
+                                                                  <SelectTrigger className="h-9">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-card border border-border">
+                                  <SelectItem value="auto" className="text-foreground hover:bg-accent">Auto</SelectItem>
+                                  <SelectItem value="1024x1024" className="text-foreground hover:bg-accent">1024x1024</SelectItem>
+                                  <SelectItem value="1792x1024" className="text-foreground hover:bg-accent">1792x1024</SelectItem>
+                                  <SelectItem value="1024x1792" className="text-foreground hover:bg-accent">1024x1792</SelectItem>
+                                </SelectContent>
                                 </Select>
                               </div>
                               <div>
@@ -1283,14 +1283,14 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                                   value={tool.quality || 'auto'} 
                                   onValueChange={(value) => updateTool(index, 'quality', value)}
                                 >
-                                  <SelectTrigger className="h-9">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="auto">Auto</SelectItem>
-                                    <SelectItem value="standard">Standard</SelectItem>
-                                    <SelectItem value="hd">HD</SelectItem>
-                                  </SelectContent>
+                                                                  <SelectTrigger className="h-9">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-card border border-border">
+                                  <SelectItem value="auto" className="text-foreground hover:bg-accent">Auto</SelectItem>
+                                  <SelectItem value="standard" className="text-foreground hover:bg-accent">Standard</SelectItem>
+                                  <SelectItem value="hd" className="text-foreground hover:bg-accent">HD</SelectItem>
+                                </SelectContent>
                                 </Select>
                               </div>
                             </div>
@@ -1300,7 +1300,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                         {tool.type === 'function' && (
                           <div className="space-y-3">
                             <div>
-                              <Label className="text-sm font-medium mb-2 block">Function Name</Label>
+                              <Label className="text-sm font-medium text-foreground mb-2 block">Function Name</Label>
                               <Input
                                 value={tool.name || ''}
                                 onChange={(e) => updateTool(index, 'name', e.target.value)}
@@ -1309,7 +1309,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                               />
                             </div>
                             <div>
-                              <Label className="text-sm font-medium mb-2 block">Description</Label>
+                              <Label className="text-sm font-medium text-foreground mb-2 block">Description</Label>
                               <Textarea
                                 value={tool.description || ''}
                                 onChange={(e) => updateTool(index, 'description', e.target.value)}
@@ -1318,7 +1318,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                               />
                             </div>
                             <div>
-                              <Label className="text-sm font-medium mb-2 block">Parameters (JSON Schema)</Label>
+                              <Label className="text-sm font-medium text-foreground mb-2 block">Parameters (JSON Schema)</Label>
                               <Textarea
                                 value={typeof tool.parameters === 'string' ? tool.parameters : JSON.stringify(tool.parameters || {}, null, 2)}
                                 onChange={(e) => {
@@ -1338,7 +1338,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                         {tool.type === 'file_search' && (
                           <div className="space-y-3">
                             <div>
-                              <Label className="text-sm font-medium mb-2 block">Vector Store IDs</Label>
+                              <Label className="text-sm font-medium text-foreground mb-2 block">Vector Store IDs</Label>
                               <Input
                                 value={Array.isArray(tool.vector_store_ids) ? tool.vector_store_ids.join(', ') : tool.vector_store_ids || ''}
                                 onChange={(e) => updateTool(index, 'vector_store_ids', e.target.value.split(',').map(id => id.trim()))}
@@ -1347,7 +1347,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                               />
                             </div>
                             <div>
-                              <Label className="text-sm font-medium mb-2 block">Max Results</Label>
+                              <Label className="text-sm font-medium text-foreground mb-2 block">Max Results</Label>
                               <Input
                                 type="number"
                                 value={tool.max_num_results || 5}
@@ -1368,14 +1368,14 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                                 value={tool.search_context_size || 'medium'} 
                                 onValueChange={(value) => updateTool(index, 'search_context_size', value)}
                               >
-                                <SelectTrigger className="h-9">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="small">Small</SelectItem>
-                                  <SelectItem value="medium">Medium</SelectItem>
-                                  <SelectItem value="large">Large</SelectItem>
-                                </SelectContent>
+                                                              <SelectTrigger className="h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-card border border-border">
+                                <SelectItem value="small" className="text-foreground hover:bg-accent">Small</SelectItem>
+                                <SelectItem value="medium" className="text-foreground hover:bg-accent">Medium</SelectItem>
+                                <SelectItem value="large" className="text-foreground hover:bg-accent">Large</SelectItem>
+                              </SelectContent>
                               </Select>
                             </div>
                           </div>
@@ -1384,7 +1384,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                     ))}
 
                     {state.tools.length === 0 && (
-                      <div className="text-center py-8 text-gray-500">
+                      <div className="text-center py-8 text-muted-foreground">
                         <p className="text-sm">No tools configured yet.</p>
                         <p className="text-xs mt-1">Add tools from the main configuration panel to extend AI capabilities.</p>
                       </div>
@@ -1395,69 +1395,69 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                 {activeConfigPanel === 'advanced' && (
                   <div className="space-y-6">
                     <div>
-                      <Label className="text-base font-semibold text-gray-900 mb-3 block">Advanced Parameters</Label>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <Label className="text-base font-semibold text-foreground mb-3 block">Advanced Parameters</Label>
+                      <p className="text-sm text-muted-foreground mb-4">
                         Fine-tune the AI model's behavior with advanced settings.
                       </p>
                     </div>
 
                     <div className="space-y-6">
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="p-4 border rounded-lg bg-gray-50">
+                        <div className="p-4 border border-border rounded-lg bg-muted">
                           <div className="flex items-center space-x-3 mb-3">
                             <Switch 
                               checked={state.stream} 
                               onCheckedChange={(checked) => updateState('stream', checked)} 
                             />
                             <div>
-                              <Label className="text-sm font-medium">Streaming</Label>
-                              <p className="text-xs text-gray-500">Real-time response streaming</p>
+                              <Label className="text-sm font-medium text-foreground">Streaming</Label>
+                              <p className="text-xs text-muted-foreground">Real-time response streaming</p>
                             </div>
                           </div>
                         </div>
                         
-                        <div className="p-4 border rounded-lg bg-gray-50">
+                        <div className="p-4 border border-border rounded-lg bg-muted">
                           <div className="flex items-center space-x-3 mb-3">
                             <Switch 
                               checked={state.store} 
                               onCheckedChange={(checked) => updateState('store', checked)} 
                             />
                             <div>
-                              <Label className="text-sm font-medium">Store Response</Label>
-                              <p className="text-xs text-gray-500">Save response for later use</p>
+                              <Label className="text-sm font-medium text-foreground">Store Response</Label>
+                              <p className="text-xs text-muted-foreground">Save response for later use</p>
                             </div>
                           </div>
                         </div>
                       </div>
 
                       <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-3 block">Service Tier</Label>
+                        <Label className="text-sm font-medium text-foreground mb-3 block">Service Tier</Label>
                         <Select value={state.service_tier} onValueChange={(value) => updateState('service_tier', value)}>
                           <SelectTrigger className="h-10">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="auto">Auto</SelectItem>
-                            <SelectItem value="default">Default</SelectItem>
-                            <SelectItem value="scale">Scale</SelectItem>
+                          <SelectContent className="bg-card border border-border">
+                            <SelectItem value="auto" className="text-foreground hover:bg-accent">Auto</SelectItem>
+                            <SelectItem value="default" className="text-foreground hover:bg-accent">Default</SelectItem>
+                            <SelectItem value="scale" className="text-foreground hover:bg-accent">Scale</SelectItem>
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-gray-500 mt-1">Choose the service tier for processing</p>
+                        <p className="text-xs text-muted-foreground mt-1">Choose the service tier for processing</p>
                       </div>
 
                       <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-3 block">Previous Response ID</Label>
+                        <Label className="text-sm font-medium text-foreground mb-3 block">Previous Response ID</Label>
                         <Input
                           value={state.previous_response_id}
                           onChange={(e) => updateState('previous_response_id', e.target.value)}
                           placeholder="resp_123456789"
                           className="h-10"
                         />
-                        <p className="text-xs text-gray-500 mt-1">Reference a previous response for context</p>
+                        <p className="text-xs text-muted-foreground mt-1">Reference a previous response for context</p>
                       </div>
 
                       <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-3 block">Tool Choice</Label>
+                        <Label className="text-sm font-medium text-foreground mb-3 block">Tool Choice</Label>
                         <Select 
                           value={typeof state.tool_choice === 'string' ? state.tool_choice : 'auto'} 
                           onValueChange={(value) => updateState('tool_choice', value)}
@@ -1465,13 +1465,13 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                           <SelectTrigger className="h-10">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="auto">Auto</SelectItem>
-                            <SelectItem value="none">None</SelectItem>
-                            <SelectItem value="required">Required</SelectItem>
+                          <SelectContent className="bg-card border border-border">
+                            <SelectItem value="auto" className="text-foreground hover:bg-accent">Auto</SelectItem>
+                            <SelectItem value="none" className="text-foreground hover:bg-accent">None</SelectItem>
+                            <SelectItem value="required" className="text-foreground hover:bg-accent">Required</SelectItem>
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-gray-500 mt-1">Control when tools should be used</p>
+                        <p className="text-xs text-muted-foreground mt-1">Control when tools should be used</p>
                       </div>
 
                       <div className="flex items-center space-x-3">
@@ -1480,8 +1480,8 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                           onCheckedChange={(checked) => updateState('parallel_tool_calls', checked)} 
                         />
                         <div>
-                          <Label className="text-sm font-medium">Parallel Tool Calls</Label>
-                          <p className="text-xs text-gray-500">Allow multiple tools to run simultaneously</p>
+                          <Label className="text-sm font-medium text-foreground">Parallel Tool Calls</Label>
+                          <p className="text-xs text-muted-foreground">Allow multiple tools to run simultaneously</p>
                         </div>
                       </div>
                     </div>
@@ -1491,31 +1491,31 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                 {activeConfigPanel === 'api' && (
                   <div className="space-y-6">
                     <div>
-                      <Label className="text-base font-semibold text-gray-900 mb-3 block">API & Model Configuration</Label>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <Label className="text-base font-semibold text-foreground mb-3 block">API & Model Configuration</Label>
+                      <p className="text-sm text-muted-foreground mb-4">
                         Configure your API endpoint, authentication, and model settings.
                       </p>
                     </div>
 
                     <div className="space-y-6">
                       {/* Model Configuration */}
-                      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h4 className="text-sm font-medium text-blue-900 mb-3">Model Configuration</h4>
+                      <div className="p-4 bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/30 rounded-lg">
+                        <h4 className="text-sm font-medium text-primary dark:text-primary-light mb-3">Model Configuration</h4>
                         
                         <div className="space-y-4">
                           <div>
-                            <Label className="text-sm font-medium text-blue-900 mb-2 block">Model Name</Label>
+                            <Label className="text-sm font-medium text-foreground mb-2 block">Model Name</Label>
                             <Input
                               value={state.model}
                               onChange={(e) => updateState('model', e.target.value)}
                               placeholder="Enter any model name..."
-                              className="h-10 font-mono bg-white border-blue-200 focus:border-blue-400"
+                              className="h-10 font-mono focus:border-primary dark:focus:border-primary-light"
                             />
-                            <p className="text-xs text-blue-700 mt-1">Enter any model name (e.g., gpt-4o, claude-3-5-sonnet-20241022, gemini-1.5-pro)</p>
+                            <p className="text-xs text-muted-foreground mt-1">Enter any model name (e.g., gpt-4o, claude-3-5-sonnet-20241022, gemini-1.5-pro)</p>
                           </div>
 
                           <div>
-                            <Label className="text-sm font-medium text-blue-900 mb-2 block">Quick Model Selection</Label>
+                            <Label className="text-sm font-medium text-foreground mb-2 block">Quick Model Selection</Label>
                             <div className="grid grid-cols-2 gap-2">
                               {[
                                 { name: 'GPT-4o', value: 'gpt-4o', provider: 'openai' },
@@ -1537,7 +1537,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                                     updateState('model', model.value);
                                     updateState('modelProvider', model.provider);
                                   }}
-                                  className="h-8 text-xs bg-white hover:bg-blue-50 border-blue-300 text-left justify-start"
+                                  className="h-8 text-xs hover:bg-primary/5 dark:hover:bg-primary/10 hover:border-primary/30 dark:hover:border-primary/40 text-left justify-start"
                                 >
                                   {model.name}
                                 </Button>
@@ -1546,7 +1546,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                           </div>
 
                           <div>
-                            <Label className="text-sm font-medium text-blue-900 mb-2 block">Model Provider</Label>
+                            <Label className="text-sm font-medium text-foreground mb-2 block">Model Provider</Label>
                             <Select 
                               value={state.modelProvider} 
                               onValueChange={(value) => {
@@ -1554,67 +1554,67 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                                 localStorage.setItem('imageGen_modelProvider', value);
                               }}
                             >
-                              <SelectTrigger className="h-10 bg-white border-blue-200">
+                              <SelectTrigger className="h-10">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="openai">OpenAI</SelectItem>
-                                <SelectItem value="claude">Anthropic (Claude)</SelectItem>
-                                <SelectItem value="gemini">Google (Gemini)</SelectItem>
-                                <SelectItem value="groq">Groq</SelectItem>
-                                <SelectItem value="deepseek">DeepSeek</SelectItem>
-                                <SelectItem value="xai">xAI (Grok)</SelectItem>
+                              <SelectContent className="bg-card border border-border">
+                                <SelectItem value="openai" className="text-foreground hover:bg-accent">OpenAI</SelectItem>
+                                <SelectItem value="claude" className="text-foreground hover:bg-accent">Anthropic (Claude)</SelectItem>
+                                <SelectItem value="gemini" className="text-foreground hover:bg-accent">Google (Gemini)</SelectItem>
+                                <SelectItem value="groq" className="text-foreground hover:bg-accent">Groq</SelectItem>
+                                <SelectItem value="deepseek" className="text-foreground hover:bg-accent">DeepSeek</SelectItem>
+                                <SelectItem value="xai" className="text-foreground hover:bg-accent">xAI (Grok)</SelectItem>
                               </SelectContent>
                             </Select>
-                            <p className="text-xs text-blue-700 mt-1">The AI model provider for your requests</p>
+                            <p className="text-xs text-muted-foreground mt-1">The AI model provider for your requests</p>
                           </div>
                         </div>
                       </div>
 
                       {/* API Configuration */}
                       <div className="space-y-4">
-                        <h4 className="text-sm font-medium text-gray-900">API Settings</h4>
+                        <h4 className="text-sm font-medium text-foreground">API Settings</h4>
                         
                         <div>
-                          <Label className="text-sm font-medium text-gray-700 mb-2 block">Base URL</Label>
-                          <Input
-                            value={state.baseUrl}
-                            onChange={(e) => {
-                              updateState('baseUrl', e.target.value);
-                              localStorage.setItem('imageGen_baseUrl', e.target.value);
-                            }}
-                            placeholder="http://localhost:8080"
-                            className="h-10 font-mono"
-                          />
-                          <p className="text-xs text-gray-500 mt-1">The base URL for your API endpoint</p>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">Base URL</Label>
+                                                  <Input
+                          value={state.baseUrl}
+                          onChange={(e) => {
+                            updateState('baseUrl', e.target.value);
+                            localStorage.setItem('imageGen_baseUrl', e.target.value);
+                          }}
+                          placeholder="http://localhost:8080"
+                          className="h-10 font-mono"
+                        />
+                          <p className="text-xs text-muted-foreground mt-1">The base URL for your API endpoint</p>
                         </div>
 
                         <div>
-                          <Label className="text-sm font-medium text-gray-700 mb-2 block">API Key</Label>
-                          <Input
-                            type="password"
-                            value={state.apiKey}
-                            onChange={(e) => {
-                              updateState('apiKey', e.target.value);
-                              localStorage.setItem('imageGen_apiKey', e.target.value);
-                            }}
-                            placeholder="Your API key"
-                            className="h-10 font-mono"
-                          />
-                          <p className="text-xs text-gray-500 mt-1">Your authentication key for API access</p>
+                          <Label className="text-sm font-medium text-foreground mb-2 block">API Key</Label>
+                                                  <Input
+                          type="password"
+                          value={state.apiKey}
+                          onChange={(e) => {
+                            updateState('apiKey', e.target.value);
+                            localStorage.setItem('imageGen_apiKey', e.target.value);
+                          }}
+                          placeholder="Your API key"
+                          className="h-10 font-mono"
+                        />
+                          <p className="text-xs text-muted-foreground mt-1">Your authentication key for API access</p>
                         </div>
                       </div>
 
                       {/* Connection Test */}
-                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                        <h4 className="text-sm font-medium text-green-900 mb-2">Connection Test</h4>
-                        <p className="text-xs text-green-700 mb-3">
+                      <div className="p-4 bg-success/5 dark:bg-success/10 border border-success/20 dark:border-success/30 rounded-lg">
+                        <h4 className="text-sm font-medium text-success dark:text-success-light mb-2">Connection Test</h4>
+                        <p className="text-xs text-muted-foreground mb-3">
                           Test your API configuration to ensure it's working correctly.
                         </p>
                         <Button 
                           variant="outline" 
                           size="sm"
-                          className="bg-white hover:bg-green-50 border-green-300"
+                          className="hover:bg-success/5 dark:hover:bg-success/10 hover:border-success/30 dark:hover:border-success/40"
                           onClick={async () => {
                             if (!state.apiKey.trim()) {
                               toast.error('Please set your API key first');
@@ -1693,54 +1693,54 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                 {activeConfigPanel === 'output' && (
                   <div className="space-y-6">
                     <div>
-                      <Label className="text-base font-semibold text-gray-900 mb-3 block">Output Format Configuration</Label>
-                      <p className="text-sm text-gray-600 mb-4">
+                      <Label className="text-base font-semibold text-foreground mb-3 block">Output Format Configuration</Label>
+                      <p className="text-sm text-muted-foreground mb-4">
                         Control how the AI formats its responses.
                       </p>
                     </div>
 
                     <div className="space-y-4">
                       <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-2 block">Format Type</Label>
+                        <Label className="text-sm font-medium text-foreground mb-2 block">Format Type</Label>
                         <Select value={state.text_format_type} onValueChange={(value) => updateState('text_format_type', value)}>
                           <SelectTrigger className="h-10">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="text">Plain Text</SelectItem>
-                            <SelectItem value="json_object">JSON Object</SelectItem>
-                            <SelectItem value="json_schema">JSON Schema</SelectItem>
+                          <SelectContent className="bg-card border border-border">
+                            <SelectItem value="text" className="text-foreground hover:bg-accent">Plain Text</SelectItem>
+                            <SelectItem value="json_object" className="text-foreground hover:bg-accent">JSON Object</SelectItem>
+                            <SelectItem value="json_schema" className="text-foreground hover:bg-accent">JSON Schema</SelectItem>
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-gray-500 mt-1">Choose how the AI should format its responses</p>
+                        <p className="text-xs text-muted-foreground mt-1">Choose how the AI should format its responses</p>
                       </div>
 
                       {state.text_format_type !== 'text' && (
-                        <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                          <h4 className="text-sm font-medium text-indigo-900 mb-2">JSON Output Settings</h4>
-                          <p className="text-xs text-indigo-700 mb-3">
+                        <div className="p-4 bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/30 rounded-lg">
+                          <h4 className="text-sm font-medium text-primary dark:text-primary-light mb-2">JSON Output Settings</h4>
+                          <p className="text-xs text-muted-foreground mb-3">
                             When using JSON output, the AI will structure its responses according to your specifications.
                           </p>
                           
                           {state.text_format_type === 'json_schema' && (
                             <div className="space-y-3">
                               <div>
-                                <Label className="text-sm font-medium text-indigo-900 mb-2 block">Schema Name</Label>
+                                <Label className="text-sm font-medium text-foreground mb-2 block">Schema Name</Label>
                                 <Input
                                   value={state.json_schema_name}
                                   onChange={(e) => updateState('json_schema_name', e.target.value)}
                                   placeholder="response_schema"
-                                  className="h-9 bg-white border-indigo-200"
+                                  className="h-9 focus:border-primary dark:focus:border-primary-light"
                                 />
                               </div>
                               
                               <div>
-                                <Label className="text-sm font-medium text-indigo-900 mb-2 block">Description</Label>
+                                <Label className="text-sm font-medium text-foreground mb-2 block">Description</Label>
                                 <Input
                                   value={state.json_schema_description}
                                   onChange={(e) => updateState('json_schema_description', e.target.value)}
                                   placeholder="Describe the purpose of this schema..."
-                                  className="h-9 bg-white border-indigo-200"
+                                  className="h-9 focus:border-primary dark:focus:border-primary-light"
                                 />
                               </div>
 
@@ -1749,12 +1749,12 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                                   checked={state.json_schema_strict} 
                                   onCheckedChange={(checked) => updateState('json_schema_strict', checked)} 
                                 />
-                                <Label className="text-sm font-medium text-indigo-900">Strict Mode</Label>
-                                <Badge variant="outline" className="text-xs bg-white text-indigo-700">
+                                <Label className="text-sm font-medium text-foreground">Strict Mode</Label>
+                                <Badge variant="outline" className="text-xs">
                                   {state.json_schema_strict ? 'Enabled' : 'Disabled'}
                                 </Badge>
                               </div>
-                              <p className="text-xs text-indigo-600">
+                              <p className="text-xs text-muted-foreground">
                                 Strict mode enforces exact schema compliance
                               </p>
 
@@ -1763,7 +1763,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                                   variant="outline"
                                   size="sm"
                                   onClick={() => openConfigPanel('json-schema')}
-                                  className="w-full h-9 bg-white hover:bg-indigo-50 border-indigo-300"
+                                  className="w-full h-9 bg-card border-border text-foreground hover:bg-primary/5 dark:hover:bg-primary/10 hover:border-primary/30 dark:hover:border-primary/40"
                                 >
                                   <Code2 className="h-4 w-4 mr-2" />
                                   Edit JSON Schema
@@ -1788,7 +1788,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
             size="icon"
             onClick={copyRequestBody}
             title="Copy JSON"
-            className="h-12 w-12 rounded-full shadow-lg bg-white hover:bg-gray-50 border-2"
+            className="h-12 w-12 rounded-full shadow-lg bg-card hover:bg-accent border border-border text-muted-foreground"
           >
             <Copy className="h-4 w-4" />
           </Button>
@@ -1797,7 +1797,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
             size="icon"
             onClick={showCurlCommand}
             title="Show cURL"
-            className="h-12 w-12 rounded-full shadow-lg bg-white hover:bg-gray-50 border-2"
+            className="h-12 w-12 rounded-full shadow-lg bg-card hover:bg-accent border border-border text-muted-foreground"
           >
             <Code2 className="h-4 w-4" />
           </Button>
@@ -1806,7 +1806,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
             size="icon"
             onClick={addChatMessage}
             title="Add Message"
-            className="h-12 w-12 rounded-full shadow-lg bg-white hover:bg-gray-50 border-2"
+            className="h-12 w-12 rounded-full shadow-lg bg-card hover:bg-accent border border-border text-muted-foreground"
           >
             <Plus className="h-4 w-4" />
           </Button>
@@ -1815,7 +1815,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
             size="icon"
             onClick={clearChatHistory}
             title="Clear Chat"
-            className="h-12 w-12 rounded-full shadow-lg bg-white hover:bg-gray-50 border-2"
+            className="h-12 w-12 rounded-full shadow-lg bg-card hover:bg-accent border border-border text-muted-foreground"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -1825,7 +1825,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
               size="icon"
               onClick={downloadResponse}
               title="Download Response"
-              className="h-12 w-12 rounded-full shadow-lg bg-white hover:bg-gray-50 border-2"
+              className="h-12 w-12 rounded-full shadow-lg bg-card hover:bg-accent border border-border text-muted-foreground"
             >
               <Download className="h-4 w-4" />
             </Button>
@@ -1833,7 +1833,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
         </div>
 
         {/* Right Panel - Chat Interface */}
-        <div className="flex-1 flex flex-col bg-white">
+        <div className="flex-1 flex flex-col bg-card">
 
           {/* Chat Messages */}
           <div className="flex-1 overflow-hidden" style={{ height: 'calc(100vh - 120px)' }}>
@@ -1842,18 +1842,18 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
               {chatHistory.length === 0 ? (
                 <div className="flex items-center justify-center h-full min-h-[300px]">
                   <div className="text-center space-y-4 max-w-md">
-                    <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                      <MessageSquare className="h-8 w-8 text-blue-600" />
+                    <div className="mx-auto w-16 h-16 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center">
+                      <MessageSquare className="h-8 w-8 text-primary dark:text-primary-light" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-medium text-gray-900">Start your conversation</h3>
-                      <p className="text-sm text-gray-500 mt-2">
+                      <h3 className="text-lg font-medium text-foreground">Start your conversation</h3>
+                      <p className="text-sm text-muted-foreground mt-2">
                         Type a message below to start chatting, or add system messages to set context.
                       </p>
                     </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-                      <h4 className="text-sm font-medium text-blue-900 mb-2">Tips:</h4>
-                      <ul className="text-xs text-blue-700 space-y-1">
+                    <div className="bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/30 rounded-lg p-4 text-left">
+                      <h4 className="text-sm font-medium text-primary dark:text-primary-light mb-2">Tips:</h4>
+                      <ul className="text-xs text-muted-foreground space-y-1">
                         <li>• Type messages in the input below</li>
                         <li>• Press Enter or click Send to add to chat</li>
                         <li>• Use "Add Message" for system prompts</li>
@@ -1866,21 +1866,17 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                 chatHistory.map((message, index) => (
                   <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[80%] group relative ${
-                      message.role === 'user' 
-                        ? 'bg-blue-600 text-white' 
-                        : message.role === 'system'
-                        ? 'bg-amber-100 text-amber-900 border border-amber-200'
-                        : 'bg-gray-100 text-gray-900'
+                      message.role === 'system'
+                        ? 'bg-warning/10 dark:bg-warning/20 text-warning dark:text-warning-light border border-warning/20 dark:border-warning/30'
+                        : 'bg-muted text-foreground border border-border'
                     } rounded-lg p-4 shadow-sm`}>
                       <div className="flex items-center justify-between mb-2">
                         <Badge 
-                          variant={message.role === 'user' ? 'secondary' : 'outline'} 
+                          variant="outline" 
                           className={`text-xs ${
-                            message.role === 'user' 
-                              ? 'bg-blue-500 text-white' 
-                              : message.role === 'system'
-                              ? 'bg-amber-200 text-amber-800'
-                              : 'bg-gray-200 text-gray-700'
+                            message.role === 'system'
+                              ? 'bg-warning/20 dark:bg-warning/30 text-warning dark:text-warning-light border-warning/30 dark:border-warning/40'
+                              : 'bg-muted text-muted-foreground border-border'
                           }`}
                         >
                           {message.role}
@@ -1890,7 +1886,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                             variant="ghost"
                             size="sm"
                             onClick={() => editChatMessage(index)}
-                            className="h-6 w-6 p-0"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-accent"
                           >
                             <Settings className="h-3 w-3" />
                           </Button>
@@ -1898,7 +1894,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                             variant="ghost"
                             size="sm"
                             onClick={() => removeChatMessage(index)}
-                            className="h-6 w-6 p-0"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-error hover:bg-error/5"
                           >
                             <Trash2 className="h-3 w-3" />
                           </Button>
@@ -1912,14 +1908,14 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                               updateChatMessage(index, 'role', value)
                             }
                           >
-                            <SelectTrigger className="h-7">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="user">User</SelectItem>
-                              <SelectItem value="assistant">Assistant</SelectItem>
-                              <SelectItem value="system">System</SelectItem>
-                            </SelectContent>
+                                                    <SelectTrigger className="h-7">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border border-border">
+                          <SelectItem value="user" className="text-foreground hover:bg-accent">User</SelectItem>
+                          <SelectItem value="assistant" className="text-foreground hover:bg-accent">Assistant</SelectItem>
+                          <SelectItem value="system" className="text-foreground hover:bg-accent">System</SelectItem>
+                        </SelectContent>
                           </Select>
                           <Textarea
                             value={message.content}
@@ -1927,10 +1923,10 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                             className="min-h-[60px] text-sm"
                           />
                           <div className="flex space-x-2">
-                            <Button size="sm" onClick={() => saveChatMessage(index)}>
+                            <Button variant="outline" size="sm" onClick={() => saveChatMessage(index)} className="border-border text-foreground hover:bg-accent">
                               Save
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => cancelEditChatMessage(index)}>
+                            <Button variant="outline" size="sm" onClick={() => cancelEditChatMessage(index)} className="border-border text-foreground hover:bg-accent">
                               Cancel
                             </Button>
                           </div>
@@ -1941,9 +1937,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                         </div>
                       )}
                       {message.timestamp && (
-                        <div className={`text-xs mt-2 opacity-70 ${
-                          message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
-                        }`}>
+                        <div className="text-xs mt-2 text-muted-foreground opacity-70">
                           {new Date(message.timestamp).toLocaleTimeString()}
                         </div>
                       )}
@@ -1954,13 +1948,13 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
               
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-gray-100 rounded-lg p-4 shadow-sm max-w-[80%]">
+                  <div className="bg-muted border border-border rounded-lg p-4 shadow-sm max-w-[80%]">
                     <div className="flex items-center space-x-3">
                       <div className="relative">
-                        <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                        <Loader2 className="h-4 w-4 animate-spin text-primary dark:text-primary-light" />
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm text-gray-600">AI is thinking...</p>
+                        <p className="text-sm text-muted-foreground">AI is thinking...</p>
                         <div className="mt-2 flex space-x-1">
                           <div className="h-1 w-2 bg-current opacity-60 rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
                           <div className="h-1 w-2 bg-current opacity-60 rounded-full animate-pulse" style={{ animationDelay: '150ms' }}></div>
@@ -1976,16 +1970,16 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
           </div>
 
           {/* Chat Input */}
-          <div className="border-t bg-white p-4">
+          <div className="border-t border-border bg-card p-4">
             <div className="max-w-4xl mx-auto">
               <div className="flex space-x-3">
                 <Select value={currentMessageRole} onValueChange={(value: 'user' | 'system') => setCurrentMessageRole(value)}>
                   <SelectTrigger className="w-20 h-10">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="system">System</SelectItem>
+                  <SelectContent className="bg-card border border-border">
+                    <SelectItem value="user" className="text-foreground hover:bg-accent">User</SelectItem>
+                    <SelectItem value="system" className="text-foreground hover:bg-accent">System</SelectItem>
                   </SelectContent>
                 </Select>
                 <div className="flex-1 flex space-x-2">
@@ -1994,15 +1988,15 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                     onChange={(e) => setCurrentMessage(e.target.value)}
                     onKeyPress={handleChatKeyPress}
                     placeholder="Type your message..."
-                    className="flex-1 min-h-[40px] max-h-[120px] resize-none"
+                    className="flex-1 min-h-[40px] max-h-[120px] resize-none focus:border-primary dark:focus:border-primary-light"
                     disabled={isLoading}
                   />
                   <Button 
                     onClick={sendChatMessage}
                     disabled={!currentMessage.trim() || isLoading}
-                    className="h-10 px-4"
+                    className="h-10 px-4 bg-primary hover:bg-primary-light dark:bg-primary-light dark:hover:bg-primary text-white shadow-sm border border-primary/20 dark:border-primary/30"
                   >
-                    <Send className="h-4 w-4" />
+                    <Send className="h-4 w-4 text-white" />
                   </Button>
                 </div>
               </div>
@@ -2012,19 +2006,19 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
 
         {/* cURL Command Modal */}
         <Dialog open={showCurlModal} onOpenChange={setShowCurlModal}>
-          <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogContent className="max-w-4xl max-h-[80vh] bg-card border border-border">
             <DialogHeader>
-              <DialogTitle>cURL Command</DialogTitle>
+              <DialogTitle className="text-foreground">cURL Command</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm overflow-auto max-h-[60vh]">
+              <div className="bg-muted text-success dark:text-success-light p-4 rounded-lg font-mono text-sm overflow-auto max-h-[60vh]">
                 <pre className="whitespace-pre-wrap break-all">{curlCommand}</pre>
               </div>
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setShowCurlModal(false)}>
+                <Button variant="outline" onClick={() => setShowCurlModal(false)} className="border-border text-foreground hover:bg-accent">
                   Close
                 </Button>
-                <Button onClick={copyCurlToClipboard}>
+                <Button variant="outline" onClick={copyCurlToClipboard} className="border-border text-foreground hover:bg-accent">
                   <Copy className="h-4 w-4 mr-2" />
                   Copy to Clipboard
                 </Button>

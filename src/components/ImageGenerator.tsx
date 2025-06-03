@@ -38,7 +38,7 @@ const LoadingCard: React.FC<{ loadingState: LoadingState }> = ({ loadingState })
       case 'creating':
         return <div className="w-3 h-3 bg-warning rounded-full animate-pulse" />;
       default:
-        return <div className="w-3 h-3 bg-accentGray-4 rounded-full animate-pulse" />;
+        return <div className="w-3 h-3 bg-muted-foreground rounded-full animate-pulse" />;
     }
   };
 
@@ -51,19 +51,19 @@ const LoadingCard: React.FC<{ loadingState: LoadingState }> = ({ loadingState })
       case 'text':
         return 'text-primary';
       default:
-        return 'text-accentGray-5';
+        return 'text-muted-foreground';
     }
   };
 
   return (
     <div className="flex justify-start mb-6">
-      <Card className="max-w-3xl px-6 py-4 bg-background1 dark:bg-accentGray-8 border border-accentGray-2 dark:border-accentGray-7 shadow-sm hover:shadow-md transition-shadow duration-200">
+      <Card className="max-w-3xl px-6 py-4 bg-card border border-border shadow-sm hover:shadow-md transition-shadow duration-200">
         <div className="flex items-center space-x-4">
           <div className="flex-shrink-0">
             {getIcon()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-sm font-medium ${getStageColor()} dark:text-white`}>
+            <p className={`text-sm font-medium ${getStageColor()}`}>
               {loadingState.message}
             </p>
             <div className="mt-3 flex space-x-1">
@@ -548,7 +548,7 @@ const ImageGenerator: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-background dark:bg-gray-900 relative">
+    <div className="flex flex-col h-full bg-background relative">
 
       {/* Redesigned Floating Action Buttons with Geist UI styling */}
       <div className="fixed right-6 top-1/2 -translate-y-1/2 z-50 flex flex-col space-y-4">
@@ -557,9 +557,9 @@ const ImageGenerator: React.FC = () => {
           size="icon"
           onClick={resetConversation}
           title="Reset conversation"
-          className="h-12 w-12 rounded-lg shadow-md bg-background dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-200"
+                      className="h-12 w-12 rounded-lg shadow-md bg-background hover:bg-accent border border-border hover:border-ring transition-all duration-200"
         >
-                      <Trash className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                      <Trash className="h-4 w-4 text-muted-foreground" />
         </Button>
         <div className="flex flex-col space-y-4">
           <DocumentModal
@@ -593,7 +593,7 @@ const ImageGenerator: React.FC = () => {
       <div className="flex-1 overflow-y-auto px-6 py-8">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <Card className="p-6 text-center max-w-2xl mx-auto bg-background dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm max-h-[80vh] overflow-y-auto">
+            <Card className="p-6 text-center max-w-2xl mx-auto bg-card border border-border shadow-sm max-h-[80vh] overflow-y-auto">
               <div className="flex justify-center mb-4">
                 <div className="w-12 h-12 bg-primary/10 dark:bg-primary/20 rounded-lg flex items-center justify-center">
                   <Sparkles className="h-6 w-6 text-primary" />
@@ -606,30 +606,30 @@ const ImageGenerator: React.FC = () => {
                 <h3 className="text-base font-semibold mb-3 text-primary dark:text-primary-light">Prerequisites:</h3>
                 <div className="text-left space-y-3">
                   <div>
-                    <p className="text-xs font-medium text-foreground dark:text-white mb-1">1. Run OpenResponses server with Docker:</p>
-                    <code className="block bg-accentGray-8 dark:bg-accentGray-1 text-success text-xs p-2 rounded font-mono border border-accentGray-3 dark:border-accentGray-7">
+                    <p className="text-xs font-medium text-foreground mb-1">1. Run OpenResponses server with Docker:</p>
+                    <code className="block bg-muted text-success text-xs p-2 rounded font-mono border border-border">
                       docker run -p 8080:8080 masaicai/open-responses:latest
                     </code>
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-foreground dark:text-white mb-1">2. Expose port 8080 using ngrok:</p>
-                    <code className="block bg-accentGray-8 dark:bg-accentGray-1 text-success text-xs p-2 rounded font-mono border border-accentGray-3 dark:border-accentGray-7">
+                    <p className="text-xs font-medium text-foreground mb-1">2. Expose port 8080 using ngrok:</p>
+                    <code className="block bg-muted text-success text-xs p-2 rounded font-mono border border-border">
                       ngrok http 8080
                     </code>
-                    <p className="text-xs text-accentGray-5 dark:text-accentGray-4 mt-1">
-                      Example: <code className="bg-background2 dark:bg-accentGray-7 px-1 rounded">https://abc123.ngrok.io</code>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Example: <code className="bg-muted px-1 rounded">https://abc123.ngrok.io</code>
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-foreground dark:text-white mb-1">3. Configure API settings:</p>
-                    <p className="text-xs text-accentGray-5 dark:text-accentGray-4">
+                    <p className="text-xs font-medium text-foreground mb-1">3. Configure API settings:</p>
+                    <p className="text-xs text-muted-foreground">
                       Enter the ngrok URL as Base URL in settings ⚙️
                     </p>
                   </div>
                 </div>
               </div>
               
-              <p className="text-sm text-accentGray-5 dark:text-accentGray-4 leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-relaxed">
                 Chat with AI and generate amazing images! Ask questions, request images, or have a conversation.
                 {selectedVectorStore && (
                   <span className="block mt-2 text-xs text-primary dark:text-primary-light font-medium">
@@ -669,8 +669,8 @@ const ImageGenerator: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Redesigned Input Area with Vercel-like styling */}
-      <div className="bg-background dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-6 py-6">
+      {/* Redesigned Input Area with Geist UI styling */}
+                <div className="bg-background border-t border-border px-6 py-6">
         <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
           <div className="flex space-x-4">
             <Textarea
@@ -678,13 +678,13 @@ const ImageGenerator: React.FC = () => {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Ask me anything or describe an image you want to generate..."
-              className="flex-1 min-h-[60px] resize-none bg-background dark:bg-gray-800 border border-gray-200 dark:border-gray-600 text-foreground placeholder-gray-500 focus:border-primary focus:ring-0 transition-colors duration-200"
+                              className="flex-1 min-h-[60px] resize-none focus:ring-0 transition-colors duration-200"
               disabled={isLoading}
             />
             <Button 
               type="submit" 
               disabled={!inputValue.trim() || isLoading}
-              className="self-end bg-primary hover:bg-gray-800 text-primary-foreground font-medium px-6 py-3 transition-colors duration-200 shadow-sm hover:shadow-md"
+              className="self-end bg-primary hover:bg-primary-light dark:hover:bg-primary-dark text-white font-medium px-6 py-3 transition-colors duration-200 shadow-sm hover:shadow-md"
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

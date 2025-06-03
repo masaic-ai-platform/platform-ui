@@ -484,20 +484,20 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
             <div className="w-12 h-12 bg-primary/10 dark:bg-primary/20 rounded-lg flex items-center justify-center">
               <Database className="h-6 w-6 text-primary dark:text-primary-light" />
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-foreground dark:text-white">Document Library</h2>
-              <p className="text-sm text-accentGray-5 dark:text-accentGray-4 mt-1">
+          <div>
+              <h2 className="text-xl font-semibold text-foreground">Document Library</h2>
+              <p className="text-sm text-muted-foreground mt-1">
                 Upload files and organize them into searchable vector stores
               </p>
-            </div>
+              </div>
           </div>
           <div className="flex items-center space-x-3">
-            <Button
+            <Button 
               onClick={loadVectorStores}
               variant="outline"
               size="sm"
               disabled={isLoading}
-              className="border-accentGray-2 dark:border-accentGray-6 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6"
+              className="border-border text-foreground hover:bg-accent"
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               Refresh
@@ -507,53 +507,53 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
 
         {/* Quick Stats - New Geist UI section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-          <div className="bg-background1/50 dark:bg-accentGray-8/50 backdrop-blur-sm rounded-lg p-4 border border-accentGray-2/50 dark:border-accentGray-6/50">
+          <div className="bg-background/50 backdrop-blur-sm rounded-lg p-4 border border-border/50">
             <div className="flex items-center space-x-3">
               <FileText className="h-5 w-5 text-primary dark:text-primary-light" />
               <div>
-                <p className="text-xs font-medium text-accentGray-5 dark:text-accentGray-4">Files Uploaded</p>
-                <p className="text-lg font-semibold text-foreground dark:text-white">{documents.length}</p>
+                <p className="text-xs font-medium text-muted-foreground">Files Uploaded</p>
+                <p className="text-lg font-semibold text-foreground">{documents.length}</p>
               </div>
             </div>
           </div>
-          <div className="bg-background1/50 dark:bg-accentGray-8/50 backdrop-blur-sm rounded-lg p-4 border border-accentGray-2/50 dark:border-accentGray-6/50">
+          <div className="bg-background/50 backdrop-blur-sm rounded-lg p-4 border border-border/50">
             <div className="flex items-center space-x-3">
               <Database className="h-5 w-5 text-success dark:text-success-light" />
               <div>
-                <p className="text-xs font-medium text-accentGray-5 dark:text-accentGray-4">Vector Stores</p>
-                <p className="text-lg font-semibold text-foreground dark:text-white">{vectorStores.length}</p>
+                <p className="text-xs font-medium text-muted-foreground">Vector Stores</p>
+                <p className="text-lg font-semibold text-foreground">{vectorStores.length}</p>
               </div>
             </div>
           </div>
-          <div className="bg-background1/50 dark:bg-accentGray-8/50 backdrop-blur-sm rounded-lg p-4 border border-accentGray-2/50 dark:border-accentGray-6/50">
+          <div className="bg-background/50 backdrop-blur-sm rounded-lg p-4 border border-border/50">
             <div className="flex items-center space-x-3">
               <Search className="h-5 w-5 text-warning dark:text-warning-light" />
               <div>
-                <p className="text-xs font-medium text-accentGray-5 dark:text-accentGray-4">Active Store</p>
-                <p className="text-sm font-medium text-foreground dark:text-white truncate">
+                <p className="text-xs font-medium text-muted-foreground">Active Store</p>
+                <p className="text-sm font-medium text-foreground truncate">
                   {selectedVectorStore ? vectorStores.find(vs => vs.id === selectedVectorStore)?.name || 'Unknown' : 'None'}
-                </p>
-              </div>
+                  </p>
+                </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* File Upload Section - Redesigned with Geist UI */}
-      <Card className="p-6 bg-background1 dark:bg-accentGray-7 border border-accentGray-2 dark:border-accentGray-6">
+      <Card className="p-6 bg-card border border-border">
         <div className="flex items-center space-x-3 mb-6">
           <div className="w-8 h-8 bg-warning/10 dark:bg-warning/20 rounded-lg flex items-center justify-center">
             <Upload className="h-4 w-4 text-warning dark:text-warning-light" />
           </div>
-          <h3 className="text-lg font-semibold text-foreground dark:text-white">Upload Documents</h3>
-        </div>
+          <h3 className="text-lg font-semibold text-foreground">Upload Documents</h3>
+                    </div>
 
         <div className="space-y-6">
-          <div className="border-2 border-dashed border-accentGray-2 dark:border-accentGray-6 rounded-lg p-6 hover:border-primary/50 dark:hover:border-primary/50 transition-colors duration-200">
+          <div className="border-2 border-dashed border-border rounded-lg p-6 hover:border-primary/50 dark:hover:border-primary/50 transition-colors duration-200">
             <div className="text-center">
-              <Upload className="mx-auto h-8 w-8 text-accentGray-4 dark:text-accentGray-5 mb-3" />
-              <h4 className="text-sm font-medium text-foreground dark:text-white mb-2">Choose files to upload</h4>
-              <p className="text-xs text-accentGray-5 dark:text-accentGray-4 mb-4">
+              <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-3" />
+              <h4 className="text-sm font-medium text-foreground mb-2">Choose files to upload</h4>
+              <p className="text-xs text-muted-foreground mb-4">
                 Supports PDF, TXT, DOCX, MD and other text formats
               </p>
               <label className="inline-block">
@@ -578,28 +578,28 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
                   )}
                 </span>
               </label>
-            </div>
-          </div>
+                </div>
+              </div>
 
           {/* File List with enhanced Geist UI styling */}
           {documents.length > 0 && (
             <div className="space-y-3">
-              <h4 className="text-sm font-medium text-foreground dark:text-white flex items-center">
+              <h4 className="text-sm font-medium text-foreground flex items-center">
                 <FileText className="h-4 w-4 mr-2" />
                 Uploaded Files ({documents.length})
               </h4>
-              <div className="max-h-48 overflow-y-auto space-y-2 border border-accentGray-2 dark:border-accentGray-6 rounded-lg p-3 bg-background2 dark:bg-accentGray-8">
+              <div className="max-h-48 overflow-y-auto space-y-2 border border-border rounded-lg p-3 bg-muted">
                 {documents.map((file) => (
-                  <div key={file.id} className="flex items-center justify-between p-3 bg-background1 dark:bg-accentGray-7 rounded-lg border border-accentGray-2 dark:border-accentGray-6 hover:shadow-sm transition-shadow">
+                  <div key={file.id} className="flex items-center justify-between p-3 bg-card rounded-lg border border-border hover:shadow-sm transition-shadow">
                     <div className="flex items-center space-x-3 flex-1 min-w-0">
                       <FileText className="h-4 w-4 text-primary dark:text-primary-light flex-shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground dark:text-white truncate">{file.filename}</p>
+                        <p className="text-sm font-medium text-foreground truncate">{file.filename}</p>
                         <div className="flex items-center space-x-4 mt-1">
-                          <span className="text-xs text-accentGray-5 dark:text-accentGray-4">
+                          <span className="text-xs text-muted-foreground">
                             {Math.round(file.bytes / 1024)} KB
                           </span>
-                          <span className="text-xs text-accentGray-5 dark:text-accentGray-4">
+                          <span className="text-xs text-muted-foreground">
                             {file.created_at ? new Date(file.created_at * 1000).toLocaleDateString() : 'Unknown date'}
                           </span>
                         </div>
@@ -610,42 +610,42 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
                         variant="outline"
                         size="sm"
                         onClick={() => viewFileContent(file.id)}
-                        className="border-accentGray-2 dark:border-accentGray-6 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6"
+                        className="border-border text-foreground hover:bg-accent"
                         title="View content"
                       >
                         <Eye className="h-3 w-3" />
                       </Button>
-                      <Button
+                        <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setDeleteDialog({
-                          isOpen: true,
+                          onClick={() => setDeleteDialog({
+                            isOpen: true,
                           type: 'file',
-                          itemId: file.id,
+                            itemId: file.id,
                           itemName: file.filename
-                        })}
+                          })}
                         className="border-error/30 dark:border-error/40 text-error dark:text-error-light hover:bg-error/5 dark:hover:bg-error/10"
                         title="Delete file"
-                      >
+                        >
                         <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
+                        </Button>
+                      </div>
                   </div>
                 ))}
-              </div>
+                </div>
             </div>
           )}
         </div>
       </Card>
 
       {/* Vector Store Management - Redesigned with Geist UI */}
-      <Card className="p-6 bg-background1 dark:bg-accentGray-7 border border-accentGray-2 dark:border-accentGray-6">
+      <Card className="p-6 bg-card border border-border">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-success/10 dark:bg-success/20 rounded-lg flex items-center justify-center">
               <Database className="h-4 w-4 text-success dark:text-success-light" />
             </div>
-            <h3 className="text-lg font-semibold text-foreground dark:text-white">Vector Stores</h3>
+            <h3 className="text-lg font-semibold text-foreground">Vector Stores</h3>
           </div>
           <Button
             onClick={() => setShowCreateVectorStore(true)}
@@ -659,33 +659,33 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
 
         {/* Create Vector Store Form */}
         {showCreateVectorStore && (
-          <div className="mb-6 p-6 bg-background2 dark:bg-accentGray-8 border border-accentGray-2 dark:border-accentGray-6 rounded-lg">
+          <div className="mb-6 p-6 bg-muted border border-border rounded-lg">
             <div className="flex items-center space-x-3 mb-4">
               <div className="w-6 h-6 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center">
                 <Plus className="h-3 w-3 text-primary dark:text-primary-light" />
               </div>
-              <h4 className="text-base font-semibold text-foreground dark:text-white">Create New Vector Store</h4>
+              <h4 className="text-base font-semibold text-foreground">Create New Vector Store</h4>
             </div>
 
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="vectorStoreName" className="text-sm font-medium text-foreground dark:text-white">Store Name</Label>
+                  <Label htmlFor="vectorStoreName" className="text-sm font-medium text-foreground">Store Name</Label>
                   <Input
                     id="vectorStoreName"
                     type="text"
                     placeholder="My Document Store"
                     value={newVectorStoreName}
                     onChange={(e) => setNewVectorStoreName(e.target.value)}
-                    className="bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5 focus:border-primary dark:focus:border-primary-light"
+                    className="bg-card border border-border text-foreground placeholder:text-muted-foreground focus:border-primary dark:focus:border-primary-light"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-foreground dark:text-white">Expiration</Label>
+                  <Label className="text-sm font-medium text-foreground">Expiration</Label>
                   <select
                     value={newVectorStoreExpires}
                     onChange={(e) => setNewVectorStoreExpires(e.target.value)}
-                    className="w-full px-3 py-2 bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white rounded-lg focus:border-primary dark:focus:border-primary-light focus:ring-1 focus:ring-primary/20 dark:focus:ring-primary/30"
+                    className="w-full px-3 py-2 bg-card border border-border text-foreground rounded-lg focus:border-primary dark:focus:border-primary-light focus:ring-1 focus:ring-primary/20 dark:focus:ring-primary/30"
                   >
                     <option value="1">1 day</option>
                     <option value="7">7 days</option>
@@ -693,20 +693,20 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
                   </select>
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="vectorStoreDesc" className="text-sm font-medium text-foreground dark:text-white">Description (Optional)</Label>
+        
+        <div className="space-y-2">
+                <Label htmlFor="vectorStoreDesc" className="text-sm font-medium text-foreground">Description (Optional)</Label>
                 <Textarea
                   id="vectorStoreDesc"
                   placeholder="Describe what documents this store contains..."
                   value={newVectorStoreDescription}
                   onChange={(e) => setNewVectorStoreDescription(e.target.value)}
                   rows={3}
-                  className="resize-none bg-background1 dark:bg-accentGray-6 border border-accentGray-2 dark:border-accentGray-5 text-foreground dark:text-white placeholder-accentGray-4 dark:placeholder-accentGray-5 focus:border-primary dark:focus:border-primary-light"
+                  className="resize-none bg-card border border-border text-foreground placeholder:text-muted-foreground focus:border-primary dark:focus:border-primary-light"
                 />
               </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-accentGray-2 dark:border-accentGray-6">
+              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-border">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -714,7 +714,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
                     setNewVectorStoreName('');
                     setNewVectorStoreDescription('');
                   }}
-                  className="border-accentGray-2 dark:border-accentGray-6 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6"
+                  className="border-border text-foreground hover:bg-accent"
                 >
                   Cancel
                 </Button>
@@ -743,10 +743,10 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
         {/* Vector Store List */}
         <div className="space-y-3">
           {vectorStores.length === 0 ? (
-            <div className="text-center py-12 border-2 border-dashed border-accentGray-2 dark:border-accentGray-6 rounded-lg">
-              <Database className="mx-auto h-12 w-12 text-accentGray-4 dark:text-accentGray-5 mb-4" />
-              <h4 className="text-sm font-medium text-foreground dark:text-white mb-2">No vector stores yet</h4>
-              <p className="text-xs text-accentGray-5 dark:text-accentGray-4 mb-4">
+            <div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
+              <Database className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h4 className="text-sm font-medium text-foreground mb-2">No vector stores yet</h4>
+              <p className="text-xs text-muted-foreground mb-4">
                 Create your first vector store to organize and search through your documents
               </p>
               <Button
@@ -763,32 +763,32 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
               <div key={store.id} className={`p-4 rounded-lg border transition-all duration-200 ${
                 selectedVectorStore === store.id
                   ? 'border-success bg-success/5 dark:bg-success/10 shadow-sm'
-                  : 'border-accentGray-2 dark:border-accentGray-6 bg-background1 dark:bg-accentGray-7 hover:shadow-sm'
+                  : 'border-border bg-card hover:shadow-sm'
               }`}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3 flex-1 min-w-0">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                       selectedVectorStore === store.id
                         ? 'bg-success/10 dark:bg-success/20'
-                        : 'bg-accentGray-1 dark:bg-accentGray-6'
+                        : 'bg-muted'
                     }`}>
                       <Database className={`h-5 w-5 ${
                         selectedVectorStore === store.id
                           ? 'text-success dark:text-success-light'
-                          : 'text-accentGray-5 dark:text-accentGray-4'
+                          : 'text-muted-foreground'
                       }`} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-base font-semibold text-foreground dark:text-white truncate">{store.name}</h4>
+                      <h4 className="text-base font-semibold text-foreground truncate">{store.name}</h4>
                       {store.metadata?.description && (
-                        <p className="text-sm text-accentGray-5 dark:text-accentGray-4 mt-1 line-clamp-2">{store.metadata.description}</p>
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{store.metadata.description}</p>
                       )}
                       <div className="flex items-center space-x-4 mt-2">
-                        <span className="text-xs text-accentGray-5 dark:text-accentGray-4 flex items-center">
+                        <span className="text-xs text-muted-foreground flex items-center">
                           <FileText className="h-3 w-3 mr-1" />
                           {store.file_count || 0} files
                         </span>
-                        <span className="text-xs text-accentGray-5 dark:text-accentGray-4 flex items-center">
+                        <span className="text-xs text-muted-foreground flex items-center">
                           <Clock className="h-3 w-3 mr-1" />
                           Created {store.created_at ? new Date(store.created_at * 1000).toLocaleDateString() : 'Unknown'}
                         </span>
@@ -809,7 +809,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
                         navigator.clipboard.writeText(store.id);
                         toast.success('Store ID copied to clipboard');
                       }}
-                      className="border-accentGray-2 dark:border-accentGray-6 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6"
+                      className="border-border text-foreground hover:bg-accent"
                       title="Copy ID"
                     >
                       <Copy className="h-3 w-3" />
@@ -855,27 +855,27 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
       {/* File Content Modal - Enhanced with Geist UI */}
       {viewingFile && (
         <div className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-background1 dark:bg-accentGray-7 rounded-xl shadow-xl max-w-4xl w-full max-h-[80vh] flex flex-col border border-accentGray-2 dark:border-accentGray-6">
-            <div className="flex items-center justify-between p-6 border-b border-accentGray-2 dark:border-accentGray-6">
+          <div className="bg-card rounded-xl shadow-xl max-w-4xl w-full max-h-[80vh] flex flex-col border border-border">
+            <div className="flex items-center justify-between p-6 border-b border-border">
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-primary/10 dark:bg-primary/20 rounded-lg flex items-center justify-center">
                   <Eye className="h-4 w-4 text-primary dark:text-primary-light" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground dark:text-white">File Content</h3>
-                  <p className="text-sm text-accentGray-5 dark:text-accentGray-4">
+                  <h3 className="text-lg font-semibold text-foreground">File Content</h3>
+                  <p className="text-sm text-muted-foreground">
                     {documents.find(f => f.id === viewingFile)?.filename || 'Unknown file'}
                   </p>
                 </div>
               </div>
-              <Button
+                      <Button
                 variant="outline"
-                size="sm"
+                        size="sm"
                 onClick={() => setViewingFile(null)}
-                className="border-accentGray-2 dark:border-accentGray-6 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6"
+                className="border-border text-foreground hover:bg-accent"
               >
                 <X className="h-4 w-4" />
-              </Button>
+                      </Button>
             </div>
             <div className="flex-1 overflow-y-auto p-6">
               {loadingFileContent ? (
@@ -883,7 +883,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
                   <Loader2 className="h-8 w-8 animate-spin text-primary dark:text-primary-light" />
                 </div>
               ) : (
-                <pre className="whitespace-pre-wrap text-sm font-mono text-foreground dark:text-white bg-background2 dark:bg-accentGray-8 p-4 rounded-lg border border-accentGray-2 dark:border-accentGray-6 max-h-96 overflow-y-auto">
+                <pre className="whitespace-pre-wrap text-sm font-mono text-foreground bg-muted p-4 rounded-lg border border-border max-h-96 overflow-y-auto">
                   {fileContent || 'No content available'}
                 </pre>
               )}
@@ -894,24 +894,24 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
 
       {/* Delete Confirmation Dialog - Enhanced with Geist UI */}
       <AlertDialog open={deleteDialog.isOpen} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, isOpen: open })}>
-        <AlertDialogContent className="bg-background1 dark:bg-accentGray-7 border border-accentGray-2 dark:border-accentGray-6">
+        <AlertDialogContent className="bg-card border border-border">
           <AlertDialogHeader>
             <div className="flex items-center space-x-3 mb-4">
               <div className="w-10 h-10 bg-error/10 dark:bg-error/20 rounded-lg flex items-center justify-center">
                 <AlertTriangle className="h-5 w-5 text-error dark:text-error-light" />
               </div>
               <div>
-                <AlertDialogTitle className="text-lg font-semibold text-foreground dark:text-white">
+                <AlertDialogTitle className="text-lg font-semibold text-foreground">
                   Confirm Deletion
                 </AlertDialogTitle>
-                <AlertDialogDescription className="text-sm text-accentGray-5 dark:text-accentGray-4 mt-1">
+                <AlertDialogDescription className="text-sm text-muted-foreground mt-1">
                   This action cannot be undone
                 </AlertDialogDescription>
               </div>
             </div>
           </AlertDialogHeader>
           <div className="py-4">
-            <p className="text-sm text-foreground dark:text-white">
+            <p className="text-sm text-foreground">
               {deleteDialog.type === 'file' 
                 ? 'Are you sure you want to delete this file? It will be removed from all vector stores.'
                 : 'Are you sure you want to delete this vector store? All associated file associations will be lost.'
@@ -919,7 +919,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
             </p>
           </div>
           <AlertDialogFooter className="flex gap-3">
-            <AlertDialogCancel className="border-accentGray-2 dark:border-accentGray-6 text-foreground dark:text-white hover:bg-background2 dark:hover:bg-accentGray-6">
+            <AlertDialogCancel className="border-border text-foreground hover:bg-accent">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction 
@@ -937,7 +937,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete {deleteDialog.type === 'file' ? 'File' : 'Store'}
                 </>
-              )}
+          )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
