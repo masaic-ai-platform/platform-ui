@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import UnifiedCard from '@/components/ui/unified-card';
 import { Code, Copy, Check, X, User, Bot, AlertTriangle } from 'lucide-react';
 
 interface ChatMessageProps {
@@ -426,11 +427,19 @@ print(response.json())`;
     <>
       <div className={`flex mb-6 ${role === 'user' ? 'justify-end' : 'justify-start'}`}>
         <div className={`max-w-3xl ${role === 'user' ? 'ml-12' : 'mr-12'}`}>
-          <Card className="p-6 shadow-sm hover:shadow-md transition-shadow duration-200 bg-card text-foreground border border-border">
+          <UnifiedCard 
+            semanticType={role === 'user' ? 'opportunity' : 'neutral'}
+            showBrandAccent={role === 'assistant'}
+            className="p-6"
+          >
             {/* Message Header */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                  role === 'user' 
+                    ? 'bg-opportunity/20 text-opportunity' 
+                    : 'bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light'
+                }`}>
                   {role === 'user' ? <User className="h-3 w-3" /> : <Bot className="h-3 w-3" />}
                 </div>
                 <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -460,7 +469,7 @@ print(response.json())`;
             <div className="mt-3 text-xs text-muted-foreground">
               {timestamp.toLocaleTimeString()}
             </div>
-          </Card>
+          </UnifiedCard>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import UnifiedCard from '@/components/ui/unified-card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
@@ -175,9 +176,9 @@ const ApiPlayground: React.FC = () => {
 
   // Load settings from localStorage
   useEffect(() => {
-    const savedApiKey = localStorage.getItem('imageGen_apiKey') || '';
-    const savedBaseUrl = localStorage.getItem('imageGen_baseUrl') || 'http://localhost:8080';
-    const savedModelProvider = localStorage.getItem('imageGen_modelProvider') || 'openai';
+    const savedApiKey = localStorage.getItem('aiPlayground_apiKey') || '';
+    const savedBaseUrl = localStorage.getItem('aiPlayground_baseUrl') || 'http://localhost:8080';
+    const savedModelProvider = localStorage.getItem('aiPlayground_modelProvider') || 'openai';
     const savedPresets = localStorage.getItem('apiPlayground_presets');
     
     setState(prev => ({
@@ -914,7 +915,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `openresponses-response-${Date.now()}.json`;
+            link.download = `masaic-dev-response-${Date.now()}.json`;
     link.click();
     URL.revokeObjectURL(url);
     toast.success('Response downloaded!');
@@ -2190,7 +2191,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                               value={state.modelProvider} 
                               onValueChange={(value) => {
                                 updateState('modelProvider', value);
-                                localStorage.setItem('imageGen_modelProvider', value);
+                                localStorage.setItem('aiPlayground_modelProvider', value);
                               }}
                             >
                               <SelectTrigger className="h-10">
@@ -2239,7 +2240,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                           value={state.baseUrl}
                           onChange={(e) => {
                             updateState('baseUrl', e.target.value);
-                            localStorage.setItem('imageGen_baseUrl', e.target.value);
+                            localStorage.setItem('aiPlayground_baseUrl', e.target.value);
                           }}
                           placeholder="http://localhost:8080"
                           className="h-10 font-mono"
@@ -2254,7 +2255,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                           value={state.apiKey}
                           onChange={(e) => {
                             updateState('apiKey', e.target.value);
-                            localStorage.setItem('imageGen_apiKey', e.target.value);
+                            localStorage.setItem('aiPlayground_apiKey', e.target.value);
                           }}
                           placeholder="Your API key"
                           className="h-10 font-mono"

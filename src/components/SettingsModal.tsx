@@ -120,14 +120,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setImageProviderKey(tempImageProviderKey);
     setInstructions(tempInstructions);
     
-    localStorage.setItem('imageGen_apiKey', tempApiKey);
-    localStorage.setItem('imageGen_baseUrl', tempBaseUrl);
-    localStorage.setItem('imageGen_modelProvider', finalChatProvider);
-    localStorage.setItem('imageGen_modelName', tempModelName);
-    localStorage.setItem('imageGen_imageModelProvider', finalImageProvider);
-    localStorage.setItem('imageGen_imageModelName', tempImageModelName);
-    localStorage.setItem('imageGen_imageProviderKey', tempImageProviderKey);
-    localStorage.setItem('imageGen_instructions', tempInstructions);
+          localStorage.setItem('aiPlayground_apiKey', tempApiKey);
+      localStorage.setItem('aiPlayground_baseUrl', tempBaseUrl);
+      localStorage.setItem('aiPlayground_modelProvider', finalChatProvider);
+      localStorage.setItem('aiPlayground_modelName', tempModelName);
+      localStorage.setItem('aiPlayground_imageModelProvider', finalImageProvider);
+      localStorage.setItem('aiPlayground_imageModelName', tempImageModelName);
+      localStorage.setItem('aiPlayground_imageProviderKey', tempImageProviderKey);
+      localStorage.setItem('aiPlayground_instructions', tempInstructions);
     
     toast.success('Settings saved successfully!');
     setIsOpen(false);
@@ -183,7 +183,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             <div>
               <DialogTitle className="text-xl font-semibold text-foreground">API Settings</DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground mt-1">
-                Configure your OpenResponses API settings
+                Configure your Masaic Dev Platform API settings
               </DialogDescription>
             </div>
           </div>
