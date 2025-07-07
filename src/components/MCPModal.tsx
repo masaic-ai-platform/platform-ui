@@ -328,13 +328,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className={`w-[90vw] p-0 ${currentView === 'tool-detail' ? 'max-w-2xl max-h-[80vh] [&>button]:hidden' : 'max-w-md'} border border-border/50 shadow-lg`}
-        style={{
-          backgroundColor: 'rgba(0, 0, 0, 0.1)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
-        }}
+        className={`w-[90vw] p-0 ${currentView === 'tool-detail' ? 'max-w-2xl max-h-[80vh] [&>button]:hidden' : 'max-w-md'}`}
       >
         <div className="flex flex-col h-full">
           <DialogHeader className="p-6 pb-4 text-center">
@@ -414,13 +408,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
                     <SelectTrigger className="bg-muted/50 border border-border focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent 
-                      style={{
-                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                        backdropFilter: 'blur(8px)',
-                        WebkitBackdropFilter: 'blur(8px)'
-                      }}
-                    >
+                    <SelectContent>
                       <SelectItem value="none">None</SelectItem>
                       <SelectItem value="access_token">Access token / API key</SelectItem>
                       <SelectItem value="custom_headers">Custom headers</SelectItem>

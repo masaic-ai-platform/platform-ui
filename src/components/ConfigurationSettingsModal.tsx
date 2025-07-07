@@ -168,13 +168,7 @@ const ConfigurationSettingsModal: React.FC<ConfigurationSettingsModalProps> = ({
                 <SelectTrigger className="w-32 focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-positive-trend/20">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent 
-                  style={{
-                    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)'
-                  }}
-                >
+                <SelectContent>
                   <SelectItem value="text">text</SelectItem>
                   <SelectItem value="json_object">json_object</SelectItem>
                   <SelectItem value="json_schema">json_schema</SelectItem>
@@ -212,13 +206,7 @@ const ConfigurationSettingsModal: React.FC<ConfigurationSettingsModalProps> = ({
               <SelectTrigger className="w-20 focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-positive-trend/20">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent 
-                style={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)'
-                }}
-              >
+              <SelectContent>
                 <SelectItem value="auto">auto</SelectItem>
                 <SelectItem value="none">none</SelectItem>
               </SelectContent>

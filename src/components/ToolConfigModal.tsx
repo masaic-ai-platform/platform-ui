@@ -62,15 +62,7 @@ const ToolConfigModal: React.FC<ToolConfigModalProps> = ({
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-              <DialogContent 
-          className="max-w-md"
-          style={{
-            backgroundColor: 'rgba(0, 0, 0, 0.1)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
-          }}
-        >
+              <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Add Tool</DialogTitle>
         </DialogHeader>

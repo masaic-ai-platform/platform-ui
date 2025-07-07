@@ -15,6 +15,8 @@ import {
 import { MCP } from '@lobehub/icons';
 import FunctionModal from './FunctionModal';
 import MCPModal from './MCPModal';
+import FileSearchModal from './FileSearchModal';
+import AgenticFileSearchModal from './AgenticFileSearchModal';
 
 interface Tool {
   id: string;
@@ -22,6 +24,8 @@ interface Tool {
   icon: React.ComponentType<{ className?: string }>;
   functionDefinition?: string; // For function tools
   mcpConfig?: any; // For MCP server tools
+  fileSearchConfig?: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string }; // For file search tools
+  agenticFileSearchConfig?: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string; iterations: number }; // For agentic file search tools
 }
 
 interface ToolsSelectionModalProps {
@@ -31,6 +35,10 @@ interface ToolsSelectionModalProps {
   onEditingFunctionChange?: (editingFunction: Tool | null) => void;
   editingMCP?: Tool | null;
   onEditingMCPChange?: (editingMCP: Tool | null) => void;
+  editingFileSearch?: Tool | null;
+  onEditingFileSearchChange?: (editingFileSearch: Tool | null) => void;
+  editingAgenticFileSearch?: Tool | null;
+  onEditingAgenticFileSearchChange?: (editingAgenticFileSearch: Tool | null) => void;
   children?: React.ReactNode;
 }
 
@@ -74,12 +82,18 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
   onEditingFunctionChange,
   editingMCP,
   onEditingMCPChange,
+  editingFileSearch,
+  onEditingFileSearchChange,
+  editingAgenticFileSearch,
+  onEditingAgenticFileSearchChange,
   children
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [functionModalOpen, setFunctionModalOpen] = useState(false);
   const [functionDefinition, setFunctionDefinition] = useState('');
   const [mcpModalOpen, setMcpModalOpen] = useState(false);
+  const [fileSearchModalOpen, setFileSearchModalOpen] = useState(false);
+  const [agenticFileSearchModalOpen, setAgenticFileSearchModalOpen] = useState(false);
 
   // Handle editing existing function
   React.useEffect(() => {
@@ -96,6 +110,20 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
     }
   }, [editingMCP]);
 
+  // Handle editing existing file search
+  React.useEffect(() => {
+    if (editingFileSearch && editingFileSearch.id === 'file_search') {
+      setFileSearchModalOpen(true);
+    }
+  }, [editingFileSearch]);
+
+  // Handle editing existing agentic file search
+  React.useEffect(() => {
+    if (editingAgenticFileSearch && editingAgenticFileSearch.id === 'agentic_file_search') {
+      setAgenticFileSearchModalOpen(true);
+    }
+  }, [editingAgenticFileSearch]);
+
   const handleToolSelect = (tool: Tool) => {
     if (tool.id === 'function') {
       setIsOpen(false);
@@ -103,6 +131,12 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
     } else if (tool.id === 'mcp_server') {
       setIsOpen(false);
       setMcpModalOpen(true);
+    } else if (tool.id === 'file_search') {
+      setIsOpen(false);
+      setFileSearchModalOpen(true);
+    } else if (tool.id === 'agentic_file_search') {
+      setIsOpen(false);
+      setAgenticFileSearchModalOpen(true);
     } else {
       onToolSelect(tool);
       setIsOpen(false);
@@ -164,6 +198,54 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
     // Clear editing state
     if (onEditingMCPChange) {
       onEditingMCPChange(null);
+    }
+  };
+
+  const handleFileSearchSave = (config: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string }) => {
+    // Create file search tool with config
+    const fileSearchTool: Tool = {
+      id: 'file_search',
+      name: config.vectorStoreName || 'File Search',
+      icon: Search,
+      fileSearchConfig: config
+    };
+
+    // If editing, remove the old file search first
+    if (editingFileSearch && onEditingFileSearchChange) {
+      // The parent component will handle removing the old file search and adding the new one
+      onEditingFileSearchChange(null);
+    }
+
+    onToolSelect(fileSearchTool);
+    setFileSearchModalOpen(false);
+    
+    // Clear editing state
+    if (onEditingFileSearchChange) {
+      onEditingFileSearchChange(null);
+    }
+  };
+
+  const handleAgenticFileSearchSave = (config: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string; iterations: number }) => {
+    // Create agentic file search tool with config
+    const agenticFileSearchTool: Tool = {
+      id: 'agentic_file_search',
+      name: config.vectorStoreName || 'Agentic File Search',
+      icon: FileSearch,
+      agenticFileSearchConfig: config
+    };
+
+    // If editing, remove the old agentic file search first
+    if (editingAgenticFileSearch && onEditingAgenticFileSearchChange) {
+      // The parent component will handle removing the old agentic file search and adding the new one
+      onEditingAgenticFileSearchChange(null);
+    }
+
+    onToolSelect(agenticFileSearchTool);
+    setAgenticFileSearchModalOpen(false);
+    
+    // Clear editing state
+    if (onEditingAgenticFileSearchChange) {
+      onEditingAgenticFileSearchChange(null);
     }
   };
 
@@ -256,6 +338,37 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
       }}
       onConnect={handleMCPConnect}
       initialConfig={editingMCP?.mcpConfig}
+    />
+    
+    <FileSearchModal
+      open={fileSearchModalOpen}
+      onOpenChange={(open) => {
+        setFileSearchModalOpen(open);
+        if (!open) {
+          // Clear editing state when modal closes
+          if (onEditingFileSearchChange) {
+            onEditingFileSearchChange(null);
+          }
+        }
+      }}
+      onSave={handleFileSearchSave}
+      initialVectorStore={editingFileSearch?.fileSearchConfig?.selectedVectorStore}
+    />
+    
+    <AgenticFileSearchModal
+      open={agenticFileSearchModalOpen}
+      onOpenChange={(open) => {
+        setAgenticFileSearchModalOpen(open);
+        if (!open) {
+          // Clear editing state when modal closes
+          if (onEditingAgenticFileSearchChange) {
+            onEditingAgenticFileSearchChange(null);
+          }
+        }
+      }}
+      onSave={handleAgenticFileSearchSave}
+      initialVectorStore={editingAgenticFileSearch?.agenticFileSearchConfig?.selectedVectorStore}
+      initialIterations={editingAgenticFileSearch?.agenticFileSearchConfig?.iterations}
     />
   </>
   );

@@ -189,15 +189,7 @@ const FunctionModal: React.FC<FunctionModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="max-w-4xl w-[90vw] h-[80vh] p-0 border border-border/50 shadow-lg"
-        style={{
-          backgroundColor: 'rgba(0, 0, 0, 0.1)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
-        }}
-      >
+      <DialogContent className="max-w-4xl w-[90vw] h-[80vh] p-0">
         <div className="flex flex-col h-full">
           <DialogHeader className="p-6 pb-0">
             <DialogTitle className="text-xl font-semibold">Add function</DialogTitle>
@@ -231,13 +223,7 @@ const FunctionModal: React.FC<FunctionModalProps> = ({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent 
-                    className="w-80 p-4 border border-border/50 shadow-lg"
-                    style={{
-                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                      backdropFilter: 'blur(12px)',
-                      WebkitBackdropFilter: 'blur(12px)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)'
-                    }}
+                    className="w-80 p-4"
                     side="right"
                     align="start"
                   >

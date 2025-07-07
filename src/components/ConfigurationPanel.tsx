@@ -57,6 +57,8 @@ interface Tool {
   icon: React.ComponentType<{ className?: string }>;
   functionDefinition?: string; // For function tools
   mcpConfig?: any; // For MCP server tools
+  fileSearchConfig?: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string }; // For file search tools
+  agenticFileSearchConfig?: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string; iterations: number }; // For agentic file search tools
 }
 
 interface ConfigurationPanelProps {
@@ -153,6 +155,8 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const [selectedTools, setSelectedTools] = useState<Tool[]>([]);
   const [editingFunction, setEditingFunction] = useState<Tool | null>(null);
   const [editingMCP, setEditingMCP] = useState<Tool | null>(null);
+  const [editingFileSearch, setEditingFileSearch] = useState<Tool | null>(null);
+  const [editingAgenticFileSearch, setEditingAgenticFileSearch] = useState<Tool | null>(null);
 
   // Fetch models from API
   useEffect(() => {
@@ -281,6 +285,14 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
     setEditingMCP(tool);
   };
 
+  const handleFileSearchEdit = (tool: Tool) => {
+    setEditingFileSearch(tool);
+  };
+
+  const handleAgenticFileSearchEdit = (tool: Tool) => {
+    setEditingAgenticFileSearch(tool);
+  };
+
   // Get tool color based on type
   const getToolColor = (toolId: string) => {
     switch (toolId) {
@@ -360,7 +372,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
               const IconComponent = tool.icon;
               const colorClass = getToolColor(tool.id);
               
-              // Get function name from definition for function tools
+              // Get display name based on tool type
               const getDisplayName = (tool: Tool) => {
                 if (tool.id === 'function' && tool.functionDefinition) {
                   try {
@@ -370,13 +382,21 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                     return 'Function';
                   }
                 }
+                if (tool.id === 'file_search' && tool.fileSearchConfig) {
+                  return tool.fileSearchConfig.vectorStoreName || 'File Search';
+                }
+                if (tool.id === 'agentic_file_search' && tool.agenticFileSearchConfig) {
+                  return `${tool.agenticFileSearchConfig.vectorStoreName || 'Agentic File Search'} (${tool.agenticFileSearchConfig.iterations})`;
+                }
                 return tool.name;
               };
               
               const displayName = getDisplayName(tool);
               const isFunction = tool.id === 'function';
               const isMCP = tool.id === 'mcp_server';
-              const isClickable = isFunction || isMCP;
+              const isFileSearch = tool.id === 'file_search';
+              const isAgenticFileSearch = tool.id === 'agentic_file_search';
+              const isClickable = isFunction || isMCP || isFileSearch || isAgenticFileSearch;
               const toolKey = (isFunction || isMCP) ? `${tool.id}-${index}` : tool.id;
               
               return (
@@ -386,7 +406,13 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                     isClickable ? 'cursor-pointer hover:bg-positive-trend/20' : ''
                   }`}
                   tabIndex={0}
-                  onClick={isFunction ? () => handleFunctionEdit(tool) : isMCP ? () => handleMCPEdit(tool) : undefined}
+                  onClick={
+                    isFunction ? () => handleFunctionEdit(tool) :
+                    isMCP ? () => handleMCPEdit(tool) :
+                    isFileSearch ? () => handleFileSearchEdit(tool) :
+                    isAgenticFileSearch ? () => handleAgenticFileSearchEdit(tool) :
+                    undefined
+                  }
                 >
                   <IconComponent className="h-3 w-3 text-positive-trend" />
                   <span className="text-xs text-positive-trend font-medium">
@@ -422,6 +448,10 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
               onEditingFunctionChange={setEditingFunction}
               editingMCP={editingMCP}
               onEditingMCPChange={setEditingMCP}
+              editingFileSearch={editingFileSearch}
+              onEditingFileSearchChange={setEditingFileSearch}
+              editingAgenticFileSearch={editingAgenticFileSearch}
+              onEditingAgenticFileSearchChange={setEditingAgenticFileSearch}
             >
               <Button
                 variant="ghost"
