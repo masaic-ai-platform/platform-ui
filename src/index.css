@@ -215,4 +215,155 @@
     box-shadow: none !important;
     outline: none !important;
   }
+  
+  /* Enhanced placeholder styling - more specific */
+  textarea::placeholder,
+  input::placeholder,
+  *[placeholder]::placeholder {
+    color: #737373 !important;
+    opacity: 0.8 !important;
+  }
+  
+  /* Dark mode placeholder */
+  .dark textarea::placeholder,
+  .dark input::placeholder,
+  .dark *[placeholder]::placeholder {
+    color: #a3a3a3 !important;
+    opacity: 0.7 !important;
+  }
+  
+  /* Modal transparency override - more aggressive */
+  [data-radix-popover-content],
+  [data-radix-dialog-content] {
+    background-color: rgba(0, 0, 0, 0.1) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  /* Light mode modal transparency */
+  :not(.dark) [data-radix-popover-content],
+  :not(.dark) [data-radix-dialog-content] {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  /* Select dropdown transparency */
+  [data-radix-select-content] {
+    background-color: rgba(0, 0, 0, 0.2) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+  
+  /* Light mode select dropdown */
+  :not(.dark) [data-radix-select-content] {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+  }
+  
+  /* Custom slider styles for configuration modal */
+  .slider-track {
+    height: 2px !important;
+    background-color: hsl(var(--border)) !important;
+  }
+  
+  .slider-range {
+    height: 2px !important;
+    background-color: #2e7d32 !important;
+  }
+  
+  .slider-thumb {
+    width: 12px !important;
+    height: 12px !important;
+    border: 2px solid #2e7d32 !important;
+    background-color: hsl(var(--background)) !important;
+    transition: all 0.2s ease-in-out !important;
+  }
+  
+  .slider-thumb:hover {
+    transform: scale(1.1) !important;
+    box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.15) !important;
+  }
+  
+  .slider-thumb:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.2) !important;
+    transform: scale(1.15) !important;
+  }
+  
+  /* Override radix slider styles more specifically */
+  [data-radix-slider-track] {
+    height: 2px !important;
+    background-color: hsl(var(--border)) !important;
+  }
+  
+  [data-radix-slider-range] {
+    height: 2px !important;
+    background-color: #2e7d32 !important;
+  }
+  
+  [data-radix-slider-thumb] {
+    width: 12px !important;
+    height: 12px !important;
+    border: 2px solid #2e7d32 !important;
+    background-color: hsl(var(--background)) !important;
+    transition: all 0.2s ease-in-out !important;
+  }
+  
+  [data-radix-slider-thumb]:hover {
+    transform: scale(1.1) !important;
+    box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.15) !important;
+  }
+  
+  [data-radix-slider-thumb]:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.2) !important;
+    transform: scale(1.15) !important;
+  }
+  
+  /* Line clamp utilities */
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+  
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  
+  .line-clamp-3 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  /* Custom scrollbar styles */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground));
+    border-radius: 3px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--foreground));
+  }
 }

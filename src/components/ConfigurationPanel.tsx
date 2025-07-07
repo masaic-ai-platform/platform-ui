@@ -19,11 +19,20 @@ import {
   Database,
   Image,
   Search,
-  Plus
+  Plus,
+  X,
+  Code,
+  FileSearch,
+  Brain,
+  Globe,
+  Terminal
 } from 'lucide-react';
+import { MCP } from '@lobehub/icons';
 import ToolConfigModal from './ToolConfigModal';
+import ToolsSelectionModal from './ToolsSelectionModal';
 import PromptMessagesInline from './PromptMessagesInline';
 import ModelSelectionModal from './ModelSelectionModal';
+import ConfigurationSettingsModal from './ConfigurationSettingsModal';
 
 interface Model {
   name: string;
@@ -40,6 +49,14 @@ interface PromptMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+}
+
+interface Tool {
+  id: string;
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  functionDefinition?: string; // For function tools
+  mcpConfig?: any; // For MCP server tools
 }
 
 interface ConfigurationPanelProps {
@@ -72,6 +89,10 @@ interface ConfigurationPanelProps {
   setTopP: (topP: number) => void;
   storeLogs: boolean;
   setStoreLogs: (store: boolean) => void;
+  textFormat: 'text' | 'json_object' | 'json_schema';
+  setTextFormat: (format: 'text' | 'json_object' | 'json_schema') => void;
+  toolChoice: 'auto' | 'none';
+  setToolChoice: (choice: 'auto' | 'none') => void;
   
   // System message
   instructions: string;
@@ -113,6 +134,10 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   setTopP,
   storeLogs = true,
   setStoreLogs,
+  textFormat = 'text',
+  setTextFormat,
+  toolChoice = 'auto',
+  setToolChoice,
   instructions,
   setInstructions,
   promptMessages = [],
@@ -125,6 +150,9 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTools, setSelectedTools] = useState<Tool[]>([]);
+  const [editingFunction, setEditingFunction] = useState<Tool | null>(null);
+  const [editingMCP, setEditingMCP] = useState<Tool | null>(null);
 
   // Fetch models from API
   useEffect(() => {
@@ -207,6 +235,72 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
     setImageModelName(name);
   };
 
+  // Tool management handlers
+  const handleToolSelect = (tool: Tool) => {
+    if (tool.id === 'function') {
+      // If editing an existing function, remove the old one first
+      if (editingFunction) {
+        setSelectedTools(prev => prev.filter(t => 
+          !(t.id === 'function' && t.functionDefinition === editingFunction.functionDefinition)
+        ));
+      }
+      
+      // Add the new/updated function
+      setSelectedTools(prev => [...prev, tool]);
+    } else if (tool.id === 'mcp_server') {
+      // Allow multiple MCP servers
+      setSelectedTools(prev => [...prev, tool]);
+    } else {
+      // For other tools, check by id only
+      if (!selectedTools.find(t => t.id === tool.id)) {
+        setSelectedTools(prev => [...prev, tool]);
+      }
+    }
+  };
+
+  const handleToolRemove = (toolId: string, functionDefinition?: string, toolIndex?: number) => {
+    if (toolId === 'function' && functionDefinition) {
+      // Remove specific function by definition
+      setSelectedTools(prev => prev.filter(tool => 
+        !(tool.id === 'function' && tool.functionDefinition === functionDefinition)
+      ));
+    } else if (toolId === 'mcp_server' && toolIndex !== undefined) {
+      // For MCP servers, remove by index since we allow multiple
+      setSelectedTools(prev => prev.filter((_, index) => index !== toolIndex));
+    } else {
+      // Remove by id for other tools
+      setSelectedTools(prev => prev.filter(tool => tool.id !== toolId));
+    }
+  };
+
+  const handleFunctionEdit = (tool: Tool) => {
+    setEditingFunction(tool);
+  };
+
+  const handleMCPEdit = (tool: Tool) => {
+    setEditingMCP(tool);
+  };
+
+  // Get tool color based on type
+  const getToolColor = (toolId: string) => {
+    switch (toolId) {
+      case 'mcp_server':
+        return 'positive-trend';
+      case 'function':
+        return 'opportunity';
+      case 'file_search':
+        return 'critical-alert';
+      case 'agentic_file_search':
+        return 'negative-trend';
+      case 'image_generation':
+        return 'neutral';
+      case 'think':
+        return 'positive-trend';
+      default:
+        return 'positive-trend';
+    }
+  };
+
   const allModels = getAllModels();
 
   return (
@@ -227,23 +321,27 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
               />
             </div>
             <div className="flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                title="Model configuration"
-              >
-                <Settings className="h-3 w-3" />
-              </Button>
+              <ConfigurationSettingsModal
+                textFormat={textFormat}
+                setTextFormat={setTextFormat}
+                toolChoice={toolChoice}
+                setToolChoice={setToolChoice}
+                temperature={temperature}
+                setTemperature={setTemperature}
+                maxTokens={maxTokens}
+                setMaxTokens={setMaxTokens}
+                topP={topP}
+                setTopP={setTopP}
+              />
             </div>
           </div>
           
           {/* Configuration Parameters */}
           <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
             <span>text_format:</span>
-            <span className="text-positive-trend font-medium">json_object</span>
+            <span className="text-positive-trend font-medium">{textFormat}</span>
             <span className="ml-2">tool_choice:</span>
-            <span className="text-positive-trend font-medium">auto</span>
+            <span className="text-positive-trend font-medium">{toolChoice}</span>
             <span className="ml-2">temp:</span>
             <span className="text-positive-trend font-medium">{temperature}</span>
             <span className="ml-2">tokens:</span>
@@ -252,59 +350,88 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
         </div>
 
         {/* Tools Section */}
-        <div className="space-y-3 mt-6">
+        <div className="mt-6">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Tools</Label>
-            <ToolConfigModal
-              selectedVectorStore={selectedVectorStore}
-              onVectorStoreSelect={onVectorStoreSelect}
-              imageModelProvider={imageModelProvider}
-              setImageModelProvider={setImageModelProvider}
-              imageModelName={imageModelName}
-              setImageModelName={setImageModelName}
-              imageProviderKey={imageProviderKey}
-              setImageProviderKey={setImageProviderKey}
+            <div className="flex items-center flex-wrap gap-2">
+              <Label className="text-sm font-medium">Tools:</Label>
+              
+                          {/* Selected Tools */}
+            {selectedTools.map((tool, index) => {
+              const IconComponent = tool.icon;
+              const colorClass = getToolColor(tool.id);
+              
+              // Get function name from definition for function tools
+              const getDisplayName = (tool: Tool) => {
+                if (tool.id === 'function' && tool.functionDefinition) {
+                  try {
+                    const parsed = JSON.parse(tool.functionDefinition);
+                    return parsed.name || 'Function';
+                  } catch {
+                    return 'Function';
+                  }
+                }
+                return tool.name;
+              };
+              
+              const displayName = getDisplayName(tool);
+              const isFunction = tool.id === 'function';
+              const isMCP = tool.id === 'mcp_server';
+              const isClickable = isFunction || isMCP;
+              const toolKey = (isFunction || isMCP) ? `${tool.id}-${index}` : tool.id;
+              
+              return (
+                <div 
+                  key={toolKey}
+                  className={`flex items-center space-x-1 bg-positive-trend/10 border border-positive-trend/20 rounded px-2 py-1 focus:ring-2 focus:ring-positive-trend/30 focus:border-positive-trend ${
+                    isClickable ? 'cursor-pointer hover:bg-positive-trend/20' : ''
+                  }`}
+                  tabIndex={0}
+                  onClick={isFunction ? () => handleFunctionEdit(tool) : isMCP ? () => handleMCPEdit(tool) : undefined}
+                >
+                  <IconComponent className="h-3 w-3 text-positive-trend" />
+                  <span className="text-xs text-positive-trend font-medium">
+                    {displayName}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-4 w-4 p-0 hover:bg-positive-trend/20"
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent triggering the edit handler
+                      if (tool.id === 'function') {
+                        handleToolRemove(tool.id, tool.functionDefinition);
+                      } else if (tool.id === 'mcp_server') {
+                        handleToolRemove(tool.id, undefined, index);
+                      } else {
+                        handleToolRemove(tool.id);
+                      }
+                    }}
+                  >
+                    <X className="h-3 w-3 text-positive-trend" />
+                  </Button>
+                </div>
+              );
+            })}
+            </div>
+            
+            {/* Add Tool Button */}
+            <ToolsSelectionModal
+              selectedTools={selectedTools}
+              onToolSelect={handleToolSelect}
+              editingFunction={editingFunction}
+              onEditingFunctionChange={setEditingFunction}
+              editingMCP={editingMCP}
+              onEditingMCPChange={setEditingMCP}
             >
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 text-xs text-muted-foreground"
+                className="h-6 text-xs text-muted-foreground hover:bg-muted/50 focus:bg-positive-trend/10 focus:text-positive-trend"
               >
                 +
               </Button>
-            </ToolConfigModal>
+            </ToolsSelectionModal>
           </div>
-          
-          {/* Active Tools */}
-          {selectedVectorStore && (
-            <div className="flex items-center space-x-2 bg-positive-trend/10 border border-positive-trend/20 rounded px-2 py-1">
-              <Search className="h-3 w-3 text-positive-trend" />
-              <span className="text-xs text-positive-trend font-medium">file_search</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-4 w-4 p-0 ml-auto"
-                onClick={() => onVectorStoreSelect(null)}
-              >
-                ×
-              </Button>
-            </div>
-          )}
-          
-          {imageProviderKey && (
-            <div className="flex items-center space-x-2 bg-opportunity/10 border border-opportunity/20 rounded px-2 py-1">
-              <Image className="h-3 w-3 text-opportunity" />
-              <span className="text-xs text-opportunity font-medium">image_generation</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-4 w-4 p-0 ml-auto"
-                onClick={() => setImageProviderKey('')}
-              >
-                ×
-              </Button>
-            </div>
-          )}
         </div>
 
         {/* System Message - Takes most available space */}
@@ -315,8 +442,8 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           <Textarea
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
-            placeholder="You are a helpful assistant..."
-            className="flex-1 text-sm resize-none focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
+            placeholder="Describe desired model behavior (tone, tool, usage, response style)"
+            className="flex-1 text-sm resize-none bg-muted/50 border border-border focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
             style={{ 
               minHeight: '300px',
               boxShadow: 'none !important',

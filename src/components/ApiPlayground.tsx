@@ -2717,7 +2717,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
 
         {/* cURL Command Modal */}
         <Dialog open={showCurlModal} onOpenChange={setShowCurlModal}>
-          <DialogContent className="max-w-4xl max-h-[80vh] bg-card border border-border">
+          <DialogContent className="max-w-4xl max-h-[80vh] bg-card/80 backdrop-blur-md border border-border">
             <DialogHeader>
               <DialogTitle className="text-foreground">cURL Command</DialogTitle>
             </DialogHeader>
@@ -2740,7 +2740,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
 
         {/* Streaming Events Modal */}
         <Dialog open={showEventsModal} onOpenChange={setShowEventsModal}>
-          <DialogContent className="max-w-6xl max-h-[90vh] bg-card border border-border">
+          <DialogContent className="max-w-6xl max-h-[90vh] bg-card/80 backdrop-blur-md border border-border">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between text-foreground">
                 <div className="flex items-center space-x-4">

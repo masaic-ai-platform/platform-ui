@@ -116,13 +116,15 @@ const AiPlayground: React.FC = () => {
   const [imageProviderKey, setImageProviderKey] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [selectedVectorStore, setSelectedVectorStore] = useState<string>('');
-  const [instructions, setInstructions] = useState('Answer questions using information from the provided documents when relevant. For image generation requests, create images as requested.');
+  const [instructions, setInstructions] = useState('');
   
   // Configuration parameters for AI model
   const [temperature, setTemperature] = useState(1.0);
   const [maxTokens, setMaxTokens] = useState(2048);
   const [topP, setTopP] = useState(1.0);
   const [storeLogs, setStoreLogs] = useState(true);
+  const [textFormat, setTextFormat] = useState<'text' | 'json_object' | 'json_schema'>('text');
+  const [toolChoice, setToolChoice] = useState<'auto' | 'none'>('auto');
   
   // Prompt messages state
   const [promptMessages, setPromptMessages] = useState<PromptMessage[]>([]);
@@ -142,11 +144,13 @@ const AiPlayground: React.FC = () => {
     const savedImageModelName = localStorage.getItem('aiPlayground_imageModelName') || 'imagen-3.0-generate-002';
     const savedImageProviderKey = localStorage.getItem('aiPlayground_imageProviderKey') || '';
     const savedSelectedVectorStore = localStorage.getItem('aiPlayground_selectedVectorStore') || '';
-    const savedInstructions = localStorage.getItem('aiPlayground_instructions') || 'Answer questions using information from the provided documents when relevant. For image generation requests, create images as requested.';
+    const savedInstructions = localStorage.getItem('aiPlayground_instructions') || '';
     const savedTemperature = parseFloat(localStorage.getItem('aiPlayground_temperature') || '1.0');
     const savedMaxTokens = parseInt(localStorage.getItem('aiPlayground_maxTokens') || '2048');
     const savedTopP = parseFloat(localStorage.getItem('aiPlayground_topP') || '1.0');
     const savedStoreLogs = localStorage.getItem('aiPlayground_storeLogs') === 'true';
+    const savedTextFormat = (localStorage.getItem('aiPlayground_textFormat') || 'text') as 'text' | 'json_object' | 'json_schema';
+    const savedToolChoice = (localStorage.getItem('aiPlayground_toolChoice') || 'auto') as 'auto' | 'none';
     const savedPromptMessages = JSON.parse(localStorage.getItem('aiPlayground_promptMessages') || '[]');
     
     setApiKey(savedApiKey);
@@ -162,6 +166,8 @@ const AiPlayground: React.FC = () => {
     setMaxTokens(savedMaxTokens);
     setTopP(savedTopP);
     setStoreLogs(savedStoreLogs);
+    setTextFormat(savedTextFormat);
+    setToolChoice(savedToolChoice);
     setPromptMessages(savedPromptMessages);
   }, []);
 
@@ -180,8 +186,10 @@ const AiPlayground: React.FC = () => {
     localStorage.setItem('aiPlayground_maxTokens', maxTokens.toString());
     localStorage.setItem('aiPlayground_topP', topP.toString());
     localStorage.setItem('aiPlayground_storeLogs', storeLogs.toString());
+    localStorage.setItem('aiPlayground_textFormat', textFormat);
+    localStorage.setItem('aiPlayground_toolChoice', toolChoice);
     localStorage.setItem('aiPlayground_promptMessages', JSON.stringify(promptMessages));
-  }, [apiKey, baseUrl, modelProvider, modelName, imageModelProvider, imageModelName, imageProviderKey, selectedVectorStore, instructions, temperature, maxTokens, topP, storeLogs, promptMessages]);
+  }, [apiKey, baseUrl, modelProvider, modelName, imageModelProvider, imageModelName, imageProviderKey, selectedVectorStore, instructions, temperature, maxTokens, topP, storeLogs, textFormat, toolChoice, promptMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -293,6 +301,8 @@ const AiPlayground: React.FC = () => {
       max_tokens: maxTokens,
       top_p: topP,
       stream: true,
+      ...(textFormat !== 'text' && { response_format: { type: textFormat } }),
+      ...(toolChoice !== 'auto' && tools.length > 0 && { tool_choice: toolChoice }),
       ...(tools.length > 0 && { tools }),
       ...(conversationId && { conversation_id: conversationId })
     };
@@ -620,6 +630,10 @@ const AiPlayground: React.FC = () => {
         setTopP={setTopP}
         storeLogs={storeLogs}
         setStoreLogs={setStoreLogs}
+        textFormat={textFormat}
+        setTextFormat={setTextFormat}
+        toolChoice={toolChoice}
+        setToolChoice={setToolChoice}
         instructions={instructions}
         setInstructions={setInstructions}
         promptMessages={promptMessages}

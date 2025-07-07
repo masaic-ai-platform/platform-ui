@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Code2, Star, ExternalLink, Database } from 'lucide-react';
+import { MessageSquare, Code2, Star, ExternalLink } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
 
 const Navigation: React.FC = () => {
@@ -14,11 +14,15 @@ const Navigation: React.FC = () => {
   return (
     <div className="bg-background border-b border-border">
       {/* Navigation Header - Redesigned with Geist UI */}
-      <div className="px-8 py-6">
+      <div className="px-8 py-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-positive-trend to-positive-trend rounded-xl flex items-center justify-center shadow-md">
-              <Database className="h-6 w-6 text-white" />
+            <div className="w-16 h-16 flex items-center justify-center">
+              <img 
+                src="/Masaic-Logo.png" 
+                alt="Masaic Logo" 
+                className="h-21 w-21 object-contain"
+              />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground tracking-tight">

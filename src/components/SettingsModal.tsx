@@ -174,7 +174,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <Settings className="h-4 w-4 text-muted-foreground" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col bg-card border border-border">
+              <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col bg-card/80 backdrop-blur-md border border-border">
         <DialogHeader className="shrink-0 pb-6 border-b border-border">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-primary/10 dark:bg-primary/20 rounded-lg flex items-center justify-center">

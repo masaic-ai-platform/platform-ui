@@ -72,12 +72,12 @@ const ModelSelectionModal: React.FC<ModelSelectionModalProps> = ({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="w-full justify-between h-9 px-3 text-sm focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
+          className="w-full max-w-[420px] justify-between h-9 px-3 text-sm focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
           disabled={loading}
         >
           <div className="flex items-center space-x-2 flex-1 min-w-0">
             {selectedModelInfo.providerName && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs shrink-0">
                 {selectedModelInfo.providerName}
               </Badge>
             )}
@@ -89,7 +89,16 @@ const ModelSelectionModal: React.FC<ModelSelectionModalProps> = ({
         </Button>
       </PopoverTrigger>
       
-      <PopoverContent className="w-[400px] p-0" align="start">
+      <PopoverContent 
+        className="w-[400px] p-0 border border-border/50 shadow-lg" 
+        style={{
+          backgroundColor: 'rgba(0, 0, 0, 0.1)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}
+        align="start"
+      >
         <div className="p-4 border-b">
           <h4 className="text-sm font-medium mb-3">Select a model</h4>
           
@@ -142,9 +151,6 @@ const ModelSelectionModal: React.FC<ModelSelectionModalProps> = ({
                           )}
                         </div>
                         <div className="flex items-center space-x-2 flex-1 min-w-0">
-                          <Badge variant="outline" className="text-xs">
-                            {model.providerName}
-                          </Badge>
                           <span className="font-medium truncate">{model.name}</span>
                         </div>
                       </div>
