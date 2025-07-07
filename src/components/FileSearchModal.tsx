@@ -410,7 +410,15 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
       <DialogContent className="max-w-2xl w-[90vw] max-h-[80vh] p-0">
         <div className="flex flex-col h-full">
           <DialogHeader className="p-6 pb-4">
-            <DialogTitle className="text-lg font-semibold">File Search Configuration</DialogTitle>
+            <DialogTitle className="text-lg font-semibold">
+              {initialVectorStoreName ? (
+                <>
+                  File Search: <span className="text-positive-trend">{initialVectorStoreName}</span>
+                </>
+              ) : (
+                'File Search Configuration'
+              )}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="flex-1 overflow-hidden px-6">

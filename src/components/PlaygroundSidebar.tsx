@@ -19,7 +19,7 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
 }) => {
   const mainOptions = [
     { id: 'responses', label: 'Responses', icon: MessageSquare },
-    { id: 'completions', label: 'Completions', icon: Zap },
+    { id: 'completions', label: 'Completions', icon: Zap, disabled: true },
   ];
 
   const bottomOptions = [
@@ -41,6 +41,7 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
       <div className="flex-1 p-2 space-y-1">
         {mainOptions.map((option) => {
           const Icon = option.icon;
+          const isDisabled = option.disabled;
           return (
             <Button
               key={option.id}
@@ -48,9 +49,12 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
               className={`w-full justify-start text-sm h-10 ${
                 activeTab === option.id 
                   ? 'bg-accent text-accent-foreground' 
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                  : isDisabled
+                    ? 'text-muted-foreground cursor-not-allowed opacity-60'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
               }`}
-              onClick={() => onTabChange(option.id)}
+              onClick={() => !isDisabled && onTabChange(option.id)}
+              disabled={isDisabled}
             >
               <Icon className="h-4 w-4 mr-3" />
               {option.label}
