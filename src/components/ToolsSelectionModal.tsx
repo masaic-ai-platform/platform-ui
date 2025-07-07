@@ -63,11 +63,11 @@ const availableTools: Tool[] = [
     name: 'Agentic File Search',
     icon: FileSearch
   },
-  {
-    id: 'image_generation',
-    name: 'Image Generation',
-    icon: Image
-  },
+  // {
+  //   id: 'image_generation',
+  //   name: 'Image Generation',
+  //   icon: Image
+  // },
   {
     id: 'think',
     name: 'Think',
@@ -353,6 +353,8 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
       }}
       onSave={handleFileSearchSave}
       initialVectorStore={editingFileSearch?.fileSearchConfig?.selectedVectorStore}
+      initialSelectedFiles={editingFileSearch?.fileSearchConfig?.selectedFiles}
+      initialVectorStoreName={editingFileSearch?.fileSearchConfig?.vectorStoreName}
     />
     
     <AgenticFileSearchModal
@@ -369,6 +371,8 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
       onSave={handleAgenticFileSearchSave}
       initialVectorStore={editingAgenticFileSearch?.agenticFileSearchConfig?.selectedVectorStore}
       initialIterations={editingAgenticFileSearch?.agenticFileSearchConfig?.iterations}
+      initialSelectedFiles={editingAgenticFileSearch?.agenticFileSearchConfig?.selectedFiles}
+      initialVectorStoreName={editingAgenticFileSearch?.agenticFileSearchConfig?.vectorStoreName}
     />
   </>
   );

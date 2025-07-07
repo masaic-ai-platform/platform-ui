@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,6 +31,7 @@ import { MCP } from '@lobehub/icons';
 import ToolConfigModal from './ToolConfigModal';
 import ToolsSelectionModal from './ToolsSelectionModal';
 import PromptMessagesInline from './PromptMessagesInline';
+import ApiKeysModal from './ApiKeysModal';
 import ModelSelectionModal from './ModelSelectionModal';
 import ConfigurationSettingsModal from './ConfigurationSettingsModal';
 
@@ -111,6 +112,10 @@ interface ConfigurationPanelProps {
   
   // Actions
   onResetConversation: () => void;
+  
+  // API Keys modal trigger
+  openApiKeysModal?: boolean;
+  onApiKeysModalChange?: (open: boolean) => void;
 }
 
 const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
@@ -147,7 +152,9 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   onRemovePromptMessage = () => {},
   selectedVectorStore,
   onVectorStoreSelect,
-  onResetConversation
+  onResetConversation,
+  openApiKeysModal = false,
+  onApiKeysModalChange = () => {}
 }) => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(false);
@@ -157,6 +164,9 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const [editingMCP, setEditingMCP] = useState<Tool | null>(null);
   const [editingFileSearch, setEditingFileSearch] = useState<Tool | null>(null);
   const [editingAgenticFileSearch, setEditingAgenticFileSearch] = useState<Tool | null>(null);
+  const [apiKeysModalOpen, setApiKeysModalOpen] = useState(false);
+  const [requiredProvider, setRequiredProvider] = useState<string | undefined>(undefined);
+  const [pendingModelSelection, setPendingModelSelection] = useState<string | null>(null);
 
   // Fetch models from API
   useEffect(() => {
@@ -207,8 +217,8 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
     fetchModels();
   }, []);
 
-  // Get all available models from providers
-  const getAllModels = () => {
+  // Get all available models from providers - memoized to prevent unnecessary recalculations
+  const allModels = useMemo(() => {
     return providers.flatMap(provider => 
       provider.supportedModels.map(model => ({
         ...model,
@@ -216,14 +226,39 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
         providerDescription: provider.description
       }))
     );
-  };
+  }, [providers]);
 
   const getModelString = () => `${modelProvider}@${modelName}`;
 
+  // Check if API key exists for provider
+  const checkApiKey = (provider: string): boolean => {
+    try {
+      const saved = localStorage.getItem('apiKeys');
+      if (!saved) return false;
+      
+      const savedKeys: { name: string; apiKey: string }[] = JSON.parse(saved);
+      return savedKeys.some(item => item.name === provider && item.apiKey.trim());
+    } catch (error) {
+      console.error('Error checking API key:', error);
+      return false;
+    }
+  };
+
   const handleModelSelect = (modelSyntax: string) => {
     const [provider, name] = modelSyntax.split('@');
+    
+    // Check if API key exists for this provider
+    if (!checkApiKey(provider)) {
+      setPendingModelSelection(modelSyntax);
+      setRequiredProvider(provider);
+      setApiKeysModalOpen(true);
+      return; // Don't set the model until API key is provided
+    }
+    
+    // API key exists, proceed with model selection
     setModelProvider(provider);
     setModelName(name);
+    setPendingModelSelection(null);
   };
 
   const imageModels = [
@@ -313,7 +348,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
     }
   };
 
-  const allModels = getAllModels();
+
 
   return (
     <div className="w-[30%] bg-background border-r border-border h-full overflow-y-auto">
@@ -492,6 +527,34 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
         </div>
 
       </div>
+
+      {/* API Keys Modal */}
+      <ApiKeysModal
+        open={apiKeysModalOpen || openApiKeysModal}
+        onOpenChange={(open) => {
+          setApiKeysModalOpen(open);
+          onApiKeysModalChange(open);
+          if (!open) {
+            // Clear state when modal closes (regardless of reason)
+            setRequiredProvider(undefined);
+            setPendingModelSelection(null);
+          }
+        }}
+        onSaveSuccess={() => {
+          // Only complete model selection when keys are successfully saved
+          if (pendingModelSelection && requiredProvider) {
+            // Add a small delay to ensure localStorage is updated
+            setTimeout(() => {
+              if (checkApiKey(requiredProvider)) {
+                const [provider, name] = pendingModelSelection.split('@');
+                setModelProvider(provider);
+                setModelName(name);
+              }
+            }, 100);
+          }
+        }}
+        requiredProvider={requiredProvider}
+      />
     </div>
   );
 };

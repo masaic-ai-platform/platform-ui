@@ -45,6 +45,13 @@ const ModelSelectionModal: React.FC<ModelSelectionModalProps> = ({
     }
   }, [searchQuery, models]);
 
+  // Safety check: if we have models but no filtered models and no search, reset
+  useEffect(() => {
+    if (models.length > 0 && filteredModels.length === 0 && !searchQuery.trim()) {
+      setFilteredModels(models);
+    }
+  }, [models, filteredModels, searchQuery]);
+
   const getSelectedModelInfo = () => {
     const model = models.find(m => m.modelSyntax === selectedModel);
     return model || { name: 'Select a model...', providerName: '' };
@@ -55,6 +62,20 @@ const ModelSelectionModal: React.FC<ModelSelectionModalProps> = ({
     setIsOpen(false);
     setSearchQuery('');
   };
+
+  // Reset search when modal opens/closes to prevent empty states
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchQuery('');
+    }
+  }, [isOpen]);
+
+  // Reset search when modal first opens
+  useEffect(() => {
+    if (isOpen && searchQuery) {
+      setSearchQuery('');
+    }
+  }, [isOpen]);
 
   const selectedModelInfo = getSelectedModelInfo();
 

@@ -48,25 +48,14 @@ const ConfigurationSettingsModal: React.FC<ConfigurationSettingsModalProps> = ({
   const [showTokensReset, setShowTokensReset] = useState(false);
   const [showTopPReset, setShowTopPReset] = useState(false);
   const [jsonSchemaModalOpen, setJsonSchemaModalOpen] = useState(false);
-  const [jsonSchemaContent, setJsonSchemaContent] = useState(() => {
-    return localStorage.getItem('aiPlayground_jsonSchemaContent') || '';
-  });
-  const [savedSchemaName, setSavedSchemaName] = useState<string | null>(() => {
-    return localStorage.getItem('aiPlayground_savedSchemaName') || null;
-  });
+  const [jsonSchemaContent, setJsonSchemaContent] = useState('');
+  const [savedSchemaName, setSavedSchemaName] = useState<string | null>(null);
 
-  // Save schema content and name to localStorage
+  // Clean up any existing localStorage entries for JSON schema (one-time cleanup)
   useEffect(() => {
-    localStorage.setItem('aiPlayground_jsonSchemaContent', jsonSchemaContent);
-  }, [jsonSchemaContent]);
-
-  useEffect(() => {
-    if (savedSchemaName) {
-      localStorage.setItem('aiPlayground_savedSchemaName', savedSchemaName);
-    } else {
-      localStorage.removeItem('aiPlayground_savedSchemaName');
-    }
-  }, [savedSchemaName]);
+    localStorage.removeItem('aiPlayground_jsonSchemaContent');
+    localStorage.removeItem('aiPlayground_savedSchemaName');
+  }, []);
 
   const resetTemperature = () => {
     setTemperature(1.0);
@@ -88,6 +77,9 @@ const ConfigurationSettingsModal: React.FC<ConfigurationSettingsModalProps> = ({
       setJsonSchemaModalOpen(true);
     } else {
       setTextFormat(format);
+      // Reset JSON schema state when switching away from json_schema
+      setJsonSchemaContent('');
+      setSavedSchemaName(null);
     }
   };
 
@@ -313,7 +305,13 @@ const ConfigurationSettingsModal: React.FC<ConfigurationSettingsModalProps> = ({
       
       <JsonSchemaModal
         open={jsonSchemaModalOpen}
-        onOpenChange={setJsonSchemaModalOpen}
+        onOpenChange={(open) => {
+          setJsonSchemaModalOpen(open);
+          // Reset state when modal closes if no schema was saved
+          if (!open && !savedSchemaName) {
+            setJsonSchemaContent('');
+          }
+        }}
         jsonSchema={jsonSchemaContent}
         onJsonSchemaChange={handleJsonSchemaContentChange}
         onSave={handleJsonSchemaSave}

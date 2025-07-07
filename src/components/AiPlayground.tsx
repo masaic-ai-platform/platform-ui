@@ -131,6 +131,7 @@ const AiPlayground: React.FC = () => {
   
   // Playground state
   const [activeTab, setActiveTab] = useState('responses');
+  const [apiKeysModalOpen, setApiKeysModalOpen] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -592,9 +593,11 @@ const AiPlayground: React.FC = () => {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
-    // Handle API Keys tab by expanding the Quick Settings in configuration panel
+    // Handle API Keys tab by opening the API keys modal
     if (tab === 'api-keys') {
-      // This will be handled by the configuration panel
+      setApiKeysModalOpen(true);
+      // Reset to previous tab since API Keys is a modal action, not a tab
+      setActiveTab('responses');
     }
   };
 
@@ -642,6 +645,8 @@ const AiPlayground: React.FC = () => {
         selectedVectorStore={selectedVectorStore}
         onVectorStoreSelect={handleVectorStoreSelect}
         onResetConversation={resetConversation}
+        openApiKeysModal={apiKeysModalOpen}
+        onApiKeysModalChange={setApiKeysModalOpen}
       />
 
       {/* Chat Area - 60% */}

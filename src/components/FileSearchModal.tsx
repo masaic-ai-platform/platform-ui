@@ -30,6 +30,8 @@ interface FileSearchModalProps {
   onOpenChange: (open: boolean) => void;
   onSave: (config: FileSearchConfig) => void;
   initialVectorStore?: string;
+  initialSelectedFiles?: string[];
+  initialVectorStoreName?: string;
 }
 
 interface FileSearchConfig {
@@ -93,12 +95,14 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
   open,
   onOpenChange,
   onSave,
-  initialVectorStore
+  initialVectorStore,
+  initialSelectedFiles,
+  initialVectorStoreName
 }) => {
   const [vectorStores, setVectorStores] = useState<VectorStore[]>([]);
   const [files, setFiles] = useState<FileItem[]>([]);
   const [vectorStoreFiles, setVectorStoreFiles] = useState<VectorStoreFile[]>([]);
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<string[]>(initialSelectedFiles || []);
   const [selectedVectorStore, setSelectedVectorStore] = useState<string>(initialVectorStore || '');
   const [newVectorStoreName, setNewVectorStoreName] = useState('');
   const [loading, setLoading] = useState({ stores: false, files: false, vectorStoreFiles: false });
@@ -238,11 +242,24 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
     return response.json();
   };
 
-  // Attach files to vector store with status tracking
-  const handleAttachFiles = async () => {
-    if (!selectedVectorStore || selectedFiles.length === 0) return;
+  // Save configuration (files are optional, only vector store is required)
+  const handleSave = async () => {
+    if (!selectedVectorStore) return;
 
-    const vectorStoreName = vectorStores.find(vs => vs.id === selectedVectorStore)?.name || '';
+    const vectorStoreName = vectorStores.find(vs => vs.id === selectedVectorStore)?.name || initialVectorStoreName || '';
+    
+    // If no files selected, just save the vector store configuration
+    if (selectedFiles.length === 0) {
+      onSave({
+        selectedFiles: [],
+        selectedVectorStore,
+        vectorStoreName
+      });
+      onOpenChange(false);
+      return;
+    }
+
+    // If files are selected, attach them to the vector store
     setAttachingFiles(selectedFiles);
     
     // Initialize upload progress
@@ -350,8 +367,13 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
     if (open) {
       fetchVectorStores();
       fetchFiles();
+      
+      // If editing with an initial vector store, load its files automatically
+      if (initialVectorStore) {
+        setShowVectorStoreFiles(true);
+      }
     }
-  }, [open]);
+  }, [open, initialVectorStore]);
 
   // Load vector store files when vector store is selected
   useEffect(() => {
@@ -677,7 +699,7 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
           {/* Footer */}
           <div className="flex items-center justify-between p-6 pt-4 border-t border-border">
             <div className="text-xs text-muted-foreground">
-              {selectedFiles.length} file(s) selected
+              {selectedFiles.length} file(s) selected • Vector store required, files optional
             </div>
             <div className="flex space-x-3">
               <Button
@@ -688,8 +710,8 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
                 Cancel
               </Button>
               <Button
-                onClick={handleAttachFiles}
-                disabled={!selectedVectorStore || selectedFiles.length === 0 || attachingFiles.length > 0 || uploadProgress.length > 0}
+                onClick={handleSave}
+                disabled={!selectedVectorStore || attachingFiles.length > 0 || uploadProgress.length > 0}
                 className="bg-positive-trend hover:bg-positive-trend/90 text-white"
               >
                 {uploadProgress.length > 0 ? (
@@ -702,8 +724,10 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     Adding Files...
                   </>
+                ) : selectedFiles.length > 0 ? (
+                  'Add Files & Save'
                 ) : (
-                  'Add to Vector Store'
+                  'Save Configuration'
                 )}
               </Button>
             </div>
