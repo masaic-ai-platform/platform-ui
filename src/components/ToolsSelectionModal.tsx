@@ -49,11 +49,6 @@ const availableTools: Tool[] = [
     icon: MCP
   },
   {
-    id: 'function',
-    name: 'Function',
-    icon: Code
-  },
-  {
     id: 'file_search',
     name: 'File Search',
     icon: Search

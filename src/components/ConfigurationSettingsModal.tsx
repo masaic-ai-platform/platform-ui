@@ -28,6 +28,12 @@ interface ConfigurationSettingsModalProps {
   topP: number;
   setTopP: (topP: number) => void;
   
+  // JSON Schema settings
+  jsonSchemaContent: string;
+  setJsonSchemaContent: (content: string) => void;
+  jsonSchemaName: string | null;
+  setJsonSchemaName: (name: string | null) => void;
+  
   children?: React.ReactNode;
 }
 
@@ -42,14 +48,17 @@ const ConfigurationSettingsModal: React.FC<ConfigurationSettingsModalProps> = ({
   setMaxTokens,
   topP,
   setTopP,
-  children
+  children,
+  jsonSchemaContent,
+  setJsonSchemaContent,
+  jsonSchemaName,
+  setJsonSchemaName
 }) => {
   const [showTempReset, setShowTempReset] = useState(false);
   const [showTokensReset, setShowTokensReset] = useState(false);
   const [showTopPReset, setShowTopPReset] = useState(false);
   const [jsonSchemaModalOpen, setJsonSchemaModalOpen] = useState(false);
-  const [jsonSchemaContent, setJsonSchemaContent] = useState('');
-  const [savedSchemaName, setSavedSchemaName] = useState<string | null>(null);
+  // Remove local state for jsonSchemaContent and jsonSchemaName
 
   // Clean up any existing localStorage entries for JSON schema (one-time cleanup)
   useEffect(() => {
@@ -79,7 +88,7 @@ const ConfigurationSettingsModal: React.FC<ConfigurationSettingsModalProps> = ({
       setTextFormat(format);
       // Reset JSON schema state when switching away from json_schema
       setJsonSchemaContent('');
-      setSavedSchemaName(null);
+      setJsonSchemaName(null);
     }
   };
 
@@ -90,10 +99,10 @@ const ConfigurationSettingsModal: React.FC<ConfigurationSettingsModalProps> = ({
     try {
       const parsedSchema = JSON.parse(jsonSchemaContent);
       const schemaName = parsedSchema.name || 'unnamed_schema';
-      setSavedSchemaName(schemaName);
+      setJsonSchemaName(schemaName);
     } catch (error) {
       console.error('Error parsing JSON schema:', error);
-      setSavedSchemaName('invalid_schema');
+      setJsonSchemaName('invalid_schema');
     }
   };
 
@@ -109,15 +118,15 @@ const ConfigurationSettingsModal: React.FC<ConfigurationSettingsModalProps> = ({
       try {
         const parsedSchema = JSON.parse(content);
         const schemaName = parsedSchema.name || 'unnamed_schema';
-        setSavedSchemaName(schemaName);
+        setJsonSchemaName(schemaName);
       } catch (error) {
         // If parsing fails, keep the previous name or set to null if no content
         if (!content.trim()) {
-          setSavedSchemaName(null);
+          setJsonSchemaName(null);
         }
       }
     } else {
-      setSavedSchemaName(null);
+      setJsonSchemaName(null);
     }
   };
 
@@ -169,11 +178,11 @@ const ConfigurationSettingsModal: React.FC<ConfigurationSettingsModalProps> = ({
             </div>
             
             {/* Schema name display when json_schema is selected */}
-            {textFormat === 'json_schema' && savedSchemaName && (
+            {textFormat === 'json_schema' && jsonSchemaName && (
               <div className="flex items-center justify-between space-x-2 pl-2">
                 <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                   <span className="text-positive-trend">{'{ }'}</span>
-                  <span>{savedSchemaName}</span>
+                  <span>{jsonSchemaName}</span>
                 </div>
                 <Button
                   variant="ghost"
@@ -308,7 +317,7 @@ const ConfigurationSettingsModal: React.FC<ConfigurationSettingsModalProps> = ({
         onOpenChange={(open) => {
           setJsonSchemaModalOpen(open);
           // Reset state when modal closes if no schema was saved
-          if (!open && !savedSchemaName) {
+          if (!open && !jsonSchemaName) {
             setJsonSchemaContent('');
           }
         }}

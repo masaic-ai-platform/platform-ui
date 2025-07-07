@@ -16,6 +16,7 @@ interface Message {
   type: 'text' | 'image';
   timestamp: Date;
   hasThinkTags?: boolean;
+  isLoading?: boolean;
 }
 
 interface PromptMessage {
@@ -24,89 +25,21 @@ interface PromptMessage {
   content: string;
 }
 
-interface LoadingState {
-  stage: 'thinking' | 'preparing' | 'searching' | 'analyzing' | 'generating' | 'creating' | 'completing' | 'streaming';
-  message: string;
-  toolType?: 'file_search' | 'image_generation' | 'text';
-}
-
-// Redesigned Loading Card Component with Masaic UI styling
-const LoadingCard: React.FC<{ loadingState: LoadingState }> = ({ loadingState }) => {
-  const getIcon = () => {
-    switch (loadingState.stage) {
-      case 'thinking':
-      case 'streaming':
-        return <div className="w-3 h-3 bg-primary rounded-full animate-pulse" />;
-      case 'preparing':
-      case 'searching':
-      case 'analyzing':
-        return <div className="w-3 h-3 bg-positive-trend rounded-full animate-pulse" />;
-      case 'generating':
-      case 'creating':
-        return <div className="w-3 h-3 bg-opportunity rounded-full animate-pulse" />;
-      default:
-        return <div className="w-3 h-3 bg-muted-foreground rounded-full animate-pulse" />;
-    }
-  };
-
-  const getStageColor = () => {
-    switch (loadingState.toolType) {
-      case 'file_search':
-        return 'text-positive-trend';
-      case 'image_generation':
-        return 'text-opportunity';
-      case 'text':
-        return 'text-primary';
-      default:
-        return 'text-muted-foreground';
-    }
-  };
-
-  const getSemanticType = () => {
-    switch (loadingState.toolType) {
-      case 'file_search':
-        return 'positive' as const;
-      case 'image_generation':
-        return 'opportunity' as const;
-      case 'text':
-        return 'neutral' as const;
-      default:
-        return 'neutral' as const;
-    }
-  };
-
-  return (
-    <div className="flex justify-start mb-6">
-      <UnifiedCard 
-        semanticType={getSemanticType()}
-        showBrandAccent={false}
-        className="max-w-3xl px-6 py-4"
-      >
-        <div className="flex items-center space-x-4">
-          <div className="flex-shrink-0">
-            {getIcon()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className={`text-sm font-medium ${getStageColor()}`}>
-              {loadingState.message}
-            </p>
-            <div className="mt-3 flex space-x-1">
-              <div className="h-1 w-2 bg-current opacity-60 rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
-              <div className="h-1 w-2 bg-current opacity-60 rounded-full animate-pulse" style={{ animationDelay: '150ms' }}></div>
-              <div className="h-1 w-2 bg-current opacity-60 rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></div>
-            </div>
-          </div>
-        </div>
-      </UnifiedCard>
-    </div>
-  );
+const getProviderApiKey = (provider: string): string => {
+  try {
+    const saved = localStorage.getItem('apiKeys');
+    if (!saved) return '';
+    const savedKeys: { name: string; apiKey: string }[] = JSON.parse(saved);
+    return savedKeys.find(item => item.name === provider)?.apiKey || '';
+  } catch {
+    return '';
+  }
 };
 
 const AiPlayground: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingState, setLoadingState] = useState<LoadingState | null>(null);
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('http://localhost:8080');
   const [modelProvider, setModelProvider] = useState('openai');
@@ -115,6 +48,7 @@ const AiPlayground: React.FC = () => {
   const [imageModelName, setImageModelName] = useState('imagen-3.0-generate-002');
   const [imageProviderKey, setImageProviderKey] = useState('');
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [previousResponseId, setPreviousResponseId] = useState<string | null>(null);
   const [selectedVectorStore, setSelectedVectorStore] = useState<string>('');
   const [instructions, setInstructions] = useState('');
   
@@ -133,6 +67,9 @@ const AiPlayground: React.FC = () => {
   const [activeTab, setActiveTab] = useState('responses');
   const [apiKeysModalOpen, setApiKeysModalOpen] = useState(false);
   
+  const [jsonSchemaContent, setJsonSchemaContent] = useState('');
+  const [jsonSchemaName, setJsonSchemaName] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -199,6 +136,7 @@ const AiPlayground: React.FC = () => {
   const resetConversation = () => {
     setMessages([]);
     setConversationId(null);
+    setPreviousResponseId(null);
     toast.success('Conversation reset');
   };
 
@@ -224,17 +162,14 @@ const AiPlayground: React.FC = () => {
   };
 
   const generateResponse = async (prompt: string) => {
-    if (!apiKey.trim()) {
-      toast.error('Please set your API key in settings first');
+    const provider = modelProvider;
+    const apiKeyForProvider = getProviderApiKey(provider);
+    if (!apiKeyForProvider) {
+      toast.error('Please set your API key for the selected provider.');
       return;
     }
 
     setIsLoading(true);
-    setLoadingState({
-      stage: 'thinking',
-      message: 'Preparing your request...',
-      toolType: 'text'
-    });
 
     // Add user message
     const userMessage: Message = {
@@ -244,7 +179,6 @@ const AiPlayground: React.FC = () => {
       type: 'text',
       timestamp: new Date()
     };
-
     setMessages(prev => [...prev, userMessage]);
 
     // Add assistant message placeholder
@@ -254,309 +188,143 @@ const AiPlayground: React.FC = () => {
       role: 'assistant',
       content: '',
       type: 'text',
-      timestamp: new Date()
+      timestamp: new Date(),
+      isLoading: true
     };
-
     setMessages(prev => [...prev, assistantMessage]);
 
-    // Construct the request with all available options
-    const tools = [];
-    
-    // Add file search tool if vector store is selected
-    if (selectedVectorStore?.trim()) {
-      tools.push({
-        type: "file_search",
-        file_search: {
-          vector_store_ids: [selectedVectorStore.trim()]
-        }
-      });
-    }
+    // Build API request
+    const input = [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'input_text',
+            text: prompt
+          }
+        ]
+      }
+    ];
 
-    // Add image generation tool if image provider key is provided
-    if (imageProviderKey?.trim()) {
-      tools.push({
-        type: "image_generation",
-        image_generation: {
-          provider: imageModelProvider,
-          model: imageModelName,
-          api_key: imageProviderKey
+    let textFormatBlock: any = { type: textFormat };
+    if (textFormat === 'json_schema') {
+      let schema = null;
+      let schemaName = jsonSchemaName;
+      try {
+        if (jsonSchemaContent) {
+          const parsed = JSON.parse(jsonSchemaContent);
+          schema = parsed.schema;
+          schemaName = parsed.name || schemaName;
         }
-      });
+      } catch {}
+      if (!schema || !schemaName) {
+        const errorMsg = 'JSON schema is missing or invalid. Please define a valid schema in settings.';
+        toast.error(errorMsg);
+        setMessages(prev => prev.map(msg =>
+          msg.id === assistantMessageId
+            ? {
+                ...msg,
+                content: errorMsg,
+                type: 'text',
+                hasThinkTags: false,
+                isLoading: false
+              }
+            : msg
+        ));
+        setIsLoading(false);
+        return;
+      }
+      textFormatBlock = {
+        type: 'json_schema',
+        name: schemaName,
+        schema
+      };
     }
 
     const requestBody: any = {
       model: `${modelProvider}@${modelName}`,
-      messages: [
-        ...(instructions.trim() ? [{ role: 'system', content: instructions }] : []),
-        ...promptMessages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        })),
-        ...messages.map(msg => ({
-          role: msg.role,
-          content: msg.content
-        })),
-        { role: 'user', content: prompt }
-      ],
+      instructions: instructions,
+      input,
+      text: {
+        format: textFormatBlock
+      },
       temperature,
-      max_tokens: maxTokens,
+      max_output_tokens: maxTokens,
       top_p: topP,
-      stream: true,
-      ...(textFormat !== 'text' && { response_format: { type: textFormat } }),
-      ...(toolChoice !== 'auto' && tools.length > 0 && { tool_choice: toolChoice }),
-      ...(tools.length > 0 && { tools }),
-      ...(conversationId && { conversation_id: conversationId })
+      store: true
     };
+    
+    if (previousResponseId) {
+      requestBody.previous_response_id = previousResponseId;
+    }
 
     try {
-      const response = await fetch(`${baseUrl}/chat/completions`, {
+      const response = await fetch('http://localhost:6644/v1/responses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${apiKeyForProvider}`
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('No reader available');
-      }
-
-      let buffer = '';
-      let toolInProgress = '';
-      let isImageGeneration = false;
-      let currentResponseId = null;
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += new TextDecoder().decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            const trimmedLine = line.trim();
-            if (!trimmedLine || trimmedLine === 'data: [DONE]') continue;
-
-            if (trimmedLine.startsWith('data: ')) {
-              try {
-                const eventData = JSON.parse(trimmedLine.slice(6));
-                
-                // Store response ID for conversation tracking
-                if (eventData.id && !currentResponseId) {
-                  currentResponseId = eventData.id;
-                }
-
-                switch (eventData.type) {
-                  case 'response.started':
-                    setLoadingState({
-                      stage: 'thinking',
-                      message: 'Starting to process your request...',
-                      toolType: 'text'
-                    });
-                    break;
-
-                  case 'response.file_search.in_progress':
-                    toolInProgress = 'file_search';
-                    setLoadingState({
-                      stage: 'searching',
-                      message: 'Searching through your documents...',
-                      toolType: 'file_search'
-                    });
-                    toast.info('Searching documents...');
-                    break;
-
-                  case 'response.file_search.executing':
-                    setLoadingState({
-                      stage: 'analyzing',
-                      message: 'Analyzing document content...',
-                      toolType: 'file_search'
-                    });
-                    break;
-
-                  case 'response.file_search.completed':
-                    toolInProgress = '';
-                    setLoadingState({
-                      stage: 'completing',
-                      message: 'Document search completed!',
-                      toolType: 'file_search'
-                    });
-                    toast.success('Document search completed!');
-                    break;
-
-                  case 'response.image_generation.initiated':
-                    toolInProgress = 'image_generation';
-                    isImageGeneration = true;
-                    if (!eventData.reasoning?.includes('searched_files')) {
-                      setLoadingState({
-                        stage: 'preparing',
-                        message: 'Preparing to generate image...',
-                        toolType: 'image_generation'
-                      });
-                    }
-                    break;
-
-                  case 'response.output_text.delta':
-                    setLoadingState({
-                      stage: 'streaming',
-                      message: 'Generating response...',
-                      toolType: 'text'
-                    });
-                    // Stream each delta directly by appending to existing content
-                    setMessages(prev => prev.map(msg => 
-                      msg.id === assistantMessageId 
-                        ? { 
-                            ...msg, 
-                            content: msg.content + eventData.delta, 
-                            type: 'text',
-                            hasThinkTags: (msg.content + eventData.delta).includes('<think>')
-                          }
-                        : msg
-                    ));
-                    break;
-
-                  case 'response.output_text.done':
-                    setLoadingState(null); // Hide loading card
-                    // Use the complete text from the done event
-                    setMessages(prev => prev.map(msg => 
-                      msg.id === assistantMessageId 
-                        ? { 
-                            ...msg, 
-                            content: eventData.text, 
-                            type: 'text',
-                            hasThinkTags: eventData.text.includes('<think>')
-                          }
-                        : msg
-                    ));
-                    break;
-
-                  case 'response.image_generation.in_progress':
-                    toolInProgress = 'image_generation';
-                    isImageGeneration = true;
-                    setLoadingState({
-                      stage: 'generating',
-                      message: 'Generating your image...',
-                      toolType: 'image_generation'
-                    });
-                    toast.info('Image generation started...');
-                    break;
-
-                  case 'response.image_generation.executing':
-                    setLoadingState({
-                      stage: 'creating',
-                      message: 'Generating your image...',
-                      toolType: 'image_generation'
-                    });
-                    break;
-
-                  case 'response.image_generation.completed':
-                    toolInProgress = '';
-                    setLoadingState({
-                      stage: 'completing',
-                      message: 'Image ready! Finalizing...',
-                      toolType: 'image_generation'
-                    });
-                    toast.success('Image generated successfully!');
-                    break;
-
-                  case 'response.completed':
-                    setLoadingState(null); // Hide loading card
-                    
-                    // Only set conversationId on successful completion
-                    if (currentResponseId) {
-                      setConversationId(currentResponseId);
-                    }
-                    
-                    if (eventData.response?.output && eventData.response.output.length > 0) {
-                      const output = eventData.response.output[0];
-                      
-                      // Check for new format with result field (for images)
-                      if (output.result) {
-                        // Check if result contains image tag
-                        const isImage = output.result.includes('<image>');
-                        
-                        // Update the final message with the complete content
-                        setMessages(prev => prev.map(msg => 
-                          msg.id === assistantMessageId 
-                            ? { 
-                                ...msg, 
-                                content: output.result,
-                                type: isImage ? 'image' : 'text',
-                                hasThinkTags: !isImage && output.result.includes('<think>')
-                              }
-                            : msg
-                        ));
-
-                        if (isImage) {
-                          toast.success('Image generated successfully!');
-                        } else {
-                          toast.success('Response completed!');
-                        }
-                      }
-                      // Fallback to old format for backward compatibility
-                      else if (output.content && output.content.length > 0) {
-                        const content = output.content[0];
-                        
-                        // Update the final message with the complete content
-                        setMessages(prev => prev.map(msg => 
-                          msg.id === assistantMessageId 
-                            ? { 
-                                ...msg, 
-                                content: content.text || '',
-                                type: content.type === 'image' ? 'image' : 'text',
-                                hasThinkTags: content.type !== 'image' && (content.text || '').includes('<think>')
-                              }
-                            : msg
-                        ));
-
-                        if (content.type === 'image') {
-                          toast.success('Image generated successfully!');
-                        } else {
-                          toast.success('Response completed!');
-                        }
-                      }
-                    }
-                    break;
-
-                  default:
-                    break;
-                }
-              } catch (parseError) {
-                console.error('❌ Error parsing SSE data:', parseError, 'Original line:', trimmedLine);
-                console.error('Parse error details:', parseError.message);
+        setMessages(prev => prev.map(msg =>
+          msg.id === assistantMessageId
+            ? {
+                ...msg,
+                content: `Error: ${errorText}`,
+                type: 'text',
+                hasThinkTags: false,
+                isLoading: false
               }
-            }
-          }
-        }
-      } finally {
-        reader.releaseLock();
+            : msg
+        ));
+        setIsLoading(false);
+        return;
       }
 
-    } catch (error) {
-      console.error('Error generating response:', error);
-      toast.error('Failed to generate response. Please check your settings and try again.');
+      const data = await response.json();
       
-      // Update the assistant message with error
-      setMessages(prev => prev.map(msg => 
-        msg.id === assistantMessageId 
-          ? { 
-              ...msg, 
-              content: 'Sorry, I encountered an error while processing your request. Please try again.',
-              type: 'text'
+      if (data.id) {
+        setPreviousResponseId(data.id);
+      }
+      
+      let assistantContent = '';
+      if (data.output && data.output[0] && data.output[0].content && data.output[0].content[0] && data.output[0].content[0].text) {
+        assistantContent = data.output[0].content[0].text;
+      } else if (data.error && data.error.message) {
+        assistantContent = `Error: ${data.error.message}`;
+      } else {
+        assistantContent = JSON.stringify(data, null, 2);
+      }
+      
+      setMessages(prev => prev.map(msg =>
+        msg.id === assistantMessageId
+          ? {
+              ...msg,
+              content: assistantContent,
+              type: 'text',
+              hasThinkTags: false,
+              isLoading: false
+            }
+          : msg
+      ));
+    } catch (error: any) {
+      setMessages(prev => prev.map(msg =>
+        msg.id === assistantMessageId
+          ? {
+              ...msg,
+              content: `Error: ${error.message}`,
+              type: 'text',
+              hasThinkTags: false,
+              isLoading: false
             }
           : msg
       ));
     } finally {
       setIsLoading(false);
-      setLoadingState(null); // Ensure loading card is hidden
     }
   };
 
@@ -647,6 +415,10 @@ const AiPlayground: React.FC = () => {
         onResetConversation={resetConversation}
         openApiKeysModal={apiKeysModalOpen}
         onApiKeysModalChange={setApiKeysModalOpen}
+        jsonSchemaContent={jsonSchemaContent}
+        setJsonSchemaContent={setJsonSchemaContent}
+        jsonSchemaName={jsonSchemaName}
+        setJsonSchemaName={setJsonSchemaName}
       />
 
       {/* Chat Area - 60% */}
@@ -678,9 +450,9 @@ const AiPlayground: React.FC = () => {
                 imageProviderKey={imageProviderKey}
                 selectedVectorStore={selectedVectorStore}
                 instructions={instructions}
+                isLoading={message.isLoading}
               />
             ))}
-            {loadingState && <LoadingCard loadingState={loadingState} />}
           </div>
         )}
         <div ref={messagesEndRef} />

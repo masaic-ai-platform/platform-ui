@@ -116,6 +116,10 @@ interface ConfigurationPanelProps {
   // API Keys modal trigger
   openApiKeysModal?: boolean;
   onApiKeysModalChange?: (open: boolean) => void;
+  jsonSchemaContent: string;
+  setJsonSchemaContent: (content: string) => void;
+  jsonSchemaName: string | null;
+  setJsonSchemaName: (name: string | null) => void;
 }
 
 const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
@@ -154,7 +158,11 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   onVectorStoreSelect,
   onResetConversation,
   openApiKeysModal = false,
-  onApiKeysModalChange = () => {}
+  onApiKeysModalChange = () => {},
+  jsonSchemaContent,
+  setJsonSchemaContent,
+  jsonSchemaName,
+  setJsonSchemaName
 }) => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(false);
@@ -379,6 +387,10 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                 setMaxTokens={setMaxTokens}
                 topP={topP}
                 setTopP={setTopP}
+                jsonSchemaContent={jsonSchemaContent}
+                setJsonSchemaContent={setJsonSchemaContent}
+                jsonSchemaName={jsonSchemaName}
+                setJsonSchemaName={setJsonSchemaName}
               />
             </div>
           </div>
