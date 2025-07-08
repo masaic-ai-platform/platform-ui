@@ -178,7 +178,7 @@ const ApiPlayground: React.FC = () => {
   useEffect(() => {
     const savedApiKey = localStorage.getItem('aiPlayground_apiKey') || '';
     const savedBaseUrl = localStorage.getItem('aiPlayground_baseUrl') || 'http://localhost:8080';
-    const savedModelProvider = localStorage.getItem('aiPlayground_modelProvider') || 'openai';
+    const savedModelProvider = localStorage.getItem('platform_modelProvider') || 'openai';
     const savedPresets = localStorage.getItem('apiPlayground_presets');
     
     setState(prev => ({
@@ -2191,7 +2191,7 @@ ${headers.map(h => `--header '${h}'`).join(' \\\n')} \\
                               value={state.modelProvider} 
                               onValueChange={(value) => {
                                 updateState('modelProvider', value);
-                                localStorage.setItem('aiPlayground_modelProvider', value);
+                                localStorage.setItem('platform_modelProvider', value);
                               }}
                             >
                               <SelectTrigger className="h-10">

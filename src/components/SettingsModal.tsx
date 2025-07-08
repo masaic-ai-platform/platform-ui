@@ -122,12 +122,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     
           localStorage.setItem('aiPlayground_apiKey', tempApiKey);
       localStorage.setItem('aiPlayground_baseUrl', tempBaseUrl);
-      localStorage.setItem('aiPlayground_modelProvider', finalChatProvider);
-      localStorage.setItem('aiPlayground_modelName', tempModelName);
+              localStorage.setItem('platform_modelProvider', finalChatProvider);
+        localStorage.setItem('platform_modelName', tempModelName);
       localStorage.setItem('aiPlayground_imageModelProvider', finalImageProvider);
       localStorage.setItem('aiPlayground_imageModelName', tempImageModelName);
       localStorage.setItem('aiPlayground_imageProviderKey', tempImageProviderKey);
-      localStorage.setItem('aiPlayground_instructions', tempInstructions);
+      localStorage.setItem('platform_instructions', tempInstructions);
     
     toast.success('Settings saved successfully!');
     setIsOpen(false);

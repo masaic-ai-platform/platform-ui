@@ -3,16 +3,29 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import UnifiedCard from '@/components/ui/unified-card';
-import { Loader2, Send, Sparkles } from 'lucide-react';
+import { Loader2, Send, Sparkles, RotateCcw, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import ChatMessage from './ChatMessage';
 import ConfigurationPanel from './ConfigurationPanel';
 import PlaygroundSidebar from './PlaygroundSidebar';
 
+interface ToolExecution {
+  serverName: string;
+  toolName: string;
+  status: 'in_progress' | 'completed';
+}
+
+interface ContentBlock {
+  type: 'text' | 'tool_progress';
+  content?: string;
+  toolExecutions?: ToolExecution[];
+}
+
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  contentBlocks?: ContentBlock[];
   type: 'text' | 'image';
   timestamp: Date;
   hasThinkTags?: boolean;
@@ -25,9 +38,19 @@ interface PromptMessage {
   content: string;
 }
 
+interface Tool {
+  id: string;
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  functionDefinition?: string; // For function tools
+  mcpConfig?: any; // For MCP server tools
+  fileSearchConfig?: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string }; // For file search tools
+  agenticFileSearchConfig?: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string; iterations: number }; // For agentic file search tools
+}
+
 const getProviderApiKey = (provider: string): string => {
   try {
-    const saved = localStorage.getItem('apiKeys');
+    const saved = localStorage.getItem('platform_apiKeysys');
     if (!saved) return '';
     const savedKeys: { name: string; apiKey: string }[] = JSON.parse(saved);
     return savedKeys.find(item => item.name === provider)?.apiKey || '';
@@ -63,6 +86,9 @@ const AiPlayground: React.FC = () => {
   // Prompt messages state
   const [promptMessages, setPromptMessages] = useState<PromptMessage[]>([]);
   
+  // Tools state
+  const [selectedTools, setSelectedTools] = useState<Tool[]>([]);
+  
   // Playground state
   const [activeTab, setActiveTab] = useState('responses');
   const [apiKeysModalOpen, setApiKeysModalOpen] = useState(false);
@@ -70,19 +96,22 @@ const AiPlayground: React.FC = () => {
   const [jsonSchemaContent, setJsonSchemaContent] = useState('');
   const [jsonSchemaName, setJsonSchemaName] = useState<string | null>(null);
 
+  // Chat header state
+  const [copiedResponseId, setCopiedResponseId] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Load saved settings from localStorage
-    const savedApiKey = localStorage.getItem('aiPlayground_apiKey') || '';
+    const savedApiKey = localStorage.getItem('platform_apiKeys') || '';
     const savedBaseUrl = localStorage.getItem('aiPlayground_baseUrl') || 'http://localhost:8080';
-    const savedModelProvider = localStorage.getItem('aiPlayground_modelProvider') || 'openai';
-    const savedModelName = localStorage.getItem('aiPlayground_modelName') || 'gpt-4o';
+    const savedModelProvider = localStorage.getItem('platform_modelProvider') || 'openai';
+    const savedModelName = localStorage.getItem('platform_modelName') || 'gpt-4o';
     const savedImageModelProvider = localStorage.getItem('aiPlayground_imageModelProvider') || 'gemini';
     const savedImageModelName = localStorage.getItem('aiPlayground_imageModelName') || 'imagen-3.0-generate-002';
     const savedImageProviderKey = localStorage.getItem('aiPlayground_imageProviderKey') || '';
     const savedSelectedVectorStore = localStorage.getItem('aiPlayground_selectedVectorStore') || '';
-    const savedInstructions = localStorage.getItem('aiPlayground_instructions') || '';
+    const savedInstructions = localStorage.getItem('platform_instructions') || '';
     const savedTemperature = parseFloat(localStorage.getItem('aiPlayground_temperature') || '1.0');
     const savedMaxTokens = parseInt(localStorage.getItem('aiPlayground_maxTokens') || '2048');
     const savedTopP = parseFloat(localStorage.getItem('aiPlayground_topP') || '1.0');
@@ -90,6 +119,8 @@ const AiPlayground: React.FC = () => {
     const savedTextFormat = (localStorage.getItem('aiPlayground_textFormat') || 'text') as 'text' | 'json_object' | 'json_schema';
     const savedToolChoice = (localStorage.getItem('aiPlayground_toolChoice') || 'auto') as 'auto' | 'none';
     const savedPromptMessages = JSON.parse(localStorage.getItem('aiPlayground_promptMessages') || '[]');
+    const savedOtherTools = JSON.parse(localStorage.getItem('aiPlayground_otherTools') || '[]');
+    const savedMCPTools = loadMCPToolsFromStorage();
     
     setApiKey(savedApiKey);
     setBaseUrl(savedBaseUrl);
@@ -107,19 +138,20 @@ const AiPlayground: React.FC = () => {
     setTextFormat(savedTextFormat);
     setToolChoice(savedToolChoice);
     setPromptMessages(savedPromptMessages);
+    setSelectedTools([...savedOtherTools, ...savedMCPTools]);
   }, []);
 
   // Save settings to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('aiPlayground_apiKey', apiKey);
+    localStorage.setItem('platform_apiKeys', apiKey);
     localStorage.setItem('aiPlayground_baseUrl', baseUrl);
-    localStorage.setItem('aiPlayground_modelProvider', modelProvider);
-    localStorage.setItem('aiPlayground_modelName', modelName);
+    localStorage.setItem('platform_modelProvider', modelProvider);
+    localStorage.setItem('platform_modelName', modelName);
     localStorage.setItem('aiPlayground_imageModelProvider', imageModelProvider);
     localStorage.setItem('aiPlayground_imageModelName', imageModelName);
     localStorage.setItem('aiPlayground_imageProviderKey', imageProviderKey);
     localStorage.setItem('aiPlayground_selectedVectorStore', selectedVectorStore);
-    localStorage.setItem('aiPlayground_instructions', instructions);
+    localStorage.setItem('platform_instructions', instructions);
     localStorage.setItem('aiPlayground_temperature', temperature.toString());
     localStorage.setItem('aiPlayground_maxTokens', maxTokens.toString());
     localStorage.setItem('aiPlayground_topP', topP.toString());
@@ -127,7 +159,14 @@ const AiPlayground: React.FC = () => {
     localStorage.setItem('aiPlayground_textFormat', textFormat);
     localStorage.setItem('aiPlayground_toolChoice', toolChoice);
     localStorage.setItem('aiPlayground_promptMessages', JSON.stringify(promptMessages));
-  }, [apiKey, baseUrl, modelProvider, modelName, imageModelProvider, imageModelName, imageProviderKey, selectedVectorStore, instructions, temperature, maxTokens, topP, storeLogs, textFormat, toolChoice, promptMessages]);
+    
+    // Separate MCP tools from other tools for better management
+    const mcpTools = selectedTools.filter(tool => tool.id === 'mcp_server');
+    const otherTools = selectedTools.filter(tool => tool.id !== 'mcp_server');
+    
+    saveMCPToolsToStorage(mcpTools);
+    localStorage.setItem('aiPlayground_otherTools', JSON.stringify(otherTools));
+  }, [apiKey, baseUrl, modelProvider, modelName, imageModelProvider, imageModelName, imageProviderKey, selectedVectorStore, instructions, temperature, maxTokens, topP, storeLogs, textFormat, toolChoice, promptMessages, selectedTools]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -138,6 +177,15 @@ const AiPlayground: React.FC = () => {
     setConversationId(null);
     setPreviousResponseId(null);
     toast.success('Conversation reset');
+  };
+
+  // Function to clear all localStorage data (for testing/debugging)
+  const clearAllStorageData = () => {
+    const keys = Object.keys(localStorage).filter(key => 
+      key.startsWith('aiPlayground_') || key.startsWith('platform_')
+    );
+    keys.forEach(key => localStorage.removeItem(key));
+    toast.success('All storage data cleared');
   };
 
   const handleVectorStoreSelect = (vectorStoreId: string | null) => {
@@ -159,6 +207,79 @@ const AiPlayground: React.FC = () => {
   const handleRemovePromptMessage = (id: string) => {
     setPromptMessages(prev => prev.filter(msg => msg.id !== id));
     toast.success('Message removed from prompt');
+  };
+
+  const handleCopyResponseId = async () => {
+    if (!previousResponseId) return;
+    
+    try {
+      await navigator.clipboard.writeText(previousResponseId);
+      setCopiedResponseId(true);
+      setTimeout(() => setCopiedResponseId(false), 2000);
+      toast.success('Response ID copied to clipboard');
+    } catch (err) {
+      console.error('Failed to copy response ID:', err);
+      toast.error('Failed to copy response ID');
+    }
+  };
+
+  // Enhanced MCP tools persistence using label as key
+  const saveMCPToolsToStorage = (tools: Tool[]) => {
+    const mcpTools = tools.filter(tool => tool.id === 'mcp_server' && tool.mcpConfig?.label);
+    const mcpToolsMap: Record<string, any> = {};
+    
+    mcpTools.forEach(tool => {
+      const label = tool.mcpConfig.label;
+      mcpToolsMap[label] = {
+        label: tool.mcpConfig.label,
+        url: tool.mcpConfig.url,
+        authentication: tool.mcpConfig.authentication,
+        accessToken: tool.mcpConfig.accessToken,
+        customHeaders: tool.mcpConfig.customHeaders,
+        selectedTools: tool.mcpConfig.selectedTools
+      };
+    });
+    
+    localStorage.setItem('platform_mcpTools', JSON.stringify(mcpToolsMap));
+  };
+
+  const loadMCPToolsFromStorage = (): Tool[] => {
+    try {
+      const stored = localStorage.getItem('platform_mcpTools');
+      if (!stored) return [];
+      
+      const mcpToolsMap = JSON.parse(stored);
+      const mcpTools: Tool[] = [];
+      
+      Object.values(mcpToolsMap).forEach((config: any) => {
+        if (config.label) {
+          mcpTools.push({
+            id: 'mcp_server',
+            name: config.label,
+            icon: () => null, // Icon will be set by the component
+            mcpConfig: config
+          });
+        }
+      });
+      
+      return mcpTools;
+    } catch (error) {
+      console.error('Error loading MCP tools from storage:', error);
+      return [];
+    }
+  };
+
+  const getMCPToolByLabel = (label: string) => {
+    try {
+      const stored = localStorage.getItem('platform_mcpTools');
+      if (!stored) return null;
+      
+      const mcpToolsMap = JSON.parse(stored);
+      return mcpToolsMap[label] || null;
+    } catch (error) {
+      console.error('Error getting MCP tool by label:', error);
+      return null;
+    }
   };
 
   const generateResponse = async (prompt: string) => {
@@ -255,6 +376,32 @@ const AiPlayground: React.FC = () => {
       stream: true
     };
     
+    // Add tools if any are selected
+    if (selectedTools.length > 0) {
+      requestBody.tools = selectedTools.map(tool => {
+        if (tool.id === 'mcp_server' && tool.mcpConfig) {
+          return {
+            type: 'mcp',
+            server_label: tool.mcpConfig.label,
+            server_url: tool.mcpConfig.url,
+            allowed_tools: tool.mcpConfig.selectedTools,
+            headers: tool.mcpConfig.authentication === 'access_token' && tool.mcpConfig.accessToken
+              ? { 'Authorization': `Bearer ${tool.mcpConfig.accessToken}` }
+              : tool.mcpConfig.authentication === 'custom_headers' && tool.mcpConfig.customHeaders
+              ? tool.mcpConfig.customHeaders.reduce((acc: any, header: any) => {
+                  if (header.key && header.value) {
+                    acc[header.key] = header.value;
+                  }
+                  return acc;
+                }, {})
+              : {}
+          };
+        }
+        // Add other tool types as needed
+        return null;
+      }).filter(Boolean);
+    }
+    
     if (previousResponseId) {
       requestBody.previous_response_id = previousResponseId;
     }
@@ -293,6 +440,24 @@ const AiPlayground: React.FC = () => {
       let streamingContent = '';
       let responseId = '';
       let isStreaming = false;
+      let contentBlocks: ContentBlock[] = [];
+      let currentTextBlock: ContentBlock | null = null;
+      let activeToolExecutions = new Map<string, ToolExecution>();
+
+      const updateMessage = (blocks: ContentBlock[], fullContent: string) => {
+        setMessages(prev => prev.map(msg =>
+          msg.id === assistantMessageId
+            ? {
+                ...msg,
+                content: fullContent,
+                contentBlocks: [...blocks],
+                type: 'text',
+                hasThinkTags: false,
+                isLoading: false
+              }
+            : msg
+        ));
+      };
 
       if (reader) {
         try {
@@ -329,50 +494,95 @@ const AiPlayground: React.FC = () => {
                     if (data.delta) {
                       streamingContent += data.delta;
                       
+                      // Create or update current text block
+                      if (!currentTextBlock) {
+                        currentTextBlock = { type: 'text', content: data.delta };
+                        contentBlocks.push(currentTextBlock);
+                      } else {
+                        currentTextBlock.content = (currentTextBlock.content || '') + data.delta;
+                      }
+                      
                       // Check if we have a complete JSON object for real-time formatting
                       let displayContent = streamingContent;
                       if (textFormat === 'json_object' || textFormat === 'json_schema') {
                         try {
-                          // Try to parse as JSON - if successful, it's complete JSON
                           JSON.parse(streamingContent);
-                          // If parsing succeeds, keep the JSON as-is for formatting
                           displayContent = streamingContent;
                         } catch {
-                          // If parsing fails, it's incomplete JSON - show as-is
                           displayContent = streamingContent;
                         }
                       }
                       
-                      // Update message content in real-time
-                      setMessages(prev => prev.map(msg =>
-                        msg.id === assistantMessageId
-                          ? {
-                              ...msg,
-                              content: displayContent,
-                              type: 'text',
-                              hasThinkTags: false,
-                              isLoading: false
-                            }
-                          : msg
-                      ));
+                      updateMessage(contentBlocks, displayContent);
                     }
                   } else if (data.type === 'response.output_text.done') {
                     // Streaming completed for this output
                     isStreaming = false;
+                    currentTextBlock = null; // Reset for potential next text stream
                     if (data.text) {
-                      // Use the complete text from the done event
                       streamingContent = data.text;
-                      setMessages(prev => prev.map(msg =>
-                        msg.id === assistantMessageId
-                          ? {
-                              ...msg,
-                              content: streamingContent,
-                              type: 'text',
-                              hasThinkTags: false,
-                              isLoading: false
-                            }
-                          : msg
-                      ));
+                      // Update the last text block with complete content
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'text') {
+                          contentBlocks[i].content = data.text;
+                          break;
+                        }
+                      }
+                      updateMessage(contentBlocks, streamingContent);
+                    }
+                  } else if (data.type && data.type.startsWith('response.mcp_call.')) {
+                    // Handle MCP tool events
+                    const typeParts = data.type.split('.');
+                    if (typeParts.length >= 4) {
+                      const toolIdentifier = typeParts[2];
+                      const status = typeParts[3];
+                      
+                      // Parse tool identifier: myshopify_search_shop_catalog
+                      const identifierParts = toolIdentifier.split('_');
+                      const serverName = identifierParts[0];
+                      const toolName = identifierParts.slice(1).join('_');
+                      
+                      if (status === 'in_progress') {
+                        // Add new tool execution
+                        const toolExecution: ToolExecution = {
+                          serverName,
+                          toolName,
+                          status: 'in_progress'
+                        };
+                        activeToolExecutions.set(toolIdentifier, toolExecution);
+                        
+                        // Find existing tool progress block or create new one
+                        let toolProgressBlock = contentBlocks.find(block => block.type === 'tool_progress');
+                        if (!toolProgressBlock) {
+                          toolProgressBlock = {
+                            type: 'tool_progress',
+                            toolExecutions: Array.from(activeToolExecutions.values())
+                          };
+                          contentBlocks.push(toolProgressBlock);
+                        } else {
+                          // Update existing tool progress block
+                          toolProgressBlock.toolExecutions = Array.from(activeToolExecutions.values());
+                        }
+                        currentTextBlock = null; // Reset text block for potential next text
+                        
+                        updateMessage(contentBlocks, streamingContent);
+                      } else if (status === 'completed') {
+                        // Update tool execution status
+                        const toolExecution = activeToolExecutions.get(toolIdentifier);
+                        if (toolExecution) {
+                          toolExecution.status = 'completed';
+                          
+                                                  // Update the last tool progress block
+                        for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                          if (contentBlocks[i].type === 'tool_progress') {
+                            contentBlocks[i].toolExecutions = Array.from(activeToolExecutions.values());
+                            break;
+                          }
+                        }
+                          
+                          updateMessage(contentBlocks, streamingContent);
+                        }
+                      }
                     }
                   }
                 } catch (parseError) {
@@ -503,6 +713,9 @@ const AiPlayground: React.FC = () => {
         promptMessages={promptMessages}
         onAddPromptMessage={handleAddPromptMessage}
         onRemovePromptMessage={handleRemovePromptMessage}
+        selectedTools={selectedTools}
+        onSelectedToolsChange={setSelectedTools}
+        getMCPToolByLabel={getMCPToolByLabel}
         selectedVectorStore={selectedVectorStore}
         onVectorStoreSelect={handleVectorStoreSelect}
         onResetConversation={resetConversation}
@@ -516,6 +729,51 @@ const AiPlayground: React.FC = () => {
 
       {/* Chat Area - 60% */}
       <div className="w-[60%] flex flex-col">
+        {/* Sticky Header */}
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-6 py-3">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            {/* Reset Chat Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetConversation}
+              className="flex items-center space-x-2 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              title="Reset conversation"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span className="text-sm">Reset Chat</span>
+            </Button>
+
+            {/* Response ID Display */}
+            {previousResponseId && (
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-muted-foreground">Response ID:</span>
+                <div className="flex items-center space-x-1 bg-muted/50 rounded px-2 py-1">
+                  <code className="text-xs font-mono text-foreground">
+                    {previousResponseId.length > 20 
+                      ? `${previousResponseId.substring(0, 20)}...` 
+                      : previousResponseId
+                    }
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopyResponseId}
+                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                    title="Copy response ID"
+                  >
+                    {copiedResponseId ? (
+                      <Check className="w-3 h-3 text-green-500" />
+                    ) : (
+                      <Copy className="w-3 h-3" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-6 py-8">
         {messages.length === 0 ? (
@@ -531,9 +789,11 @@ const AiPlayground: React.FC = () => {
                 key={message.id}
                 role={message.role}
                 content={message.content}
+                contentBlocks={message.contentBlocks}
                 type={message.type}
                 timestamp={message.timestamp}
                 hasThinkTags={message.hasThinkTags}
+                formatType={message.role === 'assistant' ? textFormat : 'text'}
                 apiKey={apiKey}
                 baseUrl={baseUrl}
                 modelProvider={modelProvider}
@@ -571,16 +831,7 @@ const AiPlayground: React.FC = () => {
                   outline: 'none !important'
                 }}
               />
-              <div className="absolute bottom-3 right-3 flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
-                  title="Auto-clear conversation"
-                  onClick={resetConversation}
-                >
-                  <span className="text-xs">🔄</span>
-                </Button>
+              <div className="absolute bottom-3 right-3">
                 <Button 
                   type="submit" 
                   disabled={!inputValue.trim() || isLoading}

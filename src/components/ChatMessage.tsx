@@ -4,6 +4,19 @@ import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Code, Copy, Check, X, User, Bot, AlertTriangle } from 'lucide-react';
+import ToolExecutionProgress from './ToolExecutionProgress';
+
+interface ToolExecution {
+  serverName: string;
+  toolName: string;
+  status: 'in_progress' | 'completed';
+}
+
+interface ContentBlock {
+  type: 'text' | 'tool_progress';
+  content?: string;
+  toolExecutions?: ToolExecution[];
+}
 
 // Simple chat bubble component
 const ChatBubble: React.FC<{ 
@@ -29,7 +42,7 @@ const ChatBubble: React.FC<{
   return (
     <div
       className={`
-        relative group p-4 rounded-lg shadow-sm border transition-all duration-200
+        relative group p-4 rounded-lg shadow-sm border transition-all duration-200 break-words overflow-hidden
         ${role === 'user' 
           ? 'bg-card border-border hover:border-positive-trend/50 hover:shadow-md' 
           : 'bg-muted border-border hover:border-positive-trend/50 hover:shadow-md'
@@ -118,39 +131,51 @@ const highlightLine = (line: string) => {
 
 interface ContentRendererProps {
   content: string;
+  formatType?: 'text' | 'json_object' | 'json_schema';
 }
 
-const ContentRenderer: React.FC<ContentRendererProps> = ({ content }) => {
-  const isJson = (str: string) => {
+const ContentRenderer: React.FC<ContentRendererProps> = ({ content, formatType = 'text' }) => {
+  // Simple logic: if formatType is json_object or json_schema, render as JSON
+  // Otherwise, render as markdown
+  if (formatType === 'json_object' || formatType === 'json_schema') {
+    // Try to parse and format JSON
     try {
-      JSON.parse(str);
-      return true;
-    } catch (e) {
-      return false;
+      const parsed = JSON.parse(content);
+      const formatted = JSON.stringify(parsed, null, 2);
+      return highlightJson(formatted, false);
+    } catch {
+      // If parsing fails, it's partial JSON - still highlight as JSON
+      return highlightJson(content, true);
     }
-  };
-
-  const isPartialJson = (str: string) => {
-    // Check if it looks like it might be JSON (starts with { or [)
-    const trimmed = str.trim();
-    return trimmed.startsWith('{') || trimmed.startsWith('[');
-  };
-
-  if (isJson(content)) {
-    return highlightJson(content, false);
   }
 
-  // Handle partial JSON during streaming - apply same highlighting
-  if (isPartialJson(content)) {
-    return highlightJson(content, true);
-  }
-
+  // For text format, render as markdown
   return (
-    <div className="prose dark:prose-invert prose-sm max-w-none prose-p:my-2 prose-pre:my-2 prose-ul:my-2 prose-ol:my-2 prose-h1:my-2 prose-h2:my-2 prose-h3:my-2 prose-h4:my-2 prose-h5:my-2 prose-h6:my-2">
+    <div className="prose dark:prose-invert prose-sm max-w-none prose-p:my-2 prose-pre:my-2 prose-ul:my-2 prose-ol:my-2 prose-h1:my-2 prose-h2:my-2 prose-h3:my-2 prose-h4:my-2 prose-h5:my-2 prose-h6:my-2 break-words">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          // Add custom components here if needed, e.g., for styling
+          a: ({ href, children, ...props }) => (
+            <a 
+              href={href} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-positive-trend hover:underline break-all inline-block max-w-full"
+              style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
+              {...props}
+            >
+              {children}
+            </a>
+          ),
+          img: ({ src, alt, ...props }) => (
+            <img 
+              src={src} 
+              alt={alt || ''} 
+              className="max-w-full h-auto rounded-md my-2"
+              loading="lazy"
+              {...props}
+            />
+          ),
         }}
       >
         {content}
@@ -162,10 +187,12 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content }) => {
 interface ChatMessageProps {
   role: 'user' | 'assistant';
   content: string;
+  contentBlocks?: ContentBlock[];
   type?: 'text' | 'image';
   timestamp: Date;
   hasThinkTags?: boolean;
   isLoading?: boolean;
+  formatType?: 'text' | 'json_object' | 'json_schema';
   // New props for code generation
   apiKey?: string;
   baseUrl?: string;
@@ -178,12 +205,14 @@ interface ChatMessageProps {
   instructions?: string;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ 
+const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ 
   role, 
   content, 
+  contentBlocks,
   type = 'text', 
   timestamp,
   hasThinkTags = false,
+  formatType = 'text',
   apiKey = '',
   baseUrl = 'http://localhost:8080',
   modelProvider = 'openai',
@@ -230,7 +259,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   // Function to parse content with think tags - redesigned with Geist UI
   const parseContentWithThinkTags = (content: string) => {
     if (!hasThinkTags || !content.includes('<think>')) {
-      return <p className="whitespace-pre-wrap leading-relaxed text-foreground">{content}</p>;
+      return <p className="whitespace-pre-wrap leading-relaxed text-foreground break-words">{content}</p>;
     }
 
     const parts = [];
@@ -246,7 +275,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         const remainingContent = content.substring(currentIndex);
         if (remainingContent.trim()) {
           parts.push(
-            <p key={partKey++} className="whitespace-pre-wrap leading-relaxed text-foreground">
+            <p key={partKey++} className="whitespace-pre-wrap leading-relaxed text-foreground break-words">
               {remainingContent}
             </p>
           );
@@ -259,7 +288,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
         const beforeThink = content.substring(currentIndex, thinkStart);
         if (beforeThink.trim()) {
           parts.push(
-            <p key={partKey++} className="whitespace-pre-wrap leading-relaxed text-foreground">
+            <p key={partKey++} className="whitespace-pre-wrap leading-relaxed text-foreground break-words">
               {beforeThink}
             </p>
           );
@@ -279,7 +308,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                   🤔 AI Thinking #{thinkBlockNumber}
                 </span>
               </div>
-              <p className="text-sm text-warning-dark dark:text-warning-light italic whitespace-pre-wrap leading-relaxed">
+              <p className="text-sm text-warning-dark dark:text-warning-light italic whitespace-pre-wrap leading-relaxed break-words">
                 {thinkContent}
               </p>
             </div>
@@ -298,7 +327,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
                 🤔 AI Thinking #{thinkBlockNumber}
               </span>
             </div>
-            <p className="text-sm text-warning-dark dark:text-warning-light italic whitespace-pre-wrap leading-relaxed">
+            <p className="text-sm text-warning-dark dark:text-warning-light italic whitespace-pre-wrap leading-relaxed break-words">
               {thinkContent}
             </p>
           </div>
@@ -596,8 +625,50 @@ print(response.json())`;
     return parseContentWithThinkTags(content);
   };
 
+  // Render content blocks or fallback to regular content
+  const renderContent = () => {
+    if (isLoading) {
+  return (
+              <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 bg-foreground rounded-full animate-pulse"></div>
+          <div className="w-2 h-2 bg-foreground rounded-full animate-pulse" style={{ animationDelay: '200ms' }}></div>
+          <div className="w-2 h-2 bg-foreground rounded-full animate-pulse" style={{ animationDelay: '400ms' }}></div>
+        </div>
+      );
+    }
+
+    // If contentBlocks exist, render them sequentially
+    if (contentBlocks && contentBlocks.length > 0) {
+      return (
+        <div className="space-y-2">
+          {contentBlocks.map((block, index) => {
+            if (block.type === 'tool_progress' && block.toolExecutions) {
+              return (
+                <ToolExecutionProgress 
+                  key={`tool-${index}`}
+                  toolExecutions={block.toolExecutions}
+                />
+              );
+            } else if (block.type === 'text' && block.content) {
+              const contentToDisplay = role === 'assistant' ? parseAssistantContent(block.content) : block.content;
+              return (
+                <div key={`text-${index}`}>
+                  <ContentRenderer content={contentToDisplay} formatType={formatType} />
+                </div>
+              );
+            }
+            return null;
+          })}
+          </div>
+      );
+    }
+
+    // Fallback to regular content rendering
+    const contentToDisplay = role === 'assistant' ? parseAssistantContent(content) : content;
+    return <ContentRenderer content={contentToDisplay} formatType={formatType} />;
+  };
+
   const contentToDisplay = role === 'assistant' ? parseAssistantContent(content) : content;
-  
   const isError = role === 'assistant' && contentToDisplay.startsWith('Error:');
 
   return (
@@ -605,7 +676,7 @@ print(response.json())`;
       {role === 'assistant' && (
         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
           {isError ? <AlertTriangle className="w-5 h-5 text-red-500" /> : <Bot className="w-5 h-5 text-foreground" />}
-        </div>
+            </div>
       )}
       <div className={`flex-grow max-w-[80%] ${role === 'user' ? 'order-1' : ''}`}>
         <div className="flex items-center justify-between mb-1">
@@ -617,15 +688,7 @@ print(response.json())`;
           </span>
         </div>
         <ChatBubble role={role} isError={isError} content={content}>
-          {isLoading ? (
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-foreground rounded-full animate-pulse"></div>
-              <div className="w-2 h-2 bg-foreground rounded-full animate-pulse" style={{ animationDelay: '200ms' }}></div>
-              <div className="w-2 h-2 bg-foreground rounded-full animate-pulse" style={{ animationDelay: '400ms' }}></div>
-            </div>
-          ) : (
-            <ContentRenderer content={contentToDisplay} />
-          )}
+          {renderContent()}
         </ChatBubble>
       </div>
       {role === 'user' && (
@@ -643,34 +706,34 @@ print(response.json())`;
                 <h3 className="text-lg font-semibold text-foreground">Generated Code</h3>
                 <Button variant="ghost" size="icon" onClick={() => setShowCodeModal(false)} className="absolute top-4 right-4">
                   <X className="w-5 h-5" />
-                </Button>
-              </div>
+              </Button>
+            </div>
               <div className="bg-muted rounded-lg p-1 flex w-full sm:w-auto mb-4">
                 <Button 
                   variant={activeTab === 'curl' ? 'default' : 'ghost'} 
-                  onClick={() => setActiveTab('curl')}
+                onClick={() => setActiveTab('curl')}
                   className="flex-1"
-                >
-                  cURL
+              >
+                cURL
                 </Button>
                 <Button 
                   variant={activeTab === 'python' ? 'default' : 'ghost'} 
-                  onClick={() => setActiveTab('python')}
+                onClick={() => setActiveTab('python')}
                   className="flex-1"
-                >
-                  Python
+              >
+                Python
                 </Button>
-              </div>
+            </div>
               <div className="relative bg-background p-4 rounded-md h-80 overflow-auto">
                 {activeTab === 'curl' && (
                   <>
                     <pre><code className="text-sm font-mono">{generateCurlCode()}</code></pre>
-                    <Button 
+                    <Button
                       variant="ghost" 
                       size="icon" 
                       onClick={() => copyToClipboard(generateCurlCode(), 'curl')}
                       className="absolute top-2 right-2"
-                    >
+                >
                       {copiedCurl ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
                     </Button>
                   </>
@@ -678,7 +741,7 @@ print(response.json())`;
                 {activeTab === 'python' && (
                   <>
                     <pre><code className="text-sm font-mono">{generatePythonCode()}</code></pre>
-                    <Button 
+                    <Button
                       variant="ghost" 
                       size="icon" 
                       onClick={() => copyToClipboard(generatePythonCode(), 'python')}
@@ -695,6 +758,19 @@ print(response.json())`;
       )}
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  // Only compare props that actually affect the visual rendering
+  // Exclude props like 'instructions' that are only used for code generation modal
+  return (
+    prevProps.role === nextProps.role &&
+    prevProps.content === nextProps.content &&
+    prevProps.contentBlocks === nextProps.contentBlocks &&
+    prevProps.type === nextProps.type &&
+    prevProps.timestamp === nextProps.timestamp &&
+    prevProps.hasThinkTags === nextProps.hasThinkTags &&
+    prevProps.formatType === nextProps.formatType &&
+    prevProps.isLoading === nextProps.isLoading
+  );
+});
 
 export default ChatMessage;

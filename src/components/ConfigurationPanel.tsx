@@ -106,6 +106,11 @@ interface ConfigurationPanelProps {
   onAddPromptMessage?: (message: PromptMessage) => void;
   onRemovePromptMessage?: (id: string) => void;
   
+  // Tools
+  selectedTools?: Tool[];
+  onSelectedToolsChange?: (tools: Tool[]) => void;
+  getMCPToolByLabel?: (label: string) => any;
+  
   // Vector store
   selectedVectorStore: string;
   onVectorStoreSelect: (vectorStoreId: string | null) => void;
@@ -154,6 +159,9 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   promptMessages = [],
   onAddPromptMessage = () => {},
   onRemovePromptMessage = () => {},
+  selectedTools = [],
+  onSelectedToolsChange = () => {},
+  getMCPToolByLabel = () => null,
   selectedVectorStore,
   onVectorStoreSelect,
   onResetConversation,
@@ -167,7 +175,6 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTools, setSelectedTools] = useState<Tool[]>([]);
   const [editingFunction, setEditingFunction] = useState<Tool | null>(null);
   const [editingMCP, setEditingMCP] = useState<Tool | null>(null);
   const [editingFileSearch, setEditingFileSearch] = useState<Tool | null>(null);
@@ -241,7 +248,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   // Check if API key exists for provider
   const checkApiKey = (provider: string): boolean => {
     try {
-      const saved = localStorage.getItem('apiKeys');
+      const saved = localStorage.getItem('platform_apiKeysys');
       if (!saved) return false;
       
       const savedKeys: { name: string; apiKey: string }[] = JSON.parse(saved);
@@ -287,20 +294,21 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
     if (tool.id === 'function') {
       // If editing an existing function, remove the old one first
       if (editingFunction) {
-        setSelectedTools(prev => prev.filter(t => 
+        const updatedTools = selectedTools.filter(t => 
           !(t.id === 'function' && t.functionDefinition === editingFunction.functionDefinition)
-        ));
+        );
+        onSelectedToolsChange([...updatedTools, tool]);
+      } else {
+        // Add the new function
+        onSelectedToolsChange([...selectedTools, tool]);
       }
-      
-      // Add the new/updated function
-      setSelectedTools(prev => [...prev, tool]);
     } else if (tool.id === 'mcp_server') {
       // Allow multiple MCP servers
-      setSelectedTools(prev => [...prev, tool]);
+      onSelectedToolsChange([...selectedTools, tool]);
     } else {
       // For other tools, check by id only
       if (!selectedTools.find(t => t.id === tool.id)) {
-        setSelectedTools(prev => [...prev, tool]);
+        onSelectedToolsChange([...selectedTools, tool]);
       }
     }
   };
@@ -308,15 +316,18 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const handleToolRemove = (toolId: string, functionDefinition?: string, toolIndex?: number) => {
     if (toolId === 'function' && functionDefinition) {
       // Remove specific function by definition
-      setSelectedTools(prev => prev.filter(tool => 
+      const updatedTools = selectedTools.filter(tool => 
         !(tool.id === 'function' && tool.functionDefinition === functionDefinition)
-      ));
+      );
+      onSelectedToolsChange(updatedTools);
     } else if (toolId === 'mcp_server' && toolIndex !== undefined) {
       // For MCP servers, remove by index since we allow multiple
-      setSelectedTools(prev => prev.filter((_, index) => index !== toolIndex));
+      const updatedTools = selectedTools.filter((_, index) => index !== toolIndex);
+      onSelectedToolsChange(updatedTools);
     } else {
       // Remove by id for other tools
-      setSelectedTools(prev => prev.filter(tool => tool.id !== toolId));
+      const updatedTools = selectedTools.filter(tool => tool.id !== toolId);
+      onSelectedToolsChange(updatedTools);
     }
   };
 
@@ -499,6 +510,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
               onEditingFileSearchChange={setEditingFileSearch}
               editingAgenticFileSearch={editingAgenticFileSearch}
               onEditingAgenticFileSearchChange={setEditingAgenticFileSearch}
+              getMCPToolByLabel={getMCPToolByLabel}
             >
               <Button
                 variant="ghost"

@@ -21,6 +21,7 @@ The request body is a JSON object with the following structure:
 | Field                  | Type                               | Description                                                                                                                                                             | Required |
 | ---------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | `model`                | `string`                           | The model identifier, formatted as `provider@model_name` (e.g., `openai@gpt-4.1-mini`).                                                                                   | Yes      |
+| `tools`                | `array`                            | An array of tool configurations for the model to use. Supports MCP servers, function calling, and other tool types.                                                    | No       |
 | `instructions`         | `string`                           | The system prompt or instructions for the model.                                                                                                                        | Yes      |
 | `input`                | `array`                            | An array containing the user's message. For conversation history, this should only contain the most recent user message.                                                  | Yes      |
 | `text`                 | `object`                           | An object containing text generation parameters.                                                                                                                        | Yes      |
@@ -30,6 +31,52 @@ The request body is a JSON object with the following structure:
 | `store`                | `boolean`                          | If `true`, the response is stored for future reference.                                                                                                                 | Yes      |
 | `stream`               | `boolean`                          | If `true`, the response will be streamed using Server-Sent Events (SSE). If `false` or omitted, returns a complete response.                                            | No       |
 | `previous_response_id` | `string`                           | The `id` from the previous API response. This is used to maintain conversational context. Omit this field for the first message in a conversation.                       | No       |
+
+### `tools` Array Structure
+
+The `tools` array allows you to configure various types of tools for the model to use during response generation.
+
+#### MCP Server Tool Configuration
+
+MCP (Model Context Protocol) servers provide external tool capabilities. When configured, MCP tools are included in every request.
+
+**Configuration Source**: All MCP tool parameters come from the user's configuration in the MCP tool config modal.
+
+| Field           | Type     | Description                                                                                      | Required |
+| --------------- | -------- | ------------------------------------------------------------------------------------------------ | -------- |
+| `type`          | `string` | Always `"mcp"` for MCP server tools (hardcoded).                                                | Yes      |
+| `server_label`  | `string` | User-configured unique identifier for the MCP server (from MCP tool config modal).             | Yes      |
+| `server_url`    | `string` | User-configured URL endpoint of the MCP server (from MCP tool config modal).                   | Yes      |
+| `allowed_tools` | `array`  | User-selected array of tool names from MCP tool config modal.                                   | Yes      |
+| `headers`       | `object` | User-configured HTTP headers for MCP server authentication (from MCP tool config modal).       | No       |
+
+#### Field Configuration Details
+
+1. **`type`**: Always hardcoded as `"mcp"` for any MCP tool being sent
+2. **`server_label`**: User-configured value from MCP tool config modal
+3. **`server_url`**: User-configured value from MCP tool config modal  
+4. **`allowed_tools`**: User-selected tools from MCP tool config modal
+5. **`headers`**: User-configured headers from MCP tool config modal (for authentication, etc.)
+
+#### MCP Tool Example
+
+```json
+{
+  "type": "mcp",
+  "server_label": "shopify",
+  "server_url": "https://axzx8j-61.myshopify.com/api/mcp",
+  "allowed_tools": [
+    "search_shop_catalog",
+    "get_product_details",
+    "check_inventory"
+  ],
+  "headers": {
+    "Authorization": "Bearer your-api-token",
+    "X-Shop-Domain": "your-shop.myshopify.com",
+    "Content-Type": "application/json"
+  }
+}
+```
 
 ### `input` Object Structure
 
@@ -112,6 +159,51 @@ The `text.format` object specifies the desired output format.
     "store": true,
     "stream": true,
     "previous_response_id": "o27dGvM-zqrih-95b754a028c7918d"
+}
+```
+
+### Example Request Body (With MCP Tools)
+
+```json
+{
+    "model": "openai@gpt-4.1-mini",
+    "tools": [
+        {
+            "type": "mcp",
+            "server_label": "shopify",
+            "server_url": "https://axzx8j-61.myshopify.com/api/mcp",
+            "allowed_tools": [
+                "search_shop_catalog"
+            ],
+            "headers": {
+                "key1": "value1",
+                "key2": "value2"
+            }
+        }
+    ],
+    "instructions": "Use search_shop_catalog to search the product and then bring complete details of the product including all available images. Do not mention names of tools in the response",
+    "input": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "input_text",
+                    "text": "Find me hp printer"
+                }
+            ]
+        }
+    ],
+    "text": {
+        "format": {
+            "type": "text"
+        }
+    },
+    "temperature": 1,
+    "max_output_tokens": 2048,
+    "top_p": 1,
+    "store": true,
+    "stream": true,
+    "previous_response_id": "o27cfiQ-zqrih-95b751bd4d01d854"
 }
 ```
 
@@ -213,12 +305,51 @@ If an error occurs, the response body will contain an `error` object with a `mes
 
 ### Content Rendering
 
-The application uses enhanced content rendering with the following features:
+The application uses enhanced content rendering with format-aware logic:
 
-1. **Markdown Support**: Uses `react-markdown` with `remark-gfm` for GitHub Flavored Markdown
-2. **JSON Syntax Highlighting**: Custom highlighting function that colors JSON keys, values, and structure
-3. **Streaming-Aware Rendering**: Consistent formatting during streaming and completion
-4. **Format Detection**: Automatically detects content type (markdown vs JSON) and applies appropriate rendering
+1. **Format-Based Rendering**: Content rendering is determined by the `text.format.type` from the request rather than content analysis
+   - `text`: Rendered as markdown using `react-markdown` with `remark-gfm`
+   - `json_object` or `json_schema`: Rendered with custom JSON syntax highlighting
+
+2. **Markdown Support**: 
+   - GitHub Flavored Markdown support with `remark-gfm`
+   - Clickable links that open in new tabs with security attributes
+   - Responsive images with lazy loading
+   - Proper spacing for all markdown elements
+
+3. **JSON Syntax Highlighting**: 
+   - Custom highlighting function for consistent color scheme
+   - Keys highlighted in theme color (`positive-trend`)
+   - Streaming-aware rendering maintains colors during partial JSON
+   - Supports both complete and partial JSON during streaming
+
+4. **Streaming Content Handling**:
+   - Real-time content updates during Server-Sent Events
+   - Format-consistent rendering throughout streaming process
+   - No visual jumps when transitioning from streaming to complete content
+
+### Content Rendering Logic
+
+The `ContentRenderer` component uses a simple, reliable approach:
+
+```typescript
+interface ContentRendererProps {
+  content: string;
+  formatType?: 'text' | 'json_object' | 'json_schema';
+}
+
+// Rendering logic:
+if (formatType === 'json_object' || formatType === 'json_schema') {
+  // Render as JSON with syntax highlighting
+} else {
+  // Render as markdown with react-markdown
+}
+```
+
+This approach eliminates content-based guessing and ensures:
+- Markdown links like `[text](url)` are always clickable when format is `text`
+- JSON arrays starting with `[` are properly highlighted when format is JSON
+- No false positives or incorrect format detection
 
 ### Chat Bubble Features
 
@@ -226,6 +357,7 @@ The application uses enhanced content rendering with the following features:
 - **Copy Functionality**: Copy button appears on hover with visual feedback
 - **Consistent Styling**: Uses theme colors (`positive-trend` for accents)
 - **Responsive Design**: Adapts to different screen sizes
+- **Format-Aware Display**: Content rendering respects the original request format type
 
 ### State Management
 
@@ -235,14 +367,46 @@ The application maintains the following state for conversation continuity:
 2. **`messages`**: Array of chat messages with user and assistant roles
 3. **`isLoading`**: Boolean to show loading states during API calls
 4. **`streamingContent`**: Accumulated content during streaming responses
+5. **`textFormat`**: Current format type that determines content rendering
+
+### MCP Tools Integration
+
+#### Configuration Requirements
+
+When MCP server tools are configured, they must be included in every API request:
+
+1. **Persistent Tool Configuration**: MCP tools persist across all requests in a conversation
+2. **Server Configuration**: Each MCP server requires:
+   - `server_label`: Unique identifier for the server
+   - `server_url`: Complete endpoint URL for the MCP server
+   - `allowed_tools`: Array of specific tool names the model can use
+
+#### Implementation Notes
+
+- **Configuration Source**: All MCP tool parameters are configured by users in the MCP tool config modal
+- **Tool Inclusion**: MCP tools are automatically included in the `tools` array for every request based on saved configuration
+- **Headers Support**: Custom HTTP headers can be configured for MCP server authentication and authorization
+- **Response Handling**: The response events remain the same; MCP tool execution is transparent
+- **Error Handling**: MCP server errors are handled within the response flow
+- **Tool Responses**: Tool execution results are integrated into the streaming response
+
+#### Best Practices
+
+1. **Tool Naming**: Use descriptive `server_label` values for easy identification
+2. **Security**: Ensure MCP server URLs are secure and authenticated
+3. **Tool Selection**: Only include necessary tools in `allowed_tools` for security
+4. **Instructions**: Provide clear instructions about tool usage and response formatting
 
 ### API Integration Flow
 
 1. **Request Preparation**: Build request body with current settings and previous response ID
-2. **Streaming Setup**: If streaming is enabled, set up EventSource for SSE
-3. **Response Processing**: Handle different event types and update UI accordingly
-4. **State Updates**: Update conversation state and prepare for next interaction
-5. **Error Handling**: Display appropriate error messages and maintain application state
+2. **MCP Tools Integration**: Include configured MCP tools in every request
+3. **Format Type Tracking**: Store `text.format.type` for proper content rendering
+4. **Streaming Setup**: If streaming is enabled, set up EventSource for SSE
+5. **Response Processing**: Handle different event types and update UI accordingly
+6. **Content Rendering**: Apply format-specific rendering based on request format type
+7. **State Updates**: Update conversation state and prepare for next interaction
+8. **Error Handling**: Display appropriate error messages and maintain application state
 
 ### Configuration Management
 
@@ -250,5 +414,24 @@ The application supports dynamic configuration through:
 
 - **Model Selection**: Different providers and models with appropriate API keys
 - **Parameter Tuning**: Temperature, max tokens, top-p via configuration panel
-- **Format Selection**: Text, JSON object, or JSON schema output formats
-- **Streaming Toggle**: Enable/disable streaming per request 
+- **Format Selection**: Text, JSON object, or JSON schema output formats with proper rendering
+- **Streaming Toggle**: Enable/disable streaming per request
+- **MCP Tools Configuration**: Configure MCP servers and allowed tools for enhanced capabilities
+
+### Content Rendering Best Practices
+
+1. **Format Consistency**: Always use the request format type to determine rendering method
+2. **Streaming Support**: Maintain visual consistency during streaming for all format types
+3. **Link Security**: External links include `target="_blank"` and `rel="noopener noreferrer"`
+4. **Image Optimization**: Lazy loading and responsive sizing for better performance
+5. **Error Handling**: Graceful fallbacks for malformed content or rendering issues
+
+### Recent Improvements
+
+**Content Rendering Reliability (Latest Update)**:
+- Replaced content-based detection with format-type-based rendering
+- Eliminated false positives where markdown links were treated as JSON
+- Ensured consistent rendering behavior across all content types
+- Simplified logic for better maintainability and reliability
+
+The rendering system now provides 100% reliable content formatting based on the actual API request format type rather than attempting to guess from content patterns. 

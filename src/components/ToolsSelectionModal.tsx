@@ -39,6 +39,7 @@ interface ToolsSelectionModalProps {
   onEditingFileSearchChange?: (editingFileSearch: Tool | null) => void;
   editingAgenticFileSearch?: Tool | null;
   onEditingAgenticFileSearchChange?: (editingAgenticFileSearch: Tool | null) => void;
+  getMCPToolByLabel?: (label: string) => any;
   children?: React.ReactNode;
 }
 
@@ -81,6 +82,7 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
   onEditingFileSearchChange,
   editingAgenticFileSearch,
   onEditingAgenticFileSearchChange,
+  getMCPToolByLabel,
   children
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -320,20 +322,20 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
       onSave={handleFunctionSave}
     />
     
-    <MCPModal
-      open={mcpModalOpen}
-      onOpenChange={(open) => {
-        setMcpModalOpen(open);
-        if (!open) {
-          // Clear editing state when modal closes
-          if (onEditingMCPChange) {
-            onEditingMCPChange(null);
+          <MCPModal
+        open={mcpModalOpen}
+        onOpenChange={(open) => {
+          setMcpModalOpen(open);
+          if (!open) {
+            // Clear editing state when modal closes
+            if (onEditingMCPChange) {
+              onEditingMCPChange(null);
+            }
           }
-        }
-      }}
-      onConnect={handleMCPConnect}
-      initialConfig={editingMCP?.mcpConfig}
-    />
+        }}
+        onConnect={handleMCPConnect}
+        initialConfig={editingMCP?.mcpConfig || (editingMCP?.mcpConfig?.label && getMCPToolByLabel ? getMCPToolByLabel(editingMCP.mcpConfig.label) : undefined)}
+      />
     
     <FileSearchModal
       open={fileSearchModalOpen}
