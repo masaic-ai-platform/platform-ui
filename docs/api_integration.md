@@ -241,7 +241,7 @@ A successful non-streaming response will be a JSON object. The two most importan
 
 When `stream: true` is set, the response will be delivered as Server-Sent Events (SSE). The client should handle the following event types:
 
-#### Event Types
+#### Core Event Types
 
 1. **`response.created`** - Fired when the response is created
    - Contains the response `id` that should be captured for conversation continuity
@@ -255,8 +255,38 @@ When `stream: true` is set, the response will be delivered as Server-Sent Events
 4. **`response.completed`** - Fired when the entire response is complete
    - Final event in the stream
 
+#### MCP Tool Progress Events
+
+When MCP tools are configured and used, additional events are fired for tool execution progress:
+
+5. **`response.mcp_call.{tool_identifier}.in_progress`** - Fired when an MCP tool starts execution
+   - `{tool_identifier}` format: `{server_name}_{tool_name}` (e.g., `shopify_search_shop_catalog`)
+   - Indicates the start of tool execution for visual progress tracking
+
+6. **`response.mcp_call.{tool_identifier}.completed`** - Fired when an MCP tool completes execution
+   - Same identifier format as above
+   - Indicates the completion of tool execution
+
+#### Event Sequence Examples
+
+**Basic Text Response**:
+```
+response.created → response.output_text.delta (multiple) → response.output_text.done → response.completed
+```
+
+**Response with MCP Tools**:
+```
+response.created → response.mcp_call.shopify_search_shop_catalog.in_progress → response.mcp_call.shopify_search_shop_catalog.completed → response.output_text.delta (multiple) → response.output_text.done → response.completed
+```
+
+**Multiple MCP Tools from Same Server**:
+```
+response.created → response.mcp_call.shopify_search_shop_catalog.in_progress → response.mcp_call.shopify_get_product_details.in_progress → response.mcp_call.shopify_search_shop_catalog.completed → response.mcp_call.shopify_get_product_details.completed → response.output_text.delta (multiple) → response.output_text.done → response.completed
+```
+
 #### Example Streaming Events
 
+**Basic Response**:
 ```
 event: response.created
 data: {"id": "o27dGvM-zqrih-95b754a028c7918d", "object": "response"}
@@ -267,8 +297,26 @@ data: {"output": [{"content": [{"text": "In lines", "type": "output_text"}], "ro
 event: response.output_text.delta
 data: {"output": [{"content": [{"text": " of logic,", "type": "output_text"}], "role": "assistant"}]}
 
+event: response.output_text.done
+data: {"output": [{"content": [{"text": "", "type": "output_text"}], "role": "assistant"}]}
+
+event: response.completed
+data: {"id": "o27dGvM-zqrih-95b754a028c7918d", "object": "response"}
+```
+
+**Response with MCP Tool Progress**:
+```
+event: response.created
+data: {"id": "o27dGvM-zqrih-95b754a028c7918d", "object": "response"}
+
+event: response.mcp_call.shopify_search_shop_catalog.in_progress
+data: {}
+
+event: response.mcp_call.shopify_search_shop_catalog.completed
+data: {}
+
 event: response.output_text.delta
-data: {"output": [{"content": [{"text": " dreams take flight,", "type": "output_text"}], "role": "assistant"}]}
+data: {"output": [{"content": [{"text": "I found several HP printers", "type": "output_text"}], "role": "assistant"}]}
 
 event: response.output_text.done
 data: {"output": [{"content": [{"text": "", "type": "output_text"}], "role": "assistant"}]}
@@ -281,10 +329,11 @@ data: {"id": "o27dGvM-zqrih-95b754a028c7918d", "object": "response"}
 
 1. **Response ID Capture**: The response `id` is available in both `response.created` and `response.completed` events
 2. **Text Accumulation**: Each `response.output_text.delta` event contains a text chunk that should be appended to build the complete message
-3. **Format Detection**: The `text.format.type` from the request determines how content should be rendered:
+3. **Tool Progress Tracking**: MCP tool events should be used to show visual progress indicators grouped by server
+4. **Format Detection**: The `text.format.type` from the request determines how content should be rendered:
    - `text`: Render as markdown with `react-markdown`
    - `json_object`: Apply JSON syntax highlighting during streaming
-4. **Error Handling**: If an error occurs during streaming, an error event will be sent
+5. **Error Handling**: If an error occurs during streaming, an error event will be sent
 
 ### Error Response
 
@@ -303,6 +352,45 @@ If an error occurs, the response body will contain an `error` object with a `mes
 
 ## Front-End Implementation Details
 
+### Content Blocks Architecture
+
+The application uses a sequential content blocks system to handle mixed content streams (tool progress + text):
+
+#### ContentBlock Interface
+```typescript
+interface ContentBlock {
+  type: 'text' | 'tool_progress';
+  content?: string;                    // For text blocks
+  toolExecutions?: ToolExecution[];    // For tool progress blocks
+}
+
+interface ToolExecution {
+  serverName: string;
+  toolName: string;
+  status: 'in_progress' | 'completed';
+}
+```
+
+#### Content Block Flow
+1. **Tool Progress Events** → Create/update `tool_progress` blocks
+2. **Text Delta Events** → Create/update `text` blocks
+3. **Sequential Rendering** → Blocks render in the exact order events were received
+
+#### Event Processing Logic
+```typescript
+// Tool progress events
+if (eventType.includes('mcp_call') && eventType.includes('in_progress')) {
+  // Create or update tool progress block
+  // Group all active tool executions in single block
+}
+
+// Text delta events  
+if (eventType === 'response.output_text.delta') {
+  // Create or update current text block
+  // Maintain streaming content accumulation
+}
+```
+
 ### Content Rendering
 
 The application uses enhanced content rendering with format-aware logic:
@@ -316,6 +404,7 @@ The application uses enhanced content rendering with format-aware logic:
    - Clickable links that open in new tabs with security attributes
    - Responsive images with lazy loading
    - Proper spacing for all markdown elements
+   - **Link Wrapping**: Long URLs are properly wrapped within chat bubbles using `break-words` and `break-all` CSS classes
 
 3. **JSON Syntax Highlighting**: 
    - Custom highlighting function for consistent color scheme
@@ -346,10 +435,42 @@ if (formatType === 'json_object' || formatType === 'json_schema') {
 }
 ```
 
-This approach eliminates content-based guessing and ensures:
-- Markdown links like `[text](url)` are always clickable when format is `text`
-- JSON arrays starting with `[` are properly highlighted when format is JSON
-- No false positives or incorrect format detection
+### Link Wrapping Implementation
+
+Links are wrapped properly within chat bubbles using multiple CSS strategies:
+
+```css
+/* Container level */
+.chat-bubble {
+  overflow-hidden;
+  break-words;
+}
+
+/* Content level */
+.content-container {
+  break-words;
+}
+
+/* Link level */
+.markdown-link {
+  break-all;
+  inline-block;
+  max-w-full;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+```
+
+### Tool Progress Display
+
+MCP tool execution is displayed with visual progress indicators:
+
+1. **Server Grouping**: Tools are grouped by their server name (extracted from event identifier)
+2. **Progress States**: 
+   - `in_progress`: Animated spinner with tool name
+   - `completed`: Static completion indicator
+3. **Visual Design**: Green theme consistent with MCP branding
+4. **Real-time Updates**: Progress updates live as events stream in
 
 ### Chat Bubble Features
 
@@ -358,6 +479,7 @@ This approach eliminates content-based guessing and ensures:
 - **Consistent Styling**: Uses theme colors (`positive-trend` for accents)
 - **Responsive Design**: Adapts to different screen sizes
 - **Format-Aware Display**: Content rendering respects the original request format type
+- **Link Overflow Protection**: Long URLs wrap properly within bubble boundaries
 
 ### State Management
 
@@ -368,6 +490,8 @@ The application maintains the following state for conversation continuity:
 3. **`isLoading`**: Boolean to show loading states during API calls
 4. **`streamingContent`**: Accumulated content during streaming responses
 5. **`textFormat`**: Current format type that determines content rendering
+6. **`contentBlocks`**: Sequential array of content blocks for mixed content streams
+7. **`activeToolExecutions`**: Map tracking current tool execution states
 
 ### MCP Tools Integration
 
@@ -386,7 +510,7 @@ When MCP server tools are configured, they must be included in every API request
 - **Configuration Source**: All MCP tool parameters are configured by users in the MCP tool config modal
 - **Tool Inclusion**: MCP tools are automatically included in the `tools` array for every request based on saved configuration
 - **Headers Support**: Custom HTTP headers can be configured for MCP server authentication and authorization
-- **Response Handling**: The response events remain the same; MCP tool execution is transparent
+- **Progress Tracking**: Tool execution progress is displayed in real-time during streaming
 - **Error Handling**: MCP server errors are handled within the response flow
 - **Tool Responses**: Tool execution results are integrated into the streaming response
 
@@ -396,6 +520,7 @@ When MCP server tools are configured, they must be included in every API request
 2. **Security**: Ensure MCP server URLs are secure and authenticated
 3. **Tool Selection**: Only include necessary tools in `allowed_tools` for security
 4. **Instructions**: Provide clear instructions about tool usage and response formatting
+5. **Progress Display**: Implement proper visual feedback for tool execution states
 
 ### API Integration Flow
 
@@ -404,9 +529,11 @@ When MCP server tools are configured, they must be included in every API request
 3. **Format Type Tracking**: Store `text.format.type` for proper content rendering
 4. **Streaming Setup**: If streaming is enabled, set up EventSource for SSE
 5. **Response Processing**: Handle different event types and update UI accordingly
-6. **Content Rendering**: Apply format-specific rendering based on request format type
-7. **State Updates**: Update conversation state and prepare for next interaction
-8. **Error Handling**: Display appropriate error messages and maintain application state
+6. **Content Block Management**: Create and update content blocks based on event sequence
+7. **Tool Progress Tracking**: Display real-time tool execution progress
+8. **Content Rendering**: Apply format-specific rendering based on request format type
+9. **State Updates**: Update conversation state and prepare for next interaction
+10. **Error Handling**: Display appropriate error messages and maintain application state
 
 ### Configuration Management
 
@@ -425,13 +552,27 @@ The application supports dynamic configuration through:
 3. **Link Security**: External links include `target="_blank"` and `rel="noopener noreferrer"`
 4. **Image Optimization**: Lazy loading and responsive sizing for better performance
 5. **Error Handling**: Graceful fallbacks for malformed content or rendering issues
+6. **Link Wrapping**: Implement proper CSS strategies to prevent URL overflow
+7. **Tool Progress**: Provide clear visual feedback for tool execution states
 
 ### Recent Improvements
 
-**Content Rendering Reliability (Latest Update)**:
+**Content Blocks Architecture (Latest Update)**:
+- Introduced sequential content blocks system for mixed content streams
+- Implemented real-time tool progress tracking with visual indicators
+- Enhanced event processing to handle tool progress and text content simultaneously
+- Fixed duplicate server rendering issue in tool progress display
+
+**Content Rendering Reliability**:
 - Replaced content-based detection with format-type-based rendering
 - Eliminated false positives where markdown links were treated as JSON
 - Ensured consistent rendering behavior across all content types
 - Simplified logic for better maintainability and reliability
 
-The rendering system now provides 100% reliable content formatting based on the actual API request format type rather than attempting to guess from content patterns. 
+**Link Wrapping Improvements**:
+- Implemented comprehensive CSS-based link wrapping strategies
+- Added multiple fallback approaches for maximum browser compatibility
+- Ensured long URLs stay within chat bubble boundaries
+- Maintained link functionality while preventing overflow
+
+The rendering system now provides 100% reliable content formatting based on the actual API request format type, with robust tool progress tracking and proper link handling for optimal user experience. 
