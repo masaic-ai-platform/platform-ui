@@ -1,12 +1,120 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import UnifiedCard from '@/components/ui/unified-card';
 import { Code, Copy, Check, X, User, Bot, AlertTriangle } from 'lucide-react';
+
+// Simple chat bubble component
+const ChatBubble: React.FC<{ 
+  children: React.ReactNode; 
+  role: 'user' | 'assistant'; 
+  isError?: boolean;
+  content?: string;
+}> = ({ children, role, isError = false, content }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (!content) return;
+    
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy message:', err);
+    }
+  };
+
+  return (
+    <div
+      className={`
+        relative group p-4 rounded-lg shadow-sm border transition-all duration-200
+        ${role === 'user' 
+          ? 'bg-card border-border hover:border-positive-trend/50 hover:shadow-md' 
+          : 'bg-muted border-border hover:border-positive-trend/50 hover:shadow-md'
+        }
+        ${isError ? 'border-red-500 bg-red-50 dark:bg-red-950/20 hover:border-red-400' : ''}
+        hover:scale-[1.01] hover:ring-1 hover:ring-positive-trend/20
+      `}
+    >
+      {children}
+      
+      {/* Copy button - only show on hover and when content exists */}
+      {content && (
+        <button
+          onClick={handleCopy}
+          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-md bg-background/80 hover:bg-background border border-border hover:border-positive-trend/50 shadow-sm"
+          title="Copy message"
+        >
+          {copied ? (
+            <Check className="w-3 h-3 text-green-500" />
+          ) : (
+            <Copy className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+          )}
+        </button>
+      )}
+    </div>
+  );
+};
+
+// JSON syntax highlighting functions (adapted from JsonSchemaModal)
+const highlightJson = (jsonString: string, isPartial: boolean = false) => {
+  if (!jsonString.trim()) return null;
+  
+  if (!isPartial) {
+    try {
+      const parsed = JSON.parse(jsonString);
+      const formatted = JSON.stringify(parsed, null, 2);
+      const lines = formatted.split('\n');
+      return (
+        <pre className="font-mono text-sm leading-relaxed whitespace-pre-wrap">
+          {lines.map((line, index) => (
+            <div key={index}>{highlightLine(line)}</div>
+          ))}
+        </pre>
+      );
+    } catch {
+      // Fall through to partial highlighting
+    }
+  }
+  
+  // Handle partial or invalid JSON with line-by-line highlighting
+  const lines = jsonString.split('\n');
+  return (
+    <pre className="font-mono text-sm leading-relaxed whitespace-pre-wrap">
+      {lines.map((line, index) => (
+        <div key={index}>{highlightLine(line)}</div>
+      ))}
+    </pre>
+  );
+};
+
+const highlightLine = (line: string) => {
+  if (line.includes(':') && line.includes('"')) {
+    const keyMatch = line.match(/"([^"]+)"(\s*:)/);
+    if (keyMatch) {
+      const beforeKey = line.substring(0, line.indexOf(keyMatch[0]));
+      const key = keyMatch[1];
+      const afterKey = line.substring(line.indexOf(keyMatch[0]) + keyMatch[0].length);
+      return (
+        <span>
+          <span className="text-muted-foreground">{beforeKey}</span>
+          <span className="text-positive-trend">"{key}"</span>
+          <span className="text-muted-foreground">:</span>
+          <span className="text-foreground">{afterKey}</span>
+        </span>
+      );
+    }
+  } else if (line.includes('"') && !line.includes(':')) {
+    return <span className="text-positive-trend">{line}</span>;
+  } else if (line.match(/\b(true|false|null)\b/)) {
+    return <span className="text-positive-trend">{line}</span>;
+  } else if (line.match(/\b\d+\b/)) {
+    return <span className="text-foreground">{line}</span>;
+  }
+  return <span className="text-muted-foreground">{line}</span>;
+};
 
 interface ContentRendererProps {
   content: string;
@@ -16,22 +124,29 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content }) => {
   const isJson = (str: string) => {
     try {
       JSON.parse(str);
+      return true;
     } catch (e) {
       return false;
     }
-    return true;
+  };
+
+  const isPartialJson = (str: string) => {
+    // Check if it looks like it might be JSON (starts with { or [)
+    const trimmed = str.trim();
+    return trimmed.startsWith('{') || trimmed.startsWith('[');
   };
 
   if (isJson(content)) {
-    return (
-      <SyntaxHighlighter language="json" style={vscDarkPlus} PreTag="div">
-        {JSON.stringify(JSON.parse(content), null, 2)}
-      </SyntaxHighlighter>
-    );
+    return highlightJson(content, false);
+  }
+
+  // Handle partial JSON during streaming - apply same highlighting
+  if (isPartialJson(content)) {
+    return highlightJson(content, true);
   }
 
   return (
-    <div className="prose dark:prose-invert">
+    <div className="prose dark:prose-invert prose-sm max-w-none prose-p:my-2 prose-pre:my-2 prose-ul:my-2 prose-ol:my-2 prose-h1:my-2 prose-h2:my-2 prose-h3:my-2 prose-h4:my-2 prose-h5:my-2 prose-h6:my-2">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -501,13 +616,7 @@ print(response.json())`;
             {timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
         </div>
-        <UnifiedCard
-          className={`
-            p-4 rounded-lg shadow-sm 
-            ${role === 'user' ? 'bg-card' : 'bg-muted'}
-            ${isError ? 'border-red-500 border' : ''}
-          `}
-        >
+        <ChatBubble role={role} isError={isError} content={content}>
           {isLoading ? (
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-foreground rounded-full animate-pulse"></div>
@@ -517,7 +626,7 @@ print(response.json())`;
           ) : (
             <ContentRenderer content={contentToDisplay} />
           )}
-        </UnifiedCard>
+        </ChatBubble>
       </div>
       {role === 'user' && (
         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-card flex items-center justify-center">

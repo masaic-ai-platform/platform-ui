@@ -251,7 +251,8 @@ const AiPlayground: React.FC = () => {
       temperature,
       max_output_tokens: maxTokens,
       top_p: topP,
-      store: true
+      store: true,
+      stream: true
     };
     
     if (previousResponseId) {
@@ -285,32 +286,124 @@ const AiPlayground: React.FC = () => {
         return;
       }
 
-      const data = await response.json();
-      
-      if (data.id) {
-        setPreviousResponseId(data.id);
-      }
-      
-      let assistantContent = '';
-      if (data.output && data.output[0] && data.output[0].content && data.output[0].content[0] && data.output[0].content[0].text) {
-        assistantContent = data.output[0].content[0].text;
-      } else if (data.error && data.error.message) {
-        assistantContent = `Error: ${data.error.message}`;
-      } else {
-        assistantContent = JSON.stringify(data, null, 2);
-      }
-      
-      setMessages(prev => prev.map(msg =>
-        msg.id === assistantMessageId
-          ? {
-              ...msg,
-              content: assistantContent,
-              type: 'text',
-              hasThinkTags: false,
-              isLoading: false
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let streamingContent = '';
+      let responseId = '';
+      let isStreaming = false;
+
+      if (reader) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  
+                  // Handle different event types
+                  if (data.type === 'response.created' || data.type === 'response.completed') {
+                    if (data.response?.id) {
+                      responseId = data.response.id;
+                    }
+                  } else if (data.type === 'response.output_text.delta') {
+                    // Start or continue streaming
+                    if (!isStreaming) {
+                      isStreaming = true;
+                      // Remove loading state when streaming starts
+                      setMessages(prev => prev.map(msg =>
+                        msg.id === assistantMessageId
+                          ? { ...msg, isLoading: false }
+                          : msg
+                      ));
+                    }
+                    
+                    if (data.delta) {
+                      streamingContent += data.delta;
+                      
+                      // Check if we have a complete JSON object for real-time formatting
+                      let displayContent = streamingContent;
+                      if (textFormat === 'json_object' || textFormat === 'json_schema') {
+                        try {
+                          // Try to parse as JSON - if successful, it's complete JSON
+                          JSON.parse(streamingContent);
+                          // If parsing succeeds, keep the JSON as-is for formatting
+                          displayContent = streamingContent;
+                        } catch {
+                          // If parsing fails, it's incomplete JSON - show as-is
+                          displayContent = streamingContent;
+                        }
+                      }
+                      
+                      // Update message content in real-time
+                      setMessages(prev => prev.map(msg =>
+                        msg.id === assistantMessageId
+                          ? {
+                              ...msg,
+                              content: displayContent,
+                              type: 'text',
+                              hasThinkTags: false,
+                              isLoading: false
+                            }
+                          : msg
+                      ));
+                    }
+                  } else if (data.type === 'response.output_text.done') {
+                    // Streaming completed for this output
+                    isStreaming = false;
+                    if (data.text) {
+                      // Use the complete text from the done event
+                      streamingContent = data.text;
+                      setMessages(prev => prev.map(msg =>
+                        msg.id === assistantMessageId
+                          ? {
+                              ...msg,
+                              content: streamingContent,
+                              type: 'text',
+                              hasThinkTags: false,
+                              isLoading: false
+                            }
+                          : msg
+                      ));
+                    }
+                  }
+                } catch (parseError) {
+                  console.error('Error parsing SSE data:', parseError);
+                }
+              }
             }
-          : msg
-      ));
+          }
+        } catch (streamError) {
+          console.error('Error reading stream:', streamError);
+          setMessages(prev => prev.map(msg =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  content: `Error: Failed to read streaming response`,
+                  type: 'text',
+                  hasThinkTags: false,
+                  isLoading: false
+                }
+              : msg
+          ));
+        } finally {
+          reader.releaseLock();
+        }
+      }
+
+      // Update previous response ID for next request
+      if (responseId) {
+        setPreviousResponseId(responseId);
+      }
+
     } catch (error: any) {
       setMessages(prev => prev.map(msg =>
         msg.id === assistantMessageId

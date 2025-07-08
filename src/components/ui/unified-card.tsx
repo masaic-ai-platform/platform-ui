@@ -7,6 +7,7 @@ interface UnifiedCardProps {
   className?: string;
   semanticType?: 'positive' | 'negative' | 'critical' | 'opportunity' | 'neutral';
   showBrandAccent?: boolean;
+  showBottomSpacer?: boolean;
   onClick?: () => void;
 }
 
@@ -15,6 +16,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
   className = "", 
   semanticType = 'neutral',
   showBrandAccent = true,
+  showBottomSpacer = true,
   onClick 
 }) => {
   const getSemanticGlow = () => {
@@ -57,8 +59,8 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
         {children}
       </div>
       
-      {/* Bottom spacer for interaction dock */}
-      <div className="h-[50px] shrink-0"></div>
+      {/* Bottom spacer for interaction dock - only show when needed */}
+      {showBottomSpacer && <div className="h-[50px] shrink-0"></div>}
     </div>
   );
 };
