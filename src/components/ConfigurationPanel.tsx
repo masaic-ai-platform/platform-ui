@@ -58,8 +58,8 @@ interface Tool {
   icon: React.ComponentType<{ className?: string }>;
   functionDefinition?: string; // For function tools
   mcpConfig?: any; // For MCP server tools
-  fileSearchConfig?: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string }; // For file search tools
-  agenticFileSearchConfig?: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string; iterations: number }; // For agentic file search tools
+  fileSearchConfig?: { selectedFiles: string[]; selectedVectorStores: string[]; vectorStoreNames: string[] }; // For file search tools
+  agenticFileSearchConfig?: { selectedFiles: string[]; selectedVectorStores: string[]; vectorStoreNames: string[]; iterations: number; maxResults: number }; // For agentic file search tools
 }
 
 interface ConfigurationPanelProps {
@@ -248,7 +248,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   // Check if API key exists for provider
   const checkApiKey = (provider: string): boolean => {
     try {
-      const saved = localStorage.getItem('platform_apiKeysys');
+      const saved = localStorage.getItem('platform_apiKeys');
       if (!saved) return false;
       
       const savedKeys: { name: string; apiKey: string }[] = JSON.parse(saved);
@@ -303,8 +303,16 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
         onSelectedToolsChange([...selectedTools, tool]);
       }
     } else if (tool.id === 'mcp_server') {
-      // Allow multiple MCP servers
-      onSelectedToolsChange([...selectedTools, tool]);
+      // If editing an existing MCP server, remove the old one first
+      if (editingMCP) {
+        const updatedTools = selectedTools.filter(t => 
+          !(t.id === 'mcp_server' && t.mcpConfig?.label === editingMCP.mcpConfig?.label)
+        );
+        onSelectedToolsChange([...updatedTools, tool]);
+      } else {
+        // Add the new MCP server
+        onSelectedToolsChange([...selectedTools, tool]);
+      }
     } else {
       // For other tools, check by id only
       if (!selectedTools.find(t => t.id === tool.id)) {
@@ -441,10 +449,11 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                   }
                 }
                 if (tool.id === 'file_search' && tool.fileSearchConfig) {
-                  return tool.fileSearchConfig.vectorStoreName || 'File Search';
+                  return tool.fileSearchConfig.vectorStoreNames.length > 0 ? tool.fileSearchConfig.vectorStoreNames.join(', ') : 'File Search';
                 }
                 if (tool.id === 'agentic_file_search' && tool.agenticFileSearchConfig) {
-                  return `${tool.agenticFileSearchConfig.vectorStoreName || 'Agentic File Search'} (${tool.agenticFileSearchConfig.iterations})`;
+                  const displayName = tool.agenticFileSearchConfig.vectorStoreNames.length > 0 ? tool.agenticFileSearchConfig.vectorStoreNames.join(', ') : 'Agentic File Search';
+                  return `${displayName} (${tool.agenticFileSearchConfig.iterations})`;
                 }
                 return tool.name;
               };

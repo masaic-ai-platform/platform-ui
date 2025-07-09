@@ -125,6 +125,46 @@ if (eventType.includes('mcp_call') && eventType.includes('completed')) {
 }
 ```
 
+### File Search Tool Progress Events
+
+#### 7. `response.file_search.in_progress`
+- **Purpose**: Indicates file search tool execution has started
+- **Timing**: When file search begins execution
+- **Action**: Add file search tool to progress tracking
+
+```typescript
+// Event example
+event: response.file_search.in_progress
+data: {}
+
+// Handler
+if (eventType === 'response.file_search.in_progress') {
+  const serverName = 'file_search';
+  const toolName = 'search';
+  
+  addToolProgress(serverName, toolName, 'in_progress');
+}
+```
+
+#### 8. `response.file_search.completed`
+- **Purpose**: Indicates file search tool execution has finished
+- **Timing**: When file search completes execution
+- **Action**: Update file search tool status to completed
+
+```typescript
+// Event example
+event: response.file_search.completed
+data: {}
+
+// Handler
+if (eventType === 'response.file_search.completed') {
+  const serverName = 'file_search';
+  const toolName = 'search';
+  
+  updateToolProgress(serverName, toolName, 'completed');
+}
+```
+
 ## Content Blocks Architecture
 
 ### ContentBlock Interface
@@ -269,6 +309,36 @@ response.created
 
 **Content Blocks Result**:
 - Single `tool_progress` block with multiple shopify tool executions
+- `text` block with generated response
+
+### Response with File Search Tools
+```
+response.created 
+→ response.file_search.in_progress
+→ response.file_search.completed
+→ response.output_text.delta (multiple)
+→ response.output_text.done 
+→ response.completed
+```
+
+**Content Blocks Result**:
+- `tool_progress` block with file search execution
+- `text` block with generated response
+
+### Response with Mixed MCP and File Search Tools
+```
+response.created 
+→ response.mcp_call.shopify_search_shop_catalog.in_progress
+→ response.file_search.in_progress
+→ response.mcp_call.shopify_search_shop_catalog.completed
+→ response.file_search.completed
+→ response.output_text.delta (multiple)
+→ response.output_text.done 
+→ response.completed
+```
+
+**Content Blocks Result**:
+- Single `tool_progress` block with both MCP and file search tool executions
 - `text` block with generated response
 
 ### Interleaved Tools and Text

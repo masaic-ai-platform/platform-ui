@@ -24,8 +24,8 @@ interface Tool {
   icon: React.ComponentType<{ className?: string }>;
   functionDefinition?: string; // For function tools
   mcpConfig?: any; // For MCP server tools
-  fileSearchConfig?: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string }; // For file search tools
-  agenticFileSearchConfig?: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string; iterations: number }; // For agentic file search tools
+  fileSearchConfig?: { selectedFiles: string[]; selectedVectorStores: string[]; vectorStoreNames: string[] }; // For file search tools
+  agenticFileSearchConfig?: { selectedFiles: string[]; selectedVectorStores: string[]; vectorStoreNames: string[]; iterations: number; maxResults: number }; // For agentic file search tools
 }
 
 interface ToolsSelectionModalProps {
@@ -198,11 +198,12 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
     }
   };
 
-  const handleFileSearchSave = (config: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string }) => {
+  const handleFileSearchSave = (config: { selectedFiles: string[]; selectedVectorStores: string[]; vectorStoreNames: string[] }) => {
     // Create file search tool with config
+    const displayName = config.vectorStoreNames.length > 0 ? config.vectorStoreNames.join(', ') : 'File Search';
     const fileSearchTool: Tool = {
       id: 'file_search',
-      name: config.vectorStoreName || 'File Search',
+      name: displayName,
       icon: Search,
       fileSearchConfig: config
     };
@@ -222,11 +223,12 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
     }
   };
 
-  const handleAgenticFileSearchSave = (config: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string; iterations: number }) => {
+  const handleAgenticFileSearchSave = (config: { selectedFiles: string[]; selectedVectorStores: string[]; vectorStoreNames: string[]; iterations: number; maxResults: number }) => {
     // Create agentic file search tool with config
+    const displayName = config.vectorStoreNames.length > 0 ? config.vectorStoreNames.join(', ') : 'Agentic File Search';
     const agenticFileSearchTool: Tool = {
       id: 'agentic_file_search',
-      name: config.vectorStoreName || 'Agentic File Search',
+      name: displayName,
       icon: FileSearch,
       agenticFileSearchConfig: config
     };
@@ -349,9 +351,9 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
         }
       }}
       onSave={handleFileSearchSave}
-      initialVectorStore={editingFileSearch?.fileSearchConfig?.selectedVectorStore}
+      initialVectorStores={editingFileSearch?.fileSearchConfig?.selectedVectorStores}
       initialSelectedFiles={editingFileSearch?.fileSearchConfig?.selectedFiles}
-      initialVectorStoreName={editingFileSearch?.fileSearchConfig?.vectorStoreName}
+      initialVectorStoreNames={editingFileSearch?.fileSearchConfig?.vectorStoreNames}
     />
     
     <AgenticFileSearchModal
@@ -366,10 +368,11 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
         }
       }}
       onSave={handleAgenticFileSearchSave}
-      initialVectorStore={editingAgenticFileSearch?.agenticFileSearchConfig?.selectedVectorStore}
+      initialVectorStores={editingAgenticFileSearch?.agenticFileSearchConfig?.selectedVectorStores}
       initialIterations={editingAgenticFileSearch?.agenticFileSearchConfig?.iterations}
+      initialMaxResults={editingAgenticFileSearch?.agenticFileSearchConfig?.maxResults}
       initialSelectedFiles={editingAgenticFileSearch?.agenticFileSearchConfig?.selectedFiles}
-      initialVectorStoreName={editingAgenticFileSearch?.agenticFileSearchConfig?.vectorStoreName}
+      initialVectorStoreNames={editingAgenticFileSearch?.agenticFileSearchConfig?.vectorStoreNames}
     />
   </>
   );

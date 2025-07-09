@@ -78,6 +78,33 @@ MCP (Model Context Protocol) servers provide external tool capabilities. When co
 }
 ```
 
+#### File Search Tool Configuration
+
+File search tools provide access to vector store content for document search and retrieval. When configured, file search tools are included in requests.
+
+**Configuration Source**: All file search tool parameters come from the user's configuration in the file search tool config modal.
+
+| Field               | Type     | Description                                                                                      | Required |
+| ------------------- | -------- | ------------------------------------------------------------------------------------------------ | -------- |
+| `type`              | `string` | Always `"file_search"` for file search tools (hardcoded).                                       | Yes      |
+| `vector_store_ids`  | `array`  | User-configured array containing the vector store ID from file search tool config modal.        | Yes      |
+
+#### Field Configuration Details
+
+1. **`type`**: Always hardcoded as `"file_search"` for any file search tool being sent
+2. **`vector_store_ids`**: Array containing the user-selected vector store ID from file search tool config modal
+
+#### File Search Tool Example
+
+```json
+{
+  "type": "file_search",
+  "vector_store_ids": [
+    "vs_686d2325cfda5b000000"
+  ]
+}
+```
+
 ### `input` Object Structure
 
 Each object in the `input` array has the following structure:
@@ -207,6 +234,95 @@ The `text.format` object specifies the desired output format.
 }
 ```
 
+### Example Request Body (With File Search Tools)
+
+```json
+{
+    "model": "openai@gpt-4.1-mini",
+    "tools": [
+        {
+            "type": "file_search",
+            "vector_store_ids": [
+                "vs_686d2325cfda5b000000"
+            ]
+        }
+    ],
+    "instructions": "Search through the uploaded documents to find relevant information and provide a comprehensive answer based on the content.",
+    "input": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "input_text",
+                    "text": "What are the main features of the product described in the documentation?"
+                }
+            ]
+        }
+    ],
+    "text": {
+        "format": {
+            "type": "text"
+        }
+    },
+    "temperature": 1,
+    "max_output_tokens": 2048,
+    "top_p": 1,
+    "store": true,
+    "stream": true,
+    "previous_response_id": "o27dGvM-zqrih-95b754a028c7918d"
+}
+```
+
+### Example Request Body (With Mixed Tools)
+
+```json
+{
+    "model": "openai@gpt-4.1-mini",
+    "tools": [
+        {
+            "type": "mcp",
+            "server_label": "shopify",
+            "server_url": "https://axzx8j-61.myshopify.com/api/mcp",
+            "allowed_tools": [
+                "search_shop_catalog"
+            ],
+            "headers": {
+                "Authorization": "Bearer your-api-token"
+            }
+        },
+        {
+            "type": "file_search",
+            "vector_store_ids": [
+                "vs_686d2325cfda5b000000"
+            ]
+        }
+    ],
+    "instructions": "Use both the shop catalog search and document search to provide comprehensive product information. Search the uploaded documentation first, then use the shop catalog for current pricing and availability.",
+    "input": [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "input_text",
+                    "text": "Tell me about HP printers, including technical specifications and current pricing"
+                }
+            ]
+        }
+    ],
+    "text": {
+        "format": {
+            "type": "text"
+        }
+    },
+    "temperature": 1,
+    "max_output_tokens": 2048,
+    "top_p": 1,
+    "store": true,
+    "stream": true,
+    "previous_response_id": "o27cfiQ-zqrih-95b751bd4d01d854"
+}
+```
+
 ## Response Handling
 
 ### Non-Streaming Response
@@ -267,6 +383,16 @@ When MCP tools are configured and used, additional events are fired for tool exe
    - Same identifier format as above
    - Indicates the completion of tool execution
 
+#### File Search Tool Progress Events
+
+When file search tools are configured and used, additional events are fired for tool execution progress:
+
+7. **`response.file_search.in_progress`** - Fired when a file search tool starts execution
+   - Indicates the start of file search execution for visual progress tracking
+
+8. **`response.file_search.completed`** - Fired when a file search tool completes execution
+   - Indicates the completion of file search execution
+
 #### Event Sequence Examples
 
 **Basic Text Response**:
@@ -282,6 +408,16 @@ response.created → response.mcp_call.shopify_search_shop_catalog.in_progress �
 **Multiple MCP Tools from Same Server**:
 ```
 response.created → response.mcp_call.shopify_search_shop_catalog.in_progress → response.mcp_call.shopify_get_product_details.in_progress → response.mcp_call.shopify_search_shop_catalog.completed → response.mcp_call.shopify_get_product_details.completed → response.output_text.delta (multiple) → response.output_text.done → response.completed
+```
+
+**Response with File Search Tools**:
+```
+response.created → response.file_search.in_progress → response.file_search.completed → response.output_text.delta (multiple) → response.output_text.done → response.completed
+```
+
+**Response with Mixed MCP and File Search Tools**:
+```
+response.created → response.mcp_call.shopify_search_shop_catalog.in_progress → response.file_search.in_progress → response.mcp_call.shopify_search_shop_catalog.completed → response.file_search.completed → response.output_text.delta (multiple) → response.output_text.done → response.completed
 ```
 
 #### Example Streaming Events
@@ -317,6 +453,54 @@ data: {}
 
 event: response.output_text.delta
 data: {"output": [{"content": [{"text": "I found several HP printers", "type": "output_text"}], "role": "assistant"}]}
+
+event: response.output_text.done
+data: {"output": [{"content": [{"text": "", "type": "output_text"}], "role": "assistant"}]}
+
+event: response.completed
+data: {"id": "o27dGvM-zqrih-95b754a028c7918d", "object": "response"}
+```
+
+**Response with File Search Tool Progress**:
+```
+event: response.created
+data: {"id": "o27dGvM-zqrih-95b754a028c7918d", "object": "response"}
+
+event: response.file_search.in_progress
+data: {}
+
+event: response.file_search.completed
+data: {}
+
+event: response.output_text.delta
+data: {"output": [{"content": [{"text": "Based on the documents", "type": "output_text"}], "role": "assistant"}]}
+
+event: response.output_text.done
+data: {"output": [{"content": [{"text": "", "type": "output_text"}], "role": "assistant"}]}
+
+event: response.completed
+data: {"id": "o27dGvM-zqrih-95b754a028c7918d", "object": "response"}
+```
+
+**Response with Mixed Tool Progress**:
+```
+event: response.created
+data: {"id": "o27dGvM-zqrih-95b754a028c7918d", "object": "response"}
+
+event: response.file_search.in_progress
+data: {}
+
+event: response.mcp_call.shopify_search_shop_catalog.in_progress
+data: {}
+
+event: response.file_search.completed
+data: {}
+
+event: response.mcp_call.shopify_search_shop_catalog.completed
+data: {}
+
+event: response.output_text.delta
+data: {"output": [{"content": [{"text": "Based on the documentation and current catalog", "type": "output_text"}], "role": "assistant"}]}
 
 event: response.output_text.done
 data: {"output": [{"content": [{"text": "", "type": "output_text"}], "role": "assistant"}]}
@@ -514,13 +698,24 @@ When MCP server tools are configured, they must be included in every API request
 - **Error Handling**: MCP server errors are handled within the response flow
 - **Tool Responses**: Tool execution results are integrated into the streaming response
 
+#### File Search Tool Implementation Notes
+
+- **Configuration Source**: All file search tool parameters are configured by users in the file search tool config modal
+- **Tool Inclusion**: File search tools are automatically included in the `tools` array for every request based on saved configuration
+- **Vector Store Integration**: Tools reference specific vector stores containing uploaded documents
+- **Automatic Detection**: Both regular file search and agentic file search tools are treated as `file_search` type in the API
+- **Local Storage**: File search tool configurations are persisted in local storage using `platform_fileSearchTool` and `platform_agenticFileSearchTool` keys
+- **Multiple Vector Stores**: Multiple file search tools can be configured for different vector stores simultaneously
+
 #### Best Practices
 
-1. **Tool Naming**: Use descriptive `server_label` values for easy identification
-2. **Security**: Ensure MCP server URLs are secure and authenticated
-3. **Tool Selection**: Only include necessary tools in `allowed_tools` for security
-4. **Instructions**: Provide clear instructions about tool usage and response formatting
+1. **Tool Naming**: Use descriptive `server_label` values for MCP tools and meaningful vector store names for file search tools
+2. **Security**: Ensure MCP server URLs are secure and authenticated; manage vector store access appropriately
+3. **Tool Selection**: Only include necessary tools in `allowed_tools` for MCP servers and configure file search tools with relevant vector stores
+4. **Instructions**: Provide clear instructions about tool usage and response formatting for both MCP and file search capabilities
 5. **Progress Display**: Implement proper visual feedback for tool execution states
+6. **Vector Store Management**: Organize documents in vector stores logically for optimal file search results
+7. **Mixed Tool Usage**: When using both MCP and file search tools, provide clear instructions on how they should be used together
 
 ### API Integration Flow
 

@@ -61,6 +61,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
   const [tools, setTools] = useState<MCPTool[]>([]);
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [selectedTool, setSelectedTool] = useState<MCPTool | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   const handleConnect = async () => {
     setIsConnecting(true);
@@ -108,7 +109,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
         
         // If editing (initialConfig exists), preserve previously selected tools
         // Otherwise, select all tools by default for new connections
-        if (initialConfig && initialConfig.selectedTools) {
+        if (isEditing && initialConfig && initialConfig.selectedTools) {
           // Only select tools that still exist in the new API response
           const availableToolNames = data.map(tool => tool.name);
           const validSelectedTools = initialConfig.selectedTools.filter(toolName => 
@@ -202,9 +203,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
   };
 
   const removeCustomHeader = (index: number) => {
-    if (customHeaders.length > 1) {
-      setCustomHeaders(customHeaders.filter((_, i) => i !== index));
-    }
+    setCustomHeaders(customHeaders.filter((_, i) => i !== index));
   };
 
   const updateCustomHeader = (index: number, field: 'key' | 'value', value: string) => {
@@ -219,8 +218,8 @@ const MCPModal: React.FC<MCPModalProps> = ({
       setSelectedTool(null);
     } else if (currentView === 'connected') {
       setCurrentView('connect');
-    } else {
-      onOpenChange(false);
+      setTools([]);
+      setSelectedTools([]);
     }
   };
 
@@ -230,7 +229,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
 
   const handleToolToggle = (toolName: string) => {
     setSelectedTools(prev => 
-      prev.includes(toolName) 
+      prev.includes(toolName)
         ? prev.filter(name => name !== toolName)
         : [...prev, toolName]
     );
@@ -267,6 +266,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
     setTools([]);
     setSelectedTools([]);
     setSelectedTool(null);
+    setIsEditing(false);
   };
 
   // Reset form when modal closes
@@ -284,6 +284,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
       setAuthentication(initialConfig.authentication || 'access_token');
       setAccessToken(initialConfig.accessToken || '');
       setSelectedTools(initialConfig.selectedTools || []);
+      setIsEditing(true); // Set editing mode
       
       if (initialConfig.customHeaders) {
         setCustomHeaders(initialConfig.customHeaders);
@@ -294,6 +295,9 @@ const MCPModal: React.FC<MCPModalProps> = ({
         setCurrentView('connected');
         fetchToolsForEditing();
       }
+    } else if (open) {
+      // If no initialConfig, this is a new configuration
+      setIsEditing(false);
     }
   }, [initialConfig, open]);
 
@@ -349,7 +353,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
               <DialogTitle className="text-xl font-semibold">
                 {currentView === 'tool-detail' && selectedTool ? selectedTool.name :
                  currentView === 'connected' ? label :
-                 'Connect to MCP Server'}
+                 isEditing ? 'Edit MCP Server' : 'Connect to MCP Server'}
               </DialogTitle>
             </div>
           </DialogHeader>
@@ -638,7 +642,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
                 disabled={isConnecting || selectedTools.length === 0}
                 className="bg-positive-trend hover:bg-positive-trend/90 text-white flex items-center space-x-2 disabled:opacity-50"
               >
-                <span>Add</span>
+                <span>{isEditing ? 'Update' : 'Add'}</span>
               </Button>
             ) : currentView === 'connect' ? (
               <Button
@@ -672,4 +676,4 @@ const MCPModal: React.FC<MCPModalProps> = ({
   );
 };
 
-export default MCPModal; 
+export default MCPModal;

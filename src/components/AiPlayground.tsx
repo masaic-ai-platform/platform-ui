@@ -13,6 +13,15 @@ interface ToolExecution {
   serverName: string;
   toolName: string;
   status: 'in_progress' | 'completed';
+  agenticSearchLogs?: AgenticSearchLog[];
+}
+
+interface AgenticSearchLog {
+  iteration: number;
+  query: string;
+  reasoning: string;
+  citations: string[];
+  remaining_iterations: number;
 }
 
 interface ContentBlock {
@@ -44,13 +53,13 @@ interface Tool {
   icon: React.ComponentType<{ className?: string }>;
   functionDefinition?: string; // For function tools
   mcpConfig?: any; // For MCP server tools
-  fileSearchConfig?: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string }; // For file search tools
-  agenticFileSearchConfig?: { selectedFiles: string[]; selectedVectorStore: string; vectorStoreName?: string; iterations: number }; // For agentic file search tools
+  fileSearchConfig?: { selectedFiles: string[]; selectedVectorStores: string[]; vectorStoreNames: string[] }; // For file search tools
+  agenticFileSearchConfig?: { selectedFiles: string[]; selectedVectorStores: string[]; vectorStoreNames: string[]; iterations: number; maxResults: number }; // For agentic file search tools
 }
 
 const getProviderApiKey = (provider: string): string => {
   try {
-    const saved = localStorage.getItem('platform_apiKeysys');
+    const saved = localStorage.getItem('platform_apiKeys');
     if (!saved) return '';
     const savedKeys: { name: string; apiKey: string }[] = JSON.parse(saved);
     return savedKeys.find(item => item.name === provider)?.apiKey || '';
@@ -103,7 +112,6 @@ const AiPlayground: React.FC = () => {
 
   useEffect(() => {
     // Load saved settings from localStorage
-    const savedApiKey = localStorage.getItem('platform_apiKeys') || '';
     const savedBaseUrl = localStorage.getItem('aiPlayground_baseUrl') || 'http://localhost:8080';
     const savedModelProvider = localStorage.getItem('platform_modelProvider') || 'openai';
     const savedModelName = localStorage.getItem('platform_modelName') || 'gpt-4o';
@@ -121,8 +129,10 @@ const AiPlayground: React.FC = () => {
     const savedPromptMessages = JSON.parse(localStorage.getItem('aiPlayground_promptMessages') || '[]');
     const savedOtherTools = JSON.parse(localStorage.getItem('aiPlayground_otherTools') || '[]');
     const savedMCPTools = loadMCPToolsFromStorage();
+    const savedFileSearchTools = loadFileSearchToolsFromStorage();
+    const savedAgenticFileSearchTools = loadAgenticFileSearchToolsFromStorage();
     
-    setApiKey(savedApiKey);
+    // Don't load apiKey from localStorage - it's managed by getProviderApiKey function
     setBaseUrl(savedBaseUrl);
     setModelProvider(savedModelProvider);
     setModelName(savedModelName);
@@ -138,12 +148,12 @@ const AiPlayground: React.FC = () => {
     setTextFormat(savedTextFormat);
     setToolChoice(savedToolChoice);
     setPromptMessages(savedPromptMessages);
-    setSelectedTools([...savedOtherTools, ...savedMCPTools]);
+    setSelectedTools([...savedOtherTools, ...savedMCPTools, ...savedFileSearchTools, ...savedAgenticFileSearchTools]);
   }, []);
 
   // Save settings to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('platform_apiKeys', apiKey);
+    // Don't save platform_apiKeys here - it's managed by ApiKeysModal
     localStorage.setItem('aiPlayground_baseUrl', baseUrl);
     localStorage.setItem('platform_modelProvider', modelProvider);
     localStorage.setItem('platform_modelName', modelName);
@@ -160,11 +170,19 @@ const AiPlayground: React.FC = () => {
     localStorage.setItem('aiPlayground_toolChoice', toolChoice);
     localStorage.setItem('aiPlayground_promptMessages', JSON.stringify(promptMessages));
     
-    // Separate MCP tools from other tools for better management
+    // Separate tools by type for better management
     const mcpTools = selectedTools.filter(tool => tool.id === 'mcp_server');
-    const otherTools = selectedTools.filter(tool => tool.id !== 'mcp_server');
+    const fileSearchTools = selectedTools.filter(tool => tool.id === 'file_search');
+    const agenticFileSearchTools = selectedTools.filter(tool => tool.id === 'agentic_file_search');
+    const otherTools = selectedTools.filter(tool => 
+      tool.id !== 'mcp_server' && 
+      tool.id !== 'file_search' && 
+      tool.id !== 'agentic_file_search'
+    );
     
     saveMCPToolsToStorage(mcpTools);
+    saveFileSearchToolsToStorage(fileSearchTools);
+    saveAgenticFileSearchToolsToStorage(agenticFileSearchTools);
     localStorage.setItem('aiPlayground_otherTools', JSON.stringify(otherTools));
   }, [apiKey, baseUrl, modelProvider, modelName, imageModelProvider, imageModelName, imageProviderKey, selectedVectorStore, instructions, temperature, maxTokens, topP, storeLogs, textFormat, toolChoice, promptMessages, selectedTools]);
 
@@ -282,6 +300,108 @@ const AiPlayground: React.FC = () => {
     }
   };
 
+  // File search tools persistence
+  const loadFileSearchToolsFromStorage = (): Tool[] => {
+    try {
+      const stored = localStorage.getItem('platform_fileSearchTool');
+      if (!stored) return [];
+      
+      const fileSearchToolsMap = JSON.parse(stored);
+      const fileSearchTools: Tool[] = [];
+      
+      Object.values(fileSearchToolsMap).forEach((config: any) => {
+        if (config.selectedVectorStores && config.vectorStoreNames && config.selectedVectorStores.length > 0) {
+          const displayName = config.vectorStoreNames.join(', ');
+          fileSearchTools.push({
+            id: 'file_search',
+            name: displayName,
+            icon: () => null, // Icon will be set by the component
+            fileSearchConfig: {
+              selectedFiles: config.selectedFiles,
+              selectedVectorStores: config.selectedVectorStores,
+              vectorStoreNames: config.vectorStoreNames
+            }
+          });
+        }
+      });
+      
+      return fileSearchTools;
+    } catch (error) {
+      console.error('Error loading file search tools from storage:', error);
+      return [];
+    }
+  };
+
+  // Agentic file search tools persistence
+  const loadAgenticFileSearchToolsFromStorage = (): Tool[] => {
+    try {
+      const stored = localStorage.getItem('platform_agenticFileSearchTool');
+      if (!stored) return [];
+      
+      const agenticFileSearchToolsMap = JSON.parse(stored);
+      const agenticFileSearchTools: Tool[] = [];
+      
+      Object.values(agenticFileSearchToolsMap).forEach((config: any) => {
+        if (config.selectedVectorStores && config.vectorStoreNames && config.selectedVectorStores.length > 0) {
+          const displayName = config.vectorStoreNames.join(', ');
+          agenticFileSearchTools.push({
+            id: 'agentic_file_search',
+            name: displayName,
+            icon: () => null, // Icon will be set by the component
+            agenticFileSearchConfig: {
+              selectedFiles: config.selectedFiles,
+              selectedVectorStores: config.selectedVectorStores,
+              vectorStoreNames: config.vectorStoreNames,
+              iterations: config.iterations,
+              maxResults: config.maxResults || 4 // Default to 4 if not set
+            }
+          });
+        }
+      });
+      
+      return agenticFileSearchTools;
+    } catch (error) {
+      console.error('Error loading agentic file search tools from storage:', error);
+      return [];
+    }
+  };
+
+  const saveFileSearchToolsToStorage = (tools: Tool[]) => {
+    const fileSearchTools = tools.filter(tool => tool.id === 'file_search' && tool.fileSearchConfig?.selectedVectorStores && tool.fileSearchConfig.selectedVectorStores.length > 0);
+    const fileSearchToolsMap: Record<string, any> = {};
+    
+    fileSearchTools.forEach(tool => {
+      const combinedKey = tool.fileSearchConfig!.selectedVectorStores.sort().join('|');
+      fileSearchToolsMap[combinedKey] = {
+        selectedFiles: tool.fileSearchConfig!.selectedFiles,
+        selectedVectorStores: tool.fileSearchConfig!.selectedVectorStores,
+        vectorStoreNames: tool.fileSearchConfig!.vectorStoreNames,
+        lastUpdated: new Date().toISOString()
+      };
+    });
+    
+    localStorage.setItem('platform_fileSearchTool', JSON.stringify(fileSearchToolsMap));
+  };
+
+  const saveAgenticFileSearchToolsToStorage = (tools: Tool[]) => {
+    const agenticFileSearchTools = tools.filter(tool => tool.id === 'agentic_file_search' && tool.agenticFileSearchConfig?.selectedVectorStores && tool.agenticFileSearchConfig.selectedVectorStores.length > 0);
+    const agenticFileSearchToolsMap: Record<string, any> = {};
+    
+    agenticFileSearchTools.forEach(tool => {
+      const combinedKey = tool.agenticFileSearchConfig!.selectedVectorStores.sort().join('|');
+      agenticFileSearchToolsMap[combinedKey] = {
+        selectedFiles: tool.agenticFileSearchConfig!.selectedFiles,
+        selectedVectorStores: tool.agenticFileSearchConfig!.selectedVectorStores,
+        vectorStoreNames: tool.agenticFileSearchConfig!.vectorStoreNames,
+        iterations: tool.agenticFileSearchConfig!.iterations,
+        maxResults: tool.agenticFileSearchConfig!.maxResults,
+        lastUpdated: new Date().toISOString()
+      };
+    });
+    
+    localStorage.setItem('platform_agenticFileSearchTool', JSON.stringify(agenticFileSearchToolsMap));
+  };
+
   const generateResponse = async (prompt: string) => {
     const provider = modelProvider;
     const apiKeyForProvider = getProviderApiKey(provider);
@@ -395,6 +515,20 @@ const AiPlayground: React.FC = () => {
                   return acc;
                 }, {})
               : {}
+          };
+        } else         if (tool.id === 'file_search' && tool.fileSearchConfig) {
+          // Add file search tool
+          return {
+            type: 'file_search',
+            vector_store_ids: tool.fileSearchConfig.selectedVectorStores
+          };
+        } else if (tool.id === 'agentic_file_search' && tool.agenticFileSearchConfig) {
+          // Add agentic file search tool with proper agentic_search type
+          return {
+            type: 'agentic_search',
+            vector_store_ids: tool.agenticFileSearchConfig.selectedVectorStores,
+            max_iterations: tool.agenticFileSearchConfig.iterations,
+            max_num_results: tool.agenticFileSearchConfig.maxResults
           };
         }
         // Add other tool types as needed
@@ -583,6 +717,114 @@ const AiPlayground: React.FC = () => {
                           updateMessage(contentBlocks, streamingContent);
                         }
                       }
+                    }
+                  } else if (data.type === 'response.file_search.in_progress') {
+                    // Handle file search tool start event
+                    const toolExecution: ToolExecution = {
+                      serverName: 'file_search',
+                      toolName: 'search',
+                      status: 'in_progress'
+                    };
+                    activeToolExecutions.set('file_search', toolExecution);
+                    
+                    // Find existing tool progress block or create new one
+                    let toolProgressBlock = contentBlocks.find(block => block.type === 'tool_progress');
+                    if (!toolProgressBlock) {
+                      toolProgressBlock = {
+                        type: 'tool_progress',
+                        toolExecutions: Array.from(activeToolExecutions.values())
+                      };
+                      contentBlocks.push(toolProgressBlock);
+                    } else {
+                      // Update existing tool progress block
+                      toolProgressBlock.toolExecutions = Array.from(activeToolExecutions.values());
+                    }
+                    currentTextBlock = null; // Reset text block for potential next text
+                    
+                    updateMessage(contentBlocks, streamingContent);
+                  } else if (data.type === 'response.file_search.completed') {
+                    // Handle file search tool completion event
+                    const toolExecution = activeToolExecutions.get('file_search');
+                    if (toolExecution) {
+                      toolExecution.status = 'completed';
+                      
+                      // Update the last tool progress block
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'tool_progress') {
+                          contentBlocks[i].toolExecutions = Array.from(activeToolExecutions.values());
+                          break;
+                        }
+                      }
+                      
+                      updateMessage(contentBlocks, streamingContent);
+                    }
+                  } else if (data.type === 'response.agentic_search.in_progress') {
+                    // Handle agentic search tool start event
+                    const toolExecution: ToolExecution = {
+                      serverName: 'agentic_search',
+                      toolName: 'search',
+                      status: 'in_progress',
+                      agenticSearchLogs: []
+                    };
+                    activeToolExecutions.set('agentic_search', toolExecution);
+                    
+                    // Find existing tool progress block or create new one
+                    let toolProgressBlock = contentBlocks.find(block => block.type === 'tool_progress');
+                    if (!toolProgressBlock) {
+                      toolProgressBlock = {
+                        type: 'tool_progress',
+                        toolExecutions: Array.from(activeToolExecutions.values())
+                      };
+                      contentBlocks.push(toolProgressBlock);
+                    } else {
+                      // Update existing tool progress block
+                      toolProgressBlock.toolExecutions = Array.from(activeToolExecutions.values());
+                    }
+                    currentTextBlock = null; // Reset text block for potential next text
+                    
+                    updateMessage(contentBlocks, streamingContent);
+                  } else if (data.type === 'response.agentic_search.query_phase.iteration') {
+                    // Handle agentic search iteration logs
+                    const toolExecution = activeToolExecutions.get('agentic_search');
+                    if (toolExecution && data.iteration && data.query) {
+                      const logEntry: AgenticSearchLog = {
+                        iteration: data.iteration,
+                        query: data.query,
+                        reasoning: data.reasoning || '',
+                        citations: data.citations || [],
+                        remaining_iterations: data.remaining_iterations || 0
+                      };
+                      
+                      if (!toolExecution.agenticSearchLogs) {
+                        toolExecution.agenticSearchLogs = [];
+                      }
+                      toolExecution.agenticSearchLogs.push(logEntry);
+                      
+                      // Update the tool progress block
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'tool_progress') {
+                          contentBlocks[i].toolExecutions = Array.from(activeToolExecutions.values());
+                          break;
+                        }
+                      }
+                      
+                      updateMessage(contentBlocks, streamingContent);
+                    }
+                  } else if (data.type === 'response.agentic_search.completed') {
+                    // Handle agentic search tool completion event
+                    const toolExecution = activeToolExecutions.get('agentic_search');
+                    if (toolExecution) {
+                      toolExecution.status = 'completed';
+                      
+                      // Update the last tool progress block
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'tool_progress') {
+                          contentBlocks[i].toolExecutions = Array.from(activeToolExecutions.values());
+                          break;
+                        }
+                      }
+                      
+                      updateMessage(contentBlocks, streamingContent);
                     }
                   }
                 } catch (parseError) {

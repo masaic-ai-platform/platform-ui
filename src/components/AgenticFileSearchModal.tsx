@@ -29,6 +29,7 @@ interface AgenticFileSearchModalProps {
   onSave: (config: AgenticFileSearchConfig) => void;
   initialVectorStore?: string;
   initialIterations?: number;
+  initialMaxResults?: number;
   initialSelectedFiles?: string[];
   initialVectorStoreName?: string;
 }
@@ -38,6 +39,7 @@ interface AgenticFileSearchConfig {
   selectedVectorStore: string;
   vectorStoreName: string;
   iterations: number;
+  maxResults: number;
 }
 
 interface VectorStore {
@@ -97,6 +99,7 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
   onSave,
   initialVectorStore,
   initialIterations,
+  initialMaxResults,
   initialSelectedFiles,
   initialVectorStoreName
 }) => {
@@ -106,6 +109,7 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
   const [selectedFiles, setSelectedFiles] = useState<string[]>(initialSelectedFiles || []);
   const [selectedVectorStore, setSelectedVectorStore] = useState<string>(initialVectorStore || '');
   const [iterations, setIterations] = useState<number>(initialIterations || 3);
+  const [maxResults, setMaxResults] = useState<number>(initialMaxResults || 4);
   const [newVectorStoreName, setNewVectorStoreName] = useState('');
   const [loading, setLoading] = useState({ stores: false, files: false, vectorStoreFiles: false });
   const [uploadStatus, setUploadStatus] = useState<FileUploadStatus>({ uploading: false });
@@ -256,12 +260,18 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
     
     // If no files selected, just save the vector store configuration
     if (selectedFiles.length === 0) {
-      onSave({
+      const config = {
         selectedFiles: [],
         selectedVectorStore,
         vectorStoreName,
-        iterations
-      });
+        iterations,
+        maxResults
+      };
+      
+      // Save to localStorage
+      saveAgenticFileSearchToolToStorage(config);
+      
+      onSave(config);
       onOpenChange(false);
       return;
     }
@@ -348,14 +358,28 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
 
       await Promise.all(trackingPromises);
       
-      // All files processed successfully
-      onSave({
+      // All files processed successfully - save configuration but don't close modal
+      const config = {
         selectedFiles,
         selectedVectorStore,
         vectorStoreName,
-        iterations
+        iterations,
+        maxResults
+      };
+      
+      // Save to localStorage
+      saveAgenticFileSearchToolToStorage(config);
+      
+      onSave(config);
+      
+      // Show success message and reset file selection
+      toast({
+        description: "Files added to vector store successfully!",
+        duration: 3000,
       });
-      onOpenChange(false);
+      
+      // Reset file selection for next operation
+      setSelectedFiles([]);
       
     } catch (error) {
       console.error('Error attaching files:', error);
@@ -395,6 +419,30 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
     setSelectedVectorStore(value);
     setShowVectorStoreFiles(true);
     setSelectedFiles([]); // Clear selected files when changing vector store
+    
+    // Don't auto-save or call onSave here - wait for explicit Save Configuration click
+  };
+
+  // Agentic file search tool localStorage functions
+  const saveAgenticFileSearchToolToStorage = (config: AgenticFileSearchConfig) => {
+    try {
+      const stored = localStorage.getItem('platform_agenticFileSearchTool');
+      const agenticFileSearchToolsMap = stored ? JSON.parse(stored) : {};
+      
+      // Use vector store ID as key
+      agenticFileSearchToolsMap[config.selectedVectorStore] = {
+        selectedFiles: config.selectedFiles,
+        selectedVectorStore: config.selectedVectorStore,
+        vectorStoreName: config.vectorStoreName,
+        iterations: config.iterations,
+        maxResults: config.maxResults,
+        lastUpdated: new Date().toISOString()
+      };
+      
+      localStorage.setItem('platform_agenticFileSearchTool', JSON.stringify(agenticFileSearchToolsMap));
+    } catch (error) {
+      console.error('Error saving agentic file search tool to storage:', error);
+    }
   };
 
   const handleFileToggle = (fileId: string) => {
@@ -499,6 +547,24 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                 </div>
               </div>
 
+              {/* Max Number of Results */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Max Number of Results</Label>
+                <div className="flex items-center space-x-3">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={maxResults}
+                    onChange={(e) => setMaxResults(Math.max(1, Math.min(50, parseInt(e.target.value) || 4)))}
+                    className="w-20 focus:border-positive-trend/60"
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    Maximum number of search results to return (1-50)
+                  </span>
+                </div>
+              </div>
+
               {/* Vector Stores List */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Select Vector Store</Label>
@@ -508,19 +574,23 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                   disabled={loading.stores}
                 >
                   <SelectTrigger className="w-full focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0">
-                    <div className="flex items-center space-x-2 flex-1 min-w-0">
-                      {selectedVectorStore ? (
-                        <>
-                          <Database className="h-3 w-3 shrink-0" />
-                          <SelectValue />
-                          <Badge variant="outline" className="text-xs shrink-0">
-                            {vectorStores.find(vs => vs.id === selectedVectorStore)?.file_counts.total || 0} files
-                          </Badge>
-                        </>
-                      ) : (
-                        <SelectValue placeholder={loading.stores ? "Loading..." : "Select vector store..."} />
-                      )}
-                    </div>
+                    {selectedVectorStore ? (
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center space-x-2 flex-1 min-w-0">
+                          <span className="font-medium text-sm truncate">
+                            {vectorStores.find(vs => vs.id === selectedVectorStore)?.name || selectedVectorStore}
+                          </span>
+                          <span className="text-xs text-muted-foreground/70 font-mono truncate">
+                            ({selectedVectorStore})
+                          </span>
+                        </div>
+                        <Badge variant="outline" className="text-xs border-positive-trend/30 text-positive-trend shrink-0">
+                          {vectorStores.find(vs => vs.id === selectedVectorStore)?.file_counts.total || 0} files
+                        </Badge>
+                      </div>
+                    ) : (
+                      <SelectValue placeholder={loading.stores ? "Loading..." : "Select vector store..."} />
+                    )}
                   </SelectTrigger>
                   <SelectContent 
                     className="max-h-60"
@@ -542,29 +612,33 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                     ) : (
                       vectorStores.map((store) => (
                         <SelectItem key={store.id} value={store.id} className="p-3">
-                          <div className="flex items-center justify-between w-full">
-                            <div className="flex items-center space-x-2 flex-1 min-w-0">
-                              <Database className="h-3 w-3 text-muted-foreground shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-sm truncate">{store.name}</div>
-                                <div className="text-[10px] text-muted-foreground/70 font-mono">{store.id}</div>
-                              </div>
+                          <div className="flex items-center w-full">
+                            <div className="w-6 flex justify-center shrink-0">
+                              {selectedVectorStore === store.id && (
+                                <Check className="h-4 w-4 text-green-500" />
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2 flex-1 min-w-0 px-2">
+                              <span className="font-medium text-sm truncate">{store.name}</span>
+                              <span className="text-xs text-muted-foreground/70 font-mono truncate">({store.id})</span>
+                            </div>
+                            <div className="flex items-center space-x-2 shrink-0">
                               <Badge variant="outline" className="text-xs text-muted-foreground border-border/40">
                                 {store.file_counts.total} files
                               </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 hover:bg-positive-trend/20"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  copyToClipboard(store.id, 'Vector store');
+                                }}
+                                title={`Copy ID: ${store.id}`}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 hover:bg-positive-trend/20 shrink-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                copyToClipboard(store.id, 'Vector store');
-                              }}
-                              title={`Copy ID: ${store.id}`}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
                           </div>
                         </SelectItem>
                       ))
@@ -733,7 +807,7 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
           {/* Footer */}
           <div className="flex items-center justify-between p-6 pt-4 border-t border-border">
             <div className="text-xs text-muted-foreground">
-              {selectedFiles.length} file(s) selected • {iterations} iteration{iterations !== 1 ? 's' : ''} • Vector store required, files optional
+              {selectedFiles.length} file(s) selected • {iterations} iteration{iterations !== 1 ? 's' : ''} • Max {maxResults} result{maxResults !== 1 ? 's' : ''} • Vector store required, files optional
             </div>
             <div className="flex space-x-3">
               <Button

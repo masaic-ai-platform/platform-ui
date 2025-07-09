@@ -71,7 +71,7 @@ const ApiKeysModal: React.FC<ApiKeysModalProps> = ({
   // Load saved API keys from localStorage
   const loadSavedApiKeys = () => {
     try {
-      const saved = localStorage.getItem('platform_apiKeysys');
+      const saved = localStorage.getItem('platform_apiKeys');
       if (saved) {
         const savedKeys: SavedApiKey[] = JSON.parse(saved);
         const keysMap: Record<string, string> = {};
@@ -96,7 +96,7 @@ const ApiKeysModal: React.FC<ApiKeysModalProps> = ({
         }
       });
 
-      localStorage.setItem('platform_apiKeysys', JSON.stringify(keysArray));
+      localStorage.setItem('platform_apiKeys', JSON.stringify(keysArray));
       
       toast({
         description: "API keys saved successfully!",
