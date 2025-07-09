@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Key, Loader2, Eye, EyeOff } from 'lucide-react';
 
-const apiUrl = 'http://localhost:6644';
+const apiUrl = import.meta.env.VITE_DASHBOARD_API_URL || 'http://localhost:6644';
 
 interface ApiKeysModalProps {
   open: boolean;

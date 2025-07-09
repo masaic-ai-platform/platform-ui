@@ -536,6 +536,55 @@ function loadStickyHeaderSettings(): StickyHeaderSettings {
 }
 ```
 
+## File Search and Agentic File Search Tool Configuration Persistence
+
+### Storage Keys
+
+- `platform_fileSearchTools`: Stores the configuration for the File Search tool
+- `platform_agenticFileSearchTools`: Stores the configuration for the Agentic File Search tool
+
+### Data Structure
+
+```json
+// File Search Tool
+{
+  "type": "file_search",
+  "selectedVectorStores": ["vs_123", "vs_456"]
+}
+
+// Agentic File Search Tool
+{
+  "type": "agentic_search",
+  "selectedVectorStores": ["vs_123", "vs_456"],
+  "max_iterations": 3,
+  "max_num_results": 4
+}
+```
+
+### Usage
+
+- When a user saves the configuration in the File Search modal, the selected vector store IDs are saved to `platform_fileSearchTools` in the above format.
+- When a user saves the configuration in the Agentic File Search modal, the selected vector store IDs, max iterations, and max number of results are saved to `platform_agenticFileSearchTools` in the above format.
+- No file IDs or file associations are stored in localStorage; only the vector store configuration is persisted.
+
+### Example
+
+```javascript
+// Save File Search configuration
+localStorage.setItem('platform_fileSearchTools', JSON.stringify({
+  type: 'file_search',
+  selectedVectorStores: ['vs_abc', 'vs_xyz']
+}));
+
+// Save Agentic File Search configuration
+localStorage.setItem('platform_agenticFileSearchTools', JSON.stringify({
+  type: 'agentic_search',
+  selectedVectorStores: ['vs_abc', 'vs_xyz'],
+  max_iterations: 5,
+  max_num_results: 10
+}));
+```
+
 ## Data Validation and Migration
 
 ### Storage Version Management

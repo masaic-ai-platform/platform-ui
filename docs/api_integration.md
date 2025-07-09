@@ -771,3 +771,28 @@ The application supports dynamic configuration through:
 - Maintained link functionality while preventing overflow
 
 The rendering system now provides 100% reliable content formatting based on the actual API request format type, with robust tool progress tracking and proper link handling for optimal user experience. 
+
+## File Search and Agentic File Search Tool Configuration (Local Storage)
+
+When users configure file search or agentic file search tools, their selections are persisted in localStorage for future sessions. Only the vector store IDs and agentic parameters are stored—file associations are not persisted.
+
+### Storage Keys and Example Structure
+
+- `platform_fileSearchTools`:
+  ```json
+  {
+    "type": "file_search",
+    "selectedVectorStores": ["vs_123", "vs_456"]
+  }
+  ```
+- `platform_agenticFileSearchTools`:
+  ```json
+  {
+    "type": "agentic_search",
+    "selectedVectorStores": ["vs_123", "vs_456"],
+    "max_iterations": 3,
+    "max_num_results": 4
+  }
+  ```
+
+These configurations are used to pre-populate the modals and tool selection UI on subsequent visits. 

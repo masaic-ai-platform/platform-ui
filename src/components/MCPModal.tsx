@@ -63,6 +63,8 @@ const MCPModal: React.FC<MCPModalProps> = ({
   const [selectedTool, setSelectedTool] = useState<MCPTool | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
+  const apiUrl = import.meta.env.VITE_DASHBOARD_API_URL || 'http://localhost:6644';
+
   const handleConnect = async () => {
     setIsConnecting(true);
     
@@ -89,7 +91,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
       };
 
       // Make API call
-      const response = await fetch('http://localhost:6644/v1/dashboard/mcp/list_actions', {
+      const response = await fetch(`${apiUrl}/v1/dashboard/mcp/list_actions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -163,7 +165,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
       };
 
       // Make API call
-      const response = await fetch('http://localhost:6644/v1/dashboard/mcp/list_actions', {
+      const response = await fetch(`${apiUrl}/v1/dashboard/mcp/list_actions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
