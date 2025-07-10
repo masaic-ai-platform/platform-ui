@@ -5,9 +5,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
-import { Loader2, Upload, FileSearch, Copy, Eye, EyeOff, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { Loader2, Upload, FileSearch, Copy, Plus, Check } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
-import { Checkbox } from './ui/checkbox';
 
 interface AgenticFileSearchModalProps {
   open: boolean;
@@ -59,20 +58,6 @@ interface VectorStoreStatus {
   error?: string;
 }
 
-interface VectorStoreFile {
-  id: string;
-  object: string;
-  created_at: number;
-  usage_bytes: number;
-  vector_store_id: string;
-  status: 'in_progress' | 'completed' | 'failed';
-  attributes: {
-    category: string;
-    language: string;
-    filename: string;
-  };
-}
-
 interface FileUploadProgress {
   fileId: string;
   status: 'uploading' | 'processing' | 'completed' | 'failed';
@@ -91,9 +76,9 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
 }) => {
   const [vectorStores, setVectorStores] = useState<VectorStore[]>([]);
   const [files, setFiles] = useState<FileItem[]>([]);
-  const [vectorStoreFiles, setVectorStoreFiles] = useState<VectorStoreFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<string[]>(initialSelectedFiles || []);
   const [selectedVectorStores, setSelectedVectorStores] = useState<string[]>(initialVectorStores || []);
+  const [vectorStoreFiles, setVectorStoreFiles] = useState<Record<string, string[]>>({});
   const [iterations, setIterations] = useState<number>(initialIterations || 3);
   const [maxResults, setMaxResults] = useState<number>(initialMaxResults || 4);
   const [newVectorStoreName, setNewVectorStoreName] = useState('');
@@ -102,8 +87,6 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
   const [vectorStoreStatus, setVectorStoreStatus] = useState<VectorStoreStatus>({ creating: false });
   const [attachingFiles, setAttachingFiles] = useState<string[]>([]);
   const [uploadProgress, setUploadProgress] = useState<FileUploadProgress[]>([]);
-  const [showVectorStoreFiles, setShowVectorStoreFiles] = useState(false);
-  const [showFilesSection, setShowFilesSection] = useState(false);
 
   const { toast } = useToast();
   const apiUrl = import.meta.env.VITE_DASHBOARD_API_URL || 'http://localhost:6644';
@@ -221,24 +204,8 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
     }
   };
 
-  // Fetch files from vector store
-  const fetchVectorStoreFiles = async (vectorStoreId: string) => {
-    setLoading(prev => ({ ...prev, vectorStoreFiles: true }));
-    try {
-      const response = await fetch(`${apiUrl}/v1/vector_stores/${vectorStoreId}/files`);
-      if (!response.ok) throw new Error('Failed to fetch vector store files');
-      const data = await response.json();
-      setVectorStoreFiles(data.data || []);
-    } catch (error) {
-      console.error('Error fetching vector store files:', error);
-      setVectorStoreFiles([]);
-    } finally {
-      setLoading(prev => ({ ...prev, vectorStoreFiles: false }));
-    }
-  };
-
-  // Track file upload status using the provided API
-  const trackFileStatus = async (vectorStoreId: string, fileId: string): Promise<VectorStoreFile> => {
+  // Track file status using the provided API
+  const trackFileStatus = async (vectorStoreId: string, fileId: string): Promise<any> => {
     const response = await fetch(`${apiUrl}/v1/vector_stores/${vectorStoreId}/files/${fileId}`);
     if (!response.ok) throw new Error('Failed to check file status');
     return response.json();
@@ -288,12 +255,13 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
 
   // Associate files with vector stores
   const handleAssociateFiles = async () => {
-    if (selectedFiles.length === 0 || selectedVectorStores.length === 0) return;
+    const filesToAssociate = getFilesToAssociate();
+    if (filesToAssociate.length === 0 || selectedVectorStores.length === 0) return;
 
-    setAttachingFiles(selectedFiles);
+    setAttachingFiles(filesToAssociate);
     
     // Initialize upload progress
-    const initialProgress = selectedFiles.map(fileId => ({
+    const initialProgress = filesToAssociate.map(fileId => ({
       fileId,
       status: 'uploading' as const
     }));
@@ -302,7 +270,7 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
     try {
       // Start all associations for all vector stores
       const associationPromises = selectedVectorStores.flatMap(vectorStoreId =>
-        selectedFiles.map(async (fileId) => {
+        filesToAssociate.map(async (fileId) => {
           try {
             // Associate file with vector store using the provided API
             await associateFileWithVectorStore(vectorStoreId, fileId);
@@ -401,6 +369,9 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
 
   // Handle file selection toggle
   const handleFileToggle = (fileId: string) => {
+    // Don't allow toggling if file is already in a vector store
+    if (isFileInVectorStore(fileId)) return;
+    
     setSelectedFiles(prev => 
       prev.includes(fileId) 
         ? prev.filter(id => id !== fileId)
@@ -417,23 +388,56 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Fetch vector store files
+  const fetchVectorStoreFiles = async (vectorStoreId: string): Promise<string[]> => {
+    try {
+      const response = await fetch(`${apiUrl}/v1/vector_stores/${vectorStoreId}/files`);
+      if (!response.ok) throw new Error('Failed to fetch vector store files');
+      const data = await response.json();
+      return data.data?.map((file: any) => file.id) || [];
+    } catch (error) {
+      console.error('Error fetching vector store files:', error);
+      return [];
+    }
+  };
+
+  // Check if a file is already in any selected vector store
+  const isFileInVectorStore = (fileId: string): boolean => {
+    return Object.values(vectorStoreFiles).some(storeFiles => storeFiles.includes(fileId));
+  };
+
+  // Get files that need to be associated (not already in vector stores)
+  const getFilesToAssociate = (): string[] => {
+    return selectedFiles.filter(fileId => !isFileInVectorStore(fileId));
+  };
+
   // Load initial data when modal opens
   useEffect(() => {
     if (open) {
       fetchVectorStores();
-      if (showFilesSection) {
-        fetchFiles();
-      }
+      fetchFiles();
     }
-  }, [open, showFilesSection]);
+  }, [open]);
 
-  // Load vector store files when a single vector store is selected
+  // Load vector store files when vector stores change
   useEffect(() => {
-    if (selectedVectorStores.length === 1) {
-      fetchVectorStoreFiles(selectedVectorStores[0]);
-    } else {
-      setVectorStoreFiles([]);
-    }
+    const loadVectorStoreFiles = async () => {
+      if (selectedVectorStores.length > 0) {
+        setLoading(prev => ({ ...prev, vectorStoreFiles: true }));
+        const fileMap: Record<string, string[]> = {};
+        
+        for (const storeId of selectedVectorStores) {
+          fileMap[storeId] = await fetchVectorStoreFiles(storeId);
+        }
+        
+        setVectorStoreFiles(fileMap);
+        setLoading(prev => ({ ...prev, vectorStoreFiles: false }));
+      } else {
+        setVectorStoreFiles({});
+      }
+    };
+
+    loadVectorStoreFiles();
   }, [selectedVectorStores]);
 
   return (
@@ -534,27 +538,31 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                       vectorStores.map((store) => (
                         <div
                           key={store.id}
-                          className={`p-2 rounded-lg border transition-colors cursor-pointer ${
+                          className={`p-2 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-positive-trend/20 ${
                             selectedVectorStores.includes(store.id) 
-                              ? 'border-positive-trend bg-positive-trend/5' 
-                              : 'border-border/20 hover:bg-muted/50'
+                              ? 'border-positive-trend bg-positive-trend/10 shadow-sm' 
+                              : 'border-border/20 hover:border-positive-trend/40 hover:bg-positive-trend/5'
                           }`}
                           onClick={() => handleVectorStoreToggle(store.id)}
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleVectorStoreToggle(store.id);
+                            }
+                          }}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3 flex-1">
-                              <Checkbox
-                                checked={selectedVectorStores.includes(store.id)}
-                                onCheckedChange={() => handleVectorStoreToggle(store.id)}
-                                className="data-[state=checked]:bg-positive-trend data-[state=checked]:border-positive-trend"
-                              />
+                              <div className="flex items-center justify-center w-5 h-5">
+                                {selectedVectorStores.includes(store.id) && (
+                                  <Check className="h-4 w-4 text-positive-trend" />
+                                )}
+                              </div>
                               <div className="flex-1 min-w-0">
                                 <p className="font-medium truncate">{store.name}</p>
                                 <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                                   <span>{store.file_counts.total} files</span>
-                                  <Badge variant="outline" className="text-xs">
-                                    {store.status}
-                                  </Badge>
                                 </div>
                               </div>
                             </div>
@@ -577,173 +585,114 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                 </div>
               </div>
 
-              {/* Files Section - Expandable */}
-              <div className="flex flex-col space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-sm font-medium">Files (Optional)</Label>
-                    <p className="text-xs text-muted-foreground">Select files to associate with vector stores</p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowFilesSection(!showFilesSection)}
-                    className="text-xs"
-                  >
-                    {showFilesSection ? (
-                      <>
-                        <ChevronUp className="h-4 w-4 mr-1" />
-                        Hide Files
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="h-4 w-4 mr-1" />
-                        Show Files
-                      </>
-                    )}
-                  </Button>
+              {/* Files Section - Always Visible */}
+              <div className="flex flex-col space-y-4 h-full">
+                <div>
+                  <Label className="text-sm font-medium">Available Files...</Label>
+                  <p className="text-xs text-muted-foreground">Select files to associate with vector stores</p>
                 </div>
 
-                {showFilesSection && (
-                  <>
-                    {/* File Upload */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Upload File</Label>
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          type="file"
-                          onChange={handleFileUpload}
-                          disabled={uploadStatus.uploading}
-                          className="flex-1 focus:border-positive-trend/60"
-                        />
-                        {uploadStatus.uploading && (
-                          <Loader2 className="h-4 w-4 animate-spin text-positive-trend" />
-                        )}
+                {/* Files List - Adaptive height with scrollbar */}
+                <div className="flex-1 min-h-0 max-h-[40vh] overflow-hidden">
+                  <div className="h-full overflow-y-auto space-y-2 border border-border/40 rounded-lg bg-card/50 p-3" style={{ scrollbarWidth: 'thin' }}>
+                    {loading.files ? (
+                      <div className="flex justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-positive-trend" />
                       </div>
-                      {uploadStatus.error && (
-                        <p className="text-xs text-destructive">{uploadStatus.error}</p>
-                      )}
-                    </div>
-
-                    {/* Files List */}
-                    <div className="flex-1 overflow-hidden">
-                      <div className="h-full max-h-80 overflow-y-auto space-y-2 border border-border/40 rounded-lg bg-card/50 p-3" style={{ scrollbarWidth: 'thin' }}>
-                        {loading.files ? (
-                          <div className="flex justify-center py-8">
-                            <Loader2 className="h-6 w-6 animate-spin text-positive-trend" />
-                          </div>
-                        ) : files.length === 0 ? (
-                          <p className="text-center text-muted-foreground py-8">No files found</p>
-                        ) : (
-                          files.map((file) => (
-                            <div
-                              key={file.id}
-                              className={`p-3 rounded-lg border transition-colors cursor-pointer ${
-                                selectedFiles.includes(file.id) 
-                                  ? 'border-positive-trend bg-positive-trend/5' 
-                                  : 'border-border/20 hover:bg-muted/50'
-                              }`}
-                              onClick={() => handleFileToggle(file.id)}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-3 flex-1">
-                                  <Checkbox
-                                    checked={selectedFiles.includes(file.id)}
-                                    onCheckedChange={() => handleFileToggle(file.id)}
-                                    className="data-[state=checked]:bg-positive-trend data-[state=checked]:border-positive-trend"
-                                  />
-                                  <div className="flex-1 min-w-0">
+                    ) : files.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8">No files found</p>
+                    ) : (
+                      files.map((file) => {
+                        const isInVectorStore = isFileInVectorStore(file.id);
+                        const isSelected = selectedFiles.includes(file.id) || isInVectorStore;
+                        
+                        return (
+                          <div
+                            key={file.id}
+                            className={`p-3 rounded-lg border transition-all duration-200 ${
+                              isInVectorStore 
+                                ? 'border-positive-trend bg-positive-trend/5 opacity-75 cursor-not-allowed' 
+                                : `cursor-pointer hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-positive-trend/20 ${
+                                    isSelected 
+                                      ? 'border-positive-trend bg-positive-trend/10 shadow-sm' 
+                                      : 'border-border/20 hover:border-positive-trend/40 hover:bg-positive-trend/5'
+                                  }`
+                            }`}
+                            onClick={() => handleFileToggle(file.id)}
+                            tabIndex={isInVectorStore ? -1 : 0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleFileToggle(file.id);
+                              }
+                            }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3 flex-1">
+                                <div className="flex items-center justify-center w-5 h-5">
+                                  {isSelected && (
+                                    <Check className="h-4 w-4 text-positive-trend" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center space-x-2">
                                     <p className="font-medium truncate">{file.filename}</p>
-                                    <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                                      <span>{formatBytes(file.bytes)}</span>
-                                      <Badge variant="outline" className="text-xs">
-                                        {file.status}
+                                    {isInVectorStore && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        In Store
                                       </Badge>
-                                    </div>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                                    <span>{formatBytes(file.bytes)}</span>
+                                    <Badge variant="outline" className="text-xs">
+                                      {file.status}
+                                    </Badge>
                                   </div>
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    copyToClipboard(file.id, 'File');
-                                  }}
-                                  className="h-6 w-6 p-0 hover:bg-positive-trend/20"
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </Button>
                               </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  copyToClipboard(file.id, 'File');
+                                }}
+                                className="h-6 w-6 p-0 hover:bg-positive-trend/20"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
                             </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Associate Files Button */}
-                    {selectedFiles.length > 0 && selectedVectorStores.length > 0 && (
-                      <div className="pt-2">
-                        <Button 
-                          onClick={handleAssociateFiles}
-                          disabled={attachingFiles.length > 0}
-                          className="w-full bg-positive-trend hover:bg-positive-trend/90 text-white"
-                          size="sm"
-                        >
-                          {attachingFiles.length > 0 ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              Associating {selectedFiles.length} file(s)...
-                            </>
-                          ) : (
-                            `Associate ${selectedFiles.length} file(s) with ${selectedVectorStores.length} store(s)`
-                          )}
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Vector Store Files */}
-                    {selectedVectorStores.length === 1 && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-sm font-medium">Vector Store Files</Label>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowVectorStoreFiles(!showVectorStoreFiles)}
-                            className="text-xs"
-                          >
-                            {showVectorStoreFiles ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </div>
-
-                        {showVectorStoreFiles && (
-                          <div className="max-h-32 overflow-y-auto space-y-1 border border-border/40 rounded-lg bg-card/50 p-2" style={{ scrollbarWidth: 'thin' }}>
-                            {loading.vectorStoreFiles ? (
-                              <div className="flex justify-center py-4">
-                                <Loader2 className="h-4 w-4 animate-spin text-positive-trend" />
-                              </div>
-                            ) : vectorStoreFiles.length === 0 ? (
-                              <p className="text-xs text-muted-foreground py-2">No files in this vector store</p>
-                            ) : (
-                              vectorStoreFiles.map((file) => (
-                                <div key={file.id} className="flex items-center justify-between p-2 bg-muted/30 rounded text-xs">
-                                  <span className="truncate">{file.attributes.filename}</span>
-                                  <Badge variant="outline" className="text-xs">
-                                    {file.status}
-                                  </Badge>
-                                </div>
-                              ))
-                            )}
                           </div>
-                        )}
-                      </div>
+                        );
+                      })
                     )}
-                  </>
-                )}
+                  </div>
+                </div>
+
+                {/* Associate Files Button */}
+                {(() => {
+                  const filesToAssociate = getFilesToAssociate();
+                  return filesToAssociate.length > 0 && selectedVectorStores.length > 0 && (
+                    <div className="pt-2">
+                      <Button 
+                        onClick={handleAssociateFiles}
+                        disabled={attachingFiles.length > 0}
+                        className="w-full bg-positive-trend hover:bg-positive-trend/90 text-white"
+                        size="sm"
+                      >
+                        {attachingFiles.length > 0 ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Associating {filesToAssociate.length} file(s)...
+                          </>
+                        ) : (
+                          `Associate ${filesToAssociate.length} new file(s) with ${selectedVectorStores.length} store(s)`
+                        )}
+                      </Button>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -785,6 +734,25 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
               >
                 Save Configuration
               </Button>
+            </div>
+            
+            {/* File Upload - Bottom Right */}
+            <div className="flex flex-col space-y-1">
+              <div className="flex items-center space-x-2">
+                <Label className="text-sm font-medium">Upload File:</Label>
+                <Input
+                  type="file"
+                  onChange={handleFileUpload}
+                  disabled={uploadStatus.uploading}
+                  className="w-48 focus:border-positive-trend focus:ring-2 focus:ring-positive-trend/20"
+                />
+                {uploadStatus.uploading && (
+                  <Loader2 className="h-4 w-4 animate-spin text-positive-trend" />
+                )}
+              </div>
+              {uploadStatus.error && (
+                <p className="text-xs text-destructive text-right">{uploadStatus.error}</p>
+              )}
             </div>
           </div>
         </div>
