@@ -44,31 +44,12 @@ interface ToolsSelectionModalProps {
 }
 
 const availableTools: Tool[] = [
-  {
-    id: 'mcp_server',
-    name: 'MCP Server',
-    icon: MCP
-  },
-  {
-    id: 'file_search',
-    name: 'File Search',
-    icon: Search
-  },
-  {
-    id: 'agentic_file_search',
-    name: 'Agentic File Search',
-    icon: FileSearch
-  },
-  // {
-  //   id: 'image_generation',
-  //   name: 'Image Generation',
-  //   icon: Image
-  // },
-  {
-    id: 'think',
-    name: 'Think',
-    icon: Brain
-  }
+  { id: 'mcp_server', name: 'MCP Server', icon: MCP },
+  { id: 'file_search', name: 'File Search', icon: Search },
+  { id: 'agentic_file_search', name: 'Agentic File Search', icon: FileSearch },
+  { id: 'function', name: 'Function', icon: Code },
+  { id: 'image_generation', name: 'Image Generation', icon: Image },
+  { id: 'think', name: 'Think', icon: Brain }
 ];
 
 const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
@@ -285,16 +266,18 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
             {availableTools.map((tool) => {
               const IconComponent = tool.icon;
               const isSelected = isToolSelected(tool.id);
+              const isNonClickable = ['function', 'image_generation', 'think'].includes(tool.id);
+              const isDisabled = isSelected || isNonClickable;
               
               return (
                 <Button
                   key={tool.id}
                   variant="ghost"
-                  className={`w-full justify-start h-auto p-3 hover:bg-positive-trend/10 hover:text-positive-trend focus:bg-positive-trend/10 focus:text-positive-trend rounded-md ${
-                    isSelected ? 'opacity-50 cursor-not-allowed' : ''
+                  className={`w-full justify-start h-auto p-3 rounded-md ${
+                    isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-positive-trend/10 hover:text-positive-trend focus:bg-positive-trend/10 focus:text-positive-trend'
                   }`}
-                  onClick={() => !isSelected && handleToolSelect(tool)}
-                  disabled={isSelected}
+                  onClick={() => !isDisabled && handleToolSelect(tool)}
+                  disabled={isDisabled}
                 >
                   <div className="flex items-center space-x-3 w-full">
                     <IconComponent className="h-4 w-4 shrink-0" />
