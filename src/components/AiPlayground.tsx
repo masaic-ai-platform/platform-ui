@@ -623,7 +623,7 @@ const AiPlayground: React.FC = () => {
                   const data = JSON.parse(line.slice(6));
                   
                   // Handle different event types
-                  if (data.type === 'response.created' || data.type === 'response.completed') {
+                  if (data.type === 'response.completed') {
                     if (data.response?.id) {
                       responseId = data.response.id;
                     }

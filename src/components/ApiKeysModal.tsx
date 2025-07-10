@@ -144,8 +144,8 @@ const ApiKeysModal: React.FC<ApiKeysModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md w-[90vw] max-h-[80vh]">
-        <DialogHeader className="pb-4">
+      <DialogContent className="max-w-md w-[90vw] max-h-[80vh] flex flex-col overflow-hidden">
+        <DialogHeader className="pb-4 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-positive-trend/10 rounded-lg flex items-center justify-center">
               <Key className="h-5 w-5 text-positive-trend" />
@@ -183,11 +183,15 @@ const ApiKeysModal: React.FC<ApiKeysModalProps> = ({
                   </Label>
                   <div className="relative">
                     <Input
+                      autoComplete="new-password"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck="false"
                       type={showKeys[provider.name] ? 'text' : 'password'}
                       value={apiKeys[provider.name] || ''}
                       onChange={(e) => handleApiKeyChange(provider.name, e.target.value)}
                       placeholder={`Enter ${provider.name} API key (optional)`}
-                      className="pr-10 focus:border-positive-trend/60"
+                      className="pr-10 focus:outline-none focus:border-positive-trend focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                     <Button
                       variant="ghost"
@@ -212,8 +216,7 @@ const ApiKeysModal: React.FC<ApiKeysModalProps> = ({
               {!requiredProvider && (
                 <div className="mt-6 p-3 bg-muted/30 rounded-lg">
                   <p className="text-xs text-muted-foreground">
-                    💡 API keys are stored locally in your browser and never sent to our servers. 
-                    You can skip providers you don't plan to use.
+                    API keys are stored locally in your browser and sent to our server with request towards model.
                   </p>
                 </div>
               )}
@@ -222,7 +225,7 @@ const ApiKeysModal: React.FC<ApiKeysModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between pt-4 border-t border-border">
+        <div className="flex justify-between pt-4 border-t border-border flex-shrink-0">
           <Button
             variant="ghost"
             onClick={() => onOpenChange(false)}
