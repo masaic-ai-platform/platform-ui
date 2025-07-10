@@ -69,6 +69,26 @@ const AgenticSearchLogsView: React.FC<AgenticSearchLogsViewProps> = ({ logs }) =
 const ToolExecutionProgress: React.FC<ToolExecutionProgressProps> = ({ toolExecutions }) => {
   const [expandedTools, setExpandedTools] = useState<Set<string>>(new Set());
 
+  // Auto-expand agentic search tools that have logs
+  useEffect(() => {
+    const newExpanded = new Set(expandedTools);
+    let hasChanges = false;
+
+    toolExecutions.forEach((tool, toolIndex) => {
+      if (tool.serverName === 'agentic_search' && tool.agenticSearchLogs && tool.agenticSearchLogs.length > 0) {
+        const toolKey = `agentic_search_${toolIndex}`;
+        if (!newExpanded.has(toolKey)) {
+          newExpanded.add(toolKey);
+          hasChanges = true;
+        }
+      }
+    });
+
+    if (hasChanges) {
+      setExpandedTools(newExpanded);
+    }
+  }, [toolExecutions]);
+
   // Group tools by server name
   const groupedByServer = toolExecutions.reduce((acc, tool) => {
     if (!acc[tool.serverName]) {
@@ -170,7 +190,7 @@ const ToolExecutionProgress: React.FC<ToolExecutionProgressProps> = ({ toolExecu
                     )}
                   </div>
 
-                  {/* Agentic search logs (only show when expanded and logs exist) */}
+                  {/* Agentic search logs (show when expanded and logs exist) */}
                   {tool.serverName === 'agentic_search' && 
                    isExpanded && 
                    hasLogs && (
