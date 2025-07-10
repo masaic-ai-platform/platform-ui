@@ -265,16 +265,14 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
           <div className="space-y-1">
             {availableTools.map((tool) => {
               const IconComponent = tool.icon;
-              const isSelected = isToolSelected(tool.id);
-              const isNonClickable = ['function', 'image_generation', 'think'].includes(tool.id);
-              const isDisabled = isSelected || isNonClickable;
+              const isDisabled = ['function', 'image_generation', 'think'].includes(tool.id);
               
               return (
                 <Button
                   key={tool.id}
                   variant="ghost"
-                  className={`w-full justify-start h-auto p-3 rounded-md ${
-                    isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-positive-trend/10 hover:text-positive-trend focus:bg-positive-trend/10 focus:text-positive-trend'
+                  className={`w-full justify-start h-auto p-3 hover:bg-positive-trend/10 hover:text-positive-trend focus:bg-positive-trend/10 focus:text-positive-trend rounded-md ${
+                    isDisabled ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                   onClick={() => !isDisabled && handleToolSelect(tool)}
                   disabled={isDisabled}
