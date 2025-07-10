@@ -13,7 +13,7 @@ interface ToolExecution {
 }
 
 interface ContentBlock {
-  type: 'text' | 'tool_progress';
+  type: 'text' | 'tool_progress' | 'inline_loading';
   content?: string;
   toolExecutions?: ToolExecution[];
 }
@@ -654,6 +654,14 @@ print(response.json())`;
               return (
                 <div key={`text-${index}`}>
                   <ContentRenderer content={contentToDisplay} formatType={formatType} />
+                </div>
+              );
+            } else if (block.type === 'inline_loading') {
+              return (
+                <div key={`loading-${index}`} className="flex items-center space-x-2 mt-2">
+                  <div className="w-2 h-2 bg-foreground rounded-full animate-pulse"></div>
+                  <div className="w-2 h-2 bg-foreground rounded-full animate-pulse" style={{ animationDelay: '200ms' }}></div>
+                  <div className="w-2 h-2 bg-foreground rounded-full animate-pulse" style={{ animationDelay: '400ms' }}></div>
                 </div>
               );
             }

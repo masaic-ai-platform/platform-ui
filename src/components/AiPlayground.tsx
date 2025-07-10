@@ -25,7 +25,7 @@ interface AgenticSearchLog {
 }
 
 interface ContentBlock {
-  type: 'text' | 'tool_progress';
+  type: 'text' | 'tool_progress' | 'inline_loading';
   content?: string;
   toolExecutions?: ToolExecution[];
 }
@@ -596,6 +596,17 @@ const AiPlayground: React.FC = () => {
         ));
       };
 
+      const addInlineLoading = (blocks: ContentBlock[]) => {
+        // Remove any existing inline loading blocks first
+        const blocksWithoutLoading = blocks.filter(block => block.type !== 'inline_loading');
+        // Add new inline loading block at the end
+        return [...blocksWithoutLoading, { type: 'inline_loading' as const }];
+      };
+
+      const removeInlineLoading = (blocks: ContentBlock[]) => {
+        return blocks.filter(block => block.type !== 'inline_loading');
+      };
+
       if (reader) {
         try {
           while (true) {
@@ -620,12 +631,6 @@ const AiPlayground: React.FC = () => {
                     // Start or continue streaming
                     if (!isStreaming) {
                       isStreaming = true;
-                      // Remove loading state when streaming starts
-                      setMessages(prev => prev.map(msg =>
-                        msg.id === assistantMessageId
-                          ? { ...msg, isLoading: false }
-                          : msg
-                      ));
                     }
                     
                     if (data.delta) {
@@ -650,7 +655,9 @@ const AiPlayground: React.FC = () => {
                         }
                       }
                       
-                      updateMessage(contentBlocks, displayContent);
+                      // Remove any inline loading when text streaming starts
+                      const blocksWithoutLoading = removeInlineLoading(contentBlocks);
+                      updateMessage(blocksWithoutLoading, displayContent);
                     }
                   } else if (data.type === 'response.output_text.done') {
                     // Streaming completed for this output
@@ -717,7 +724,9 @@ const AiPlayground: React.FC = () => {
                           }
                         }
                           
-                          updateMessage(contentBlocks, streamingContent);
+                          // Add inline loading when tools complete, indicating we're waiting for next text stream
+                          const blocksWithLoading = addInlineLoading(contentBlocks);
+                          updateMessage(blocksWithLoading, streamingContent);
                         }
                       }
                     }
@@ -759,7 +768,9 @@ const AiPlayground: React.FC = () => {
                         }
                       }
                       
-                      updateMessage(contentBlocks, streamingContent);
+                      // Add inline loading when tools complete, indicating we're waiting for next text stream
+                      const blocksWithLoading = addInlineLoading(contentBlocks);
+                      updateMessage(blocksWithLoading, streamingContent);
                     }
                   } else if (data.type === 'response.agentic_search.in_progress') {
                     // Handle agentic search tool start event
@@ -827,7 +838,9 @@ const AiPlayground: React.FC = () => {
                         }
                       }
                       
-                      updateMessage(contentBlocks, streamingContent);
+                      // Add inline loading when tools complete, indicating we're waiting for next text stream
+                      const blocksWithLoading = addInlineLoading(contentBlocks);
+                      updateMessage(blocksWithLoading, streamingContent);
                     }
                   }
                 } catch (parseError) {
