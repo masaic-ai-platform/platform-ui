@@ -14,8 +14,12 @@ RUN npm ci --legacy-peer-deps
 # Copy source code
 COPY . .
 
+# Copy production environment file if it exists
+COPY .env.prod* ./
+
 # Build the application (skipping lint) with increased memory limit
-RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build
+# Use .env.prod for production build
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build -- --mode prod
 
 # Production stage
 FROM nginx:alpine AS production
