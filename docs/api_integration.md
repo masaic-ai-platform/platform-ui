@@ -796,3 +796,21 @@ When users configure file search or agentic file search tools, their selections 
   ```
 
 These configurations are used to pre-populate the modals and tool selection UI on subsequent visits. 
+
+#### Agentic File Search Tool Example
+
+When using the agentic file search tool, the API payload is the same as `file_search`, but includes additional parameters:
+
+```json
+{
+  "type": "file_search",
+  "vector_store_ids": ["vs_686d2325cfda5b000000"],
+  "max_iterations": 5,
+  "max_num_results": 10
+}
+```
+
+- `max_iterations`: (integer) Number of agentic search iterations to perform.
+- `max_num_results`: (integer) Maximum number of results to return.
+
+> **Note:** File associations (attaching files to vector stores) are performed via separate API calls and are NOT included in the tool configuration or persisted in localStorage. 

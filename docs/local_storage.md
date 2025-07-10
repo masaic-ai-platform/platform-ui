@@ -822,3 +822,5 @@ function createLazyLoader<T>(
 2. **Migration Scripts**: Provide smooth migration paths for storage updates
 3. **Cleanup**: Regularly clean up deprecated or invalid stored data
 4. **Monitoring**: Track storage usage and error rates in production 
+
+> **Note:** Only vector store configuration is persisted. File associations (attaching files to vector stores) are handled via API and are not stored in localStorage. 
