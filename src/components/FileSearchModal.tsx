@@ -5,7 +5,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
-import { Loader2, Upload, Search, Copy, Plus, Check } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Loader2, Upload, Search, Copy, Plus, Check, Trash2 } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 
 interface FileSearchModalProps {
@@ -79,6 +80,8 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
   const [vectorStoreStatus, setVectorStoreStatus] = useState<VectorStoreStatus>({ creating: false });
   const [attachingFiles, setAttachingFiles] = useState<string[]>([]);
   const [uploadProgress, setUploadProgress] = useState<FileUploadProgress[]>([]);
+  const [deletingStores, setDeletingStores] = useState<string[]>([]);
+  const [vectorStoreType, setVectorStoreType] = useState<string>('qdrant-cloud');
 
   const { toast } = useToast();
   const apiUrl = import.meta.env.VITE_DASHBOARD_API_URL || 'http://localhost:6644';
@@ -407,6 +410,30 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
     }
   };
 
+  const handleDeleteVectorStore = async (storeId: string) => {
+    setDeletingStores(prev => [...prev, storeId]);
+    try {
+      const res = await fetch(`${apiUrl}/v1/vector_stores/${storeId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete vector store');
+      // Refresh stores and files
+      await fetchVectorStores();
+      // Remove from selected
+      setSelectedVectorStores(prev => prev.filter(id => id !== storeId));
+      // Refresh vector store files map
+      const fileMap: Record<string, string[]> = {};
+      for (const id of selectedVectorStores.filter(id => id !== storeId)) {
+        fileMap[id] = await fetchVectorStoreFiles(id);
+      }
+      setVectorStoreFiles(fileMap);
+      toast({ description: 'Vector store deleted', duration: 2000 });
+    } catch (error) {
+      console.error('Error deleting vector store:', error);
+      toast({ description: 'Failed to delete vector store', variant: 'destructive', duration: 3000 });
+    } finally {
+      setDeletingStores(prev => prev.filter(id => id !== storeId));
+    }
+  };
+
   // Load initial data when modal opens
   useEffect(() => {
     if (open) {
@@ -458,8 +485,37 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
               {/* Vector Stores Section */}
               <div className="flex flex-col space-y-3 h-full min-h-0">
                 <div className="flex-shrink-0">
-                  <Label className="text-sm font-medium">Vector Stores</Label>
-                  <p className="text-xs text-muted-foreground">Select one or more vector stores for file search</p>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Vector Stores</Label>
+                    <Select value={vectorStoreType} onValueChange={setVectorStoreType}>
+                      <SelectTrigger className="w-48 h-8">
+                        <SelectValue>
+                          {vectorStoreType === 'qdrant-cloud' ? (
+                            <div className="flex items-center space-x-2">
+                              <img src="/qdrant icon.png" alt="Qdrant" className="w-4 h-4" />
+                              <span>Qdrant Cloud</span>
+                            </div>
+                          ) : (
+                            <span>Bring your own vector store</span>
+                          )}
+                        </SelectValue>
+                                              </SelectTrigger>
+                        <SelectContent 
+                          side="bottom" 
+                          align="start" 
+                          sideOffset={8}
+                          className="z-[9999]"
+                        >
+                          <SelectItem value="qdrant-cloud">
+                          <div className="flex items-center space-x-2">
+                            <img src="/qdrant icon.png" alt="Qdrant" className="w-4 h-4" />
+                            <span>Qdrant Cloud</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="bring-your-own">Bring your own vector store</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 {/* Create New Vector Store */}
@@ -531,17 +587,32 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
                                 </div>
                               </div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                copyToClipboard(store.id, 'Vector Store');
-                              }}
-                              className="h-6 w-6 p-0 hover:bg-positive-trend/20"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
+                            <div className="flex space-x-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  copyToClipboard(store.id, 'Vector Store');
+                                }}
+                                className="h-6 w-6 p-0 hover:bg-positive-trend/20"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => { e.stopPropagation(); handleDeleteVectorStore(store.id); }}
+                                className="h-6 w-6 p-0 hover:bg-destructive/20"
+                                disabled={deletingStores.includes(store.id)}
+                              >
+                                {deletingStores.includes(store.id) ? (
+                                  <Loader2 className="h-3 w-3 animate-spin text-destructive" />
+                                ) : (
+                                  <Trash2 className="h-3 w-3 text-destructive" />
+                                )}
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       ))
