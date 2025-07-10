@@ -306,11 +306,24 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
 
       await Promise.all(associationPromises);
 
+      setAttachingFiles([]);
+      setUploadProgress([]);
+      
+      // Refresh vector stores to get updated file counts
+      await fetchVectorStores();
+      
+      // Refresh vector store files to update UI state
+      const fileMap: Record<string, string[]> = {};
+      for (const storeId of selectedVectorStores) {
+        fileMap[storeId] = await fetchVectorStoreFiles(storeId);
+      }
+      setVectorStoreFiles(fileMap);
+      
       // Clear selections after successful association
       setSelectedFiles([]);
       
       toast({
-        description: "Files successfully associated with vector stores",
+        description: `Successfully associated ${filesToAssociate.length} file(s) with ${selectedVectorStores.length} vector store(s)`,
         duration: 3000,
       });
 
@@ -440,17 +453,17 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
             )}
           </DialogHeader>
 
-          <div className="flex-1 overflow-hidden px-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+          <div className="flex-1 overflow-hidden px-6 min-h-0">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full max-h-[calc(80vh-180px)]">
               {/* Vector Stores Section */}
-              <div className="flex flex-col space-y-4">
-                <div>
+              <div className="flex flex-col space-y-3 h-full min-h-0">
+                <div className="flex-shrink-0">
                   <Label className="text-sm font-medium">Vector Stores</Label>
                   <p className="text-xs text-muted-foreground">Select one or more vector stores for file search</p>
                 </div>
 
                 {/* Create New Vector Store */}
-                <div className="space-y-2">
+                <div className="space-y-2 flex-shrink-0">
                   <Label className="text-sm font-medium">Create New Vector Store</Label>
                   <div className="flex space-x-2">
                     <Input
@@ -478,8 +491,8 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
                 </div>
 
                 {/* Vector Stores List */}
-                <div className="flex-1 overflow-hidden">
-                  <div className="h-full max-h-96 overflow-y-auto space-y-2 border border-border/40 rounded-lg bg-card/50 p-3" style={{ scrollbarWidth: 'thin' }}>
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <div className="h-full max-h-64 overflow-y-auto space-y-2 border border-border/40 rounded-lg bg-card/50 p-3" style={{ scrollbarWidth: 'thin' }}>
                     {loading.stores ? (
                       <div className="flex justify-center py-8">
                         <Loader2 className="h-6 w-6 animate-spin text-positive-trend" />
@@ -538,15 +551,15 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
               </div>
 
               {/* Files Section - Always Visible */}
-              <div className="flex flex-col space-y-4 h-full">
-                <div>
+              <div className="flex flex-col space-y-3 h-full min-h-0">
+                <div className="flex-shrink-0">
                   <Label className="text-sm font-medium">Available Files...</Label>
                   <p className="text-xs text-muted-foreground">Select files to associate with vector stores</p>
                 </div>
 
                 {/* Files List - Adaptive height with scrollbar */}
-                <div className="flex-1 min-h-0 max-h-[40vh] overflow-hidden">
-                  <div className="h-full overflow-y-auto space-y-2 border border-border/40 rounded-lg bg-card/50 p-3" style={{ scrollbarWidth: 'thin' }}>
+                <div className="flex-1 min-h-0 overflow-hidden">
+                  <div className="h-full max-h-80 overflow-y-auto space-y-2 border border-border/40 rounded-lg bg-card/50 p-3" style={{ scrollbarWidth: 'thin' }}>
                     {loading.files ? (
                       <div className="flex justify-center py-8">
                         <Loader2 className="h-6 w-6 animate-spin text-positive-trend" />
@@ -649,63 +662,75 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
             </div>
           </div>
 
-          {/* Upload Progress */}
-          {uploadProgress.length > 0 && (
-            <div className="border-t px-6 py-4 space-y-2">
-              <Label className="text-sm font-medium">Upload Progress</Label>
-              {uploadProgress.map((progress) => {
-                const file = files.find(f => f.id === progress.fileId);
-                return (
-                  <div key={progress.fileId} className="flex items-center justify-between text-sm">
-                    <span className="truncate">{file?.filename || progress.fileId}</span>
-                    <div className="flex items-center space-x-2">
-                      {progress.status === 'uploading' && <Loader2 className="h-3 w-3 animate-spin" />}
-                      {progress.status === 'processing' && <Loader2 className="h-3 w-3 animate-spin text-amber-500" />}
-                      {progress.status === 'completed' && <Badge className="text-xs bg-green-500">Completed</Badge>}
-                      {progress.status === 'failed' && <Badge variant="destructive" className="text-xs">Failed</Badge>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
           {/* Footer */}
-          <div className="flex items-center justify-between p-6 pt-4 border-t border-border">
-            <div className="flex space-x-3">
-              <Button
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleSave}
-                disabled={selectedVectorStores.length === 0}
-                className="bg-positive-trend hover:bg-positive-trend/90 text-white"
-              >
-                Save Configuration
-              </Button>
-            </div>
-            
-            {/* File Upload - Bottom Right */}
-            <div className="flex flex-col space-y-1">
-              <div className="flex items-center space-x-2">
-                <Label className="text-sm font-medium">Upload File:</Label>
-                <Input
-                  type="file"
-                  onChange={handleFileUpload}
-                  disabled={uploadStatus.uploading}
-                  className="w-48 focus:border-positive-trend focus:ring-2 focus:ring-positive-trend/20"
-                />
-                {uploadStatus.uploading && (
-                  <Loader2 className="h-4 w-4 animate-spin text-positive-trend" />
+          <div className="relative">
+            <div className="flex items-center justify-between p-6 pt-4 border-t border-border">
+              <div className="flex space-x-3">
+                <Button
+                  variant="ghost"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleSave}
+                  disabled={selectedVectorStores.length === 0}
+                  className="bg-positive-trend hover:bg-positive-trend/90 text-white"
+                >
+                  Save Configuration
+                </Button>
+              </div>
+              
+              {/* File Upload - Bottom Right */}
+              <div className="flex flex-col space-y-1">
+                <div className="flex items-center space-x-2">
+                  <Label className="text-sm font-medium">Upload File:</Label>
+                  <Input
+                    type="file"
+                    onChange={handleFileUpload}
+                    disabled={uploadStatus.uploading}
+                    className="w-48 focus:border-positive-trend focus:ring-2 focus:ring-positive-trend/20"
+                  />
+                  {uploadStatus.uploading && (
+                    <Loader2 className="h-4 w-4 animate-spin text-positive-trend" />
+                  )}
+                </div>
+                {uploadStatus.error && (
+                  <p className="text-xs text-destructive text-right">{uploadStatus.error}</p>
                 )}
               </div>
-              {uploadStatus.error && (
-                <p className="text-xs text-destructive text-right">{uploadStatus.error}</p>
-              )}
             </div>
+
+            {/* Association Progress Overlay */}
+            {uploadProgress.length > 0 && (
+              <div className="absolute inset-0 bg-background/95 backdrop-blur-sm border-t border-border flex flex-col justify-center px-6 py-4">
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-positive-trend" />
+                    <Label className="text-sm font-medium">Association Progress</Label>
+                  </div>
+                  <div className="max-h-24 overflow-y-auto space-y-2" style={{ scrollbarWidth: 'thin' }}>
+                    {uploadProgress.map((progress) => {
+                      const file = files.find(f => f.id === progress.fileId);
+                      const storeName = vectorStores.find(store => selectedVectorStores.includes(store.id))?.name || 'vector store';
+                      return (
+                        <div key={progress.fileId} className="flex items-center justify-between text-sm">
+                          <span className="truncate flex-1 mr-2">
+                            Adding {file?.filename || progress.fileId} to {storeName}
+                          </span>
+                          <div className="flex items-center space-x-2 flex-shrink-0">
+                            {progress.status === 'uploading' && <Loader2 className="h-3 w-3 animate-spin" />}
+                            {progress.status === 'processing' && <Loader2 className="h-3 w-3 animate-spin text-amber-500" />}
+                            {progress.status === 'completed' && <Badge className="text-xs bg-green-500">Added</Badge>}
+                            {progress.status === 'failed' && <Badge variant="destructive" className="text-xs">Failed</Badge>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>

@@ -306,7 +306,7 @@ const AiPlayground: React.FC = () => {
   // File search tools persistence
   const loadFileSearchToolsFromStorage = (): Tool[] => {
     try {
-      const stored = localStorage.getItem('platform_fileSearchTool');
+      const stored = localStorage.getItem('platform_fileSearchTools');
       if (!stored) return [];
       
       const fileSearchToolsMap = JSON.parse(stored);
@@ -338,7 +338,7 @@ const AiPlayground: React.FC = () => {
   // Agentic file search tools persistence
   const loadAgenticFileSearchToolsFromStorage = (): Tool[] => {
     try {
-      const stored = localStorage.getItem('platform_agenticFileSearchTool');
+      const stored = localStorage.getItem('platform_agenticFileSearchTools');
       if (!stored) return [];
       
       const agenticFileSearchToolsMap = JSON.parse(stored);
@@ -383,7 +383,7 @@ const AiPlayground: React.FC = () => {
       };
     });
     
-    localStorage.setItem('platform_fileSearchTool', JSON.stringify(fileSearchToolsMap));
+    localStorage.setItem('platform_fileSearchTools', JSON.stringify(fileSearchToolsMap));
   };
 
   const saveAgenticFileSearchToolsToStorage = (tools: Tool[]) => {
@@ -402,7 +402,7 @@ const AiPlayground: React.FC = () => {
       };
     });
     
-    localStorage.setItem('platform_agenticFileSearchTool', JSON.stringify(agenticFileSearchToolsMap));
+    localStorage.setItem('platform_agenticFileSearchTools', JSON.stringify(agenticFileSearchToolsMap));
   };
 
   const generateResponse = async (prompt: string) => {
