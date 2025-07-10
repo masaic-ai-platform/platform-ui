@@ -459,7 +459,7 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-[90vw] h-[80vh] p-0">
         <div className="flex flex-col h-full">
-          <DialogHeader className="p-6 pb-4">
+          <DialogHeader className="p-4 pb-2">
             <DialogTitle className="text-xl font-semibold flex items-center space-x-2">
               <FileSearch className="h-5 w-5" />
               <span>Agentic File Search</span>
@@ -480,11 +480,11 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-medium">Vector Stores</Label>
                     <Select value={vectorStoreType} onValueChange={setVectorStoreType}>
-                      <SelectTrigger className="w-48 h-8">
+                      <SelectTrigger className="w-48 h-8 focus:ring-0 focus:ring-offset-0 focus:border-border">
                         <SelectValue>
                           {vectorStoreType === 'qdrant-cloud' ? (
                             <div className="flex items-center space-x-2">
-                              <img src="/qdrant icon.png" alt="Qdrant" className="w-4 h-4" />
+                              <img src="/qdrant icon.png" alt="Qdrant" className="w-3 h-3" />
                               <span>Qdrant Cloud</span>
                             </div>
                           ) : (
@@ -496,7 +496,7 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                           side="bottom" 
                           align="start" 
                           sideOffset={8}
-                          className="z-[9999]"
+                          className="z-[9999] pt-2"
                         >
                           <SelectItem value="qdrant-cloud">
                           <div className="flex items-center space-x-2">
