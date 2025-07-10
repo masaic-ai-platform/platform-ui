@@ -5,7 +5,10 @@ import {
   Zap, 
   Key,
   Github,
-  MessageCircle
+  MessageCircle,
+  Database,
+  BarChart3,
+  Shield
 } from 'lucide-react';
 
 interface PlaygroundSidebarProps {
@@ -20,6 +23,13 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
   const mainOptions = [
     { id: 'responses', label: 'Responses', icon: MessageSquare },
     { id: 'completions', label: 'Completions', icon: Zap, disabled: true },
+  ];
+
+  // Static options that appear under Completions
+  const staticCompletionOptions = [
+    { id: 'vector-store', label: 'Vector Store', icon: Database },
+    { id: 'observability', label: 'Observability', icon: BarChart3 },
+    { id: 'compliance', label: 'Compliance', icon: Shield },
   ];
 
   const bottomOptions = [
@@ -46,7 +56,7 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
             <Button
               key={option.id}
               variant={activeTab === option.id ? "secondary" : "ghost"}
-              className={`w-full justify-start text-sm h-10 ${
+              className={`w-full justify-start text-xs h-8 ${
                 activeTab === option.id 
                   ? 'bg-accent text-accent-foreground' 
                   : isDisabled
@@ -56,11 +66,27 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
               onClick={() => !isDisabled && onTabChange(option.id)}
               disabled={isDisabled}
             >
-              <Icon className="h-4 w-4 mr-3" />
+              <Icon className="h-3 w-3 mr-2" />
               {option.label}
             </Button>
           );
         })}
+
+        {/* Static Completion Options */}
+        <div className="ml-3 space-y-1 mt-1">
+          {staticCompletionOptions.map((option) => {
+            const Icon = option.icon;
+            return (
+              <div
+                key={option.id}
+                className="w-full justify-start text-xs h-8 text-muted-foreground opacity-50 cursor-default flex items-center px-2"
+              >
+                <Icon className="h-3 w-3 mr-2" />
+                {option.label}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Bottom Options */}
@@ -74,10 +100,10 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
               <Button
                 key={option.id}
                 variant="ghost"
-                className="w-full justify-start text-sm h-10 text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                className="w-full justify-start text-xs h-8 text-muted-foreground hover:text-foreground hover:bg-accent/50"
                 onClick={() => window.open(option.link, '_blank')}
               >
-                <Icon className="h-4 w-4 mr-3" />
+                <Icon className="h-3 w-3 mr-2" />
                 {option.label}
               </Button>
             );
@@ -87,10 +113,10 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
             <Button
               key={option.id}
               variant="ghost"
-              className="w-full justify-start text-sm h-10 text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              className="w-full justify-start text-xs h-8 text-muted-foreground hover:text-foreground hover:bg-accent/50"
               onClick={() => onTabChange(option.id)}
             >
-              <Icon className="h-4 w-4 mr-3" />
+              <Icon className="h-3 w-3 mr-2" />
               {option.label}
             </Button>
           );
