@@ -107,6 +107,9 @@ const AiPlayground: React.FC = () => {
 
   // Chat header state
   const [copiedResponseId, setCopiedResponseId] = useState(false);
+  
+  // API URL from environment variable
+  const apiUrl = import.meta.env.VITE_DASHBOARD_API_URL || 'http://localhost:6644';
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -541,7 +544,7 @@ const AiPlayground: React.FC = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:6644/v1/responses', {
+      const response = await fetch(`${apiUrl}/v1/responses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
