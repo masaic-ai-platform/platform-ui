@@ -43,11 +43,9 @@ const AgenticSearchLogsView: React.FC<AgenticSearchLogsViewProps> = ({ logs }) =
     <div className="ml-6 mt-2">
       <div 
         ref={logsContainerRef}
-        className="bg-muted/30 border-2 border-positive-trend/30 rounded-md p-3 overflow-y-auto text-xs font-mono"
+        className="bg-muted/30 border-2 border-positive-trend/30 rounded-md p-3 overflow-y-auto text-xs font-mono max-h-[4.5rem] leading-[1.5rem]"
         style={{ 
-          scrollbarWidth: 'thin',
-          maxHeight: '4.5rem', // Fixed height for exactly 3 lines
-          lineHeight: '1.5rem'
+          scrollbarWidth: 'thin'
         }}
       >
         {logs.map((log, logIndex) => (

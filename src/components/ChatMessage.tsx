@@ -59,6 +59,7 @@ const ChatBubble: React.FC<{
           onClick={handleCopy}
           className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 rounded-md bg-background/80 hover:bg-background border border-border hover:border-positive-trend/50 shadow-sm"
           title="Copy message"
+          aria-label="Copy message"
         >
           {copied ? (
             <Check className="w-3 h-3 text-green-500" />
@@ -548,8 +549,7 @@ print(response.json())`;
                   <img 
                     src={dataUrl}
                     alt="Generated"
-                    className="max-w-full h-auto rounded-md shadow-sm"
-                    style={{ maxHeight: '512px' }}
+                    className="max-w-full h-auto rounded-md shadow-sm max-h-[512px]"
                     onError={(e) => {
                       console.error('Image failed to load');
                       console.log('Validation issues:', validation.issues);
@@ -604,8 +604,7 @@ print(response.json())`;
         <img 
             src={dataUrl}
             alt="Generated"
-            className="max-w-full h-auto rounded-md shadow-sm"
-            style={{ maxHeight: '512px' }}
+            className="max-w-full h-auto rounded-md shadow-sm max-h-[512px]"
           onError={(e) => {
               console.error('Image failed to load');
               console.log('Validation issues:', validation.issues);
@@ -712,7 +711,7 @@ print(response.json())`;
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-foreground">Generated Code</h3>
-                <Button variant="ghost" size="icon" onClick={() => setShowCodeModal(false)} className="absolute top-4 right-4">
+                <Button variant="ghost" size="icon" onClick={() => setShowCodeModal(false)} className="absolute top-4 right-4" aria-label="Close">
                   <X className="w-5 h-5" />
               </Button>
             </div>
