@@ -390,8 +390,11 @@ const MCPModal: React.FC<MCPModalProps> = ({
                   <Input
                     id="label"
                     value={label}
-                    onChange={(e) => setLabel(e.target.value)}
-                    placeholder="my_mcp_server"
+                    onChange={(e) => {
+                      const formatted = e.target.value.replace(/[_\s]+/g, '-');
+                      setLabel(formatted);
+                    }}
+                    placeholder="my-mcp-server"
                     disabled={isConnecting}
                     className="bg-muted/50 border border-border focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
                     style={{ 
