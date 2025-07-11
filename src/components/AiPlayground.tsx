@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Drawer, DrawerTrigger, DrawerContent } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import UnifiedCard from '@/components/ui/unified-card';
-import { Loader2, Send, Sparkles, RotateCcw, Copy, Check } from 'lucide-react';
+import { Loader2, Send, Sparkles, RotateCcw, Copy, Check, Menu } from 'lucide-react';
 import { toast } from 'sonner';
 import ChatMessage from './ChatMessage';
 import ConfigurationPanel from './ConfigurationPanel';
@@ -899,7 +900,8 @@ const AiPlayground: React.FC = () => {
       const textarea = document.querySelector('textarea');
       if (textarea) {
         textarea.style.height = 'auto';
-        textarea.style.height = '130px';
+        const maxHeight = Math.round(window.innerHeight * 0.4);
+        textarea.style.height = Math.max(Math.min(textarea.scrollHeight, maxHeight), 96) + 'px';
       }
     }
   };
@@ -916,8 +918,8 @@ const AiPlayground: React.FC = () => {
     setInputValue(textarea.value);
     
     // Auto-resize functionality
-    textarea.style.height = 'auto';
-    textarea.style.height = Math.max(Math.min(textarea.scrollHeight, 300), 130) + 'px';
+    const maxHeight = Math.round(window.innerHeight * 0.4);
+    textarea.style.height = Math.max(Math.min(textarea.scrollHeight, maxHeight), 96) + 'px';
   };
 
   const handleTabChange = (tab: string) => {
@@ -931,14 +933,82 @@ const AiPlayground: React.FC = () => {
   };
 
   return (
+    <>
+    <Drawer>
+      {/* Mobile Hamburger */}
+      <DrawerTrigger asChild>
+        <button className="md:hidden fixed top-3 left-3 z-50 p-2 rounded-md bg-background/80 border border-border shadow-sm" aria-label="Open menu">
+          <Menu className="h-5 w-5 text-foreground" />
+        </button>
+      </DrawerTrigger>
+
+      {/* Drawer Content */}
+      <DrawerContent className="h-[85vh] overflow-y-auto p-4 space-y-4">
+        {/* Sidebar */}
+        <PlaygroundSidebar 
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          className="flex flex-col w-full"
+        />
+        {/* Configuration Panel */}
+        <ConfigurationPanel
+          modelProvider={modelProvider}
+          setModelProvider={setModelProvider}
+          modelName={modelName}
+          setModelName={setModelName}
+          imageModelProvider={imageModelProvider}
+          setImageModelProvider={setImageModelProvider}
+          imageModelName={imageModelName}
+          setImageModelName={setImageModelName}
+          imageProviderKey={imageProviderKey}
+          setImageProviderKey={setImageProviderKey}
+          apiKey={apiKey}
+          setApiKey={setApiKey}
+          baseUrl={baseUrl}
+          setBaseUrl={setBaseUrl}
+          temperature={temperature}
+          setTemperature={setTemperature}
+          maxTokens={maxTokens}
+          setMaxTokens={setMaxTokens}
+          topP={topP}
+          setTopP={setTopP}
+          storeLogs={storeLogs}
+          setStoreLogs={setStoreLogs}
+          textFormat={textFormat}
+          setTextFormat={setTextFormat}
+          toolChoice={toolChoice}
+          setToolChoice={setToolChoice}
+          instructions={instructions}
+          setInstructions={setInstructions}
+          promptMessages={promptMessages}
+          onAddPromptMessage={handleAddPromptMessage}
+          onRemovePromptMessage={handleRemovePromptMessage}
+          selectedTools={selectedTools}
+          onSelectedToolsChange={setSelectedTools}
+          getMCPToolByLabel={getMCPToolByLabel}
+          selectedVectorStore={selectedVectorStore}
+          onVectorStoreSelect={handleVectorStoreSelect}
+          onResetConversation={resetConversation}
+          openApiKeysModal={apiKeysModalOpen}
+          onApiKeysModalChange={setApiKeysModalOpen}
+          jsonSchemaContent={jsonSchemaContent}
+          setJsonSchemaContent={setJsonSchemaContent}
+          jsonSchemaName={jsonSchemaName}
+          setJsonSchemaName={setJsonSchemaName}
+          className="w-full"
+        />
+      </DrawerContent>
+    </Drawer>
+
     <div className="flex h-full bg-background">
-      {/* Left Sidebar - 10% */}
+      {/* Left Sidebar - 10% (desktop only) */}
       <PlaygroundSidebar 
         activeTab={activeTab}
         onTabChange={handleTabChange}
+        className="hidden md:flex md:flex-col md:w-[10%] md:min-w-[160px]"
       />
 
-      {/* Configuration Panel - 30% */}
+      {/* Configuration Panel - 30% (desktop only) */}
       <ConfigurationPanel
         modelProvider={modelProvider}
         setModelProvider={setModelProvider}
@@ -983,10 +1053,11 @@ const AiPlayground: React.FC = () => {
         setJsonSchemaContent={setJsonSchemaContent}
         jsonSchemaName={jsonSchemaName}
         setJsonSchemaName={setJsonSchemaName}
+        className="hidden md:block md:w-[30%]"
       />
 
-      {/* Chat Area - 60% */}
-      <div className="w-[60%] flex flex-col">
+      {/* Chat Area */}
+      <div className="flex-1 md:w-[60%] flex flex-col">
         {/* Sticky Header */}
         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-6 py-3">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -1078,7 +1149,7 @@ const AiPlayground: React.FC = () => {
                 onChange={handleTextareaChange}
                 onKeyPress={handleKeyPress}
                 placeholder="Chat with your prompt..."
-                className="w-full min-h-[130px] max-h-[300px] resize-none rounded-xl border border-border bg-muted/50 px-4 py-4 pr-12 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
+                className="w-full min-h-[96px] max-h-[40vh] resize-none rounded-xl border border-border bg-muted/50 px-4 py-4 pr-12 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
                 disabled={isLoading}
                 rows={1}
                 style={{ 
@@ -1108,6 +1179,7 @@ const AiPlayground: React.FC = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

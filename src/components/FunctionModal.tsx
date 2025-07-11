@@ -309,7 +309,7 @@ const FunctionModal: React.FC<FunctionModalProps> = ({
                           minHeight: '400px',
                           boxShadow: 'none !important',
                           outline: 'none !important',
-                          caretColor: '#22c55e'
+                          caretColor: 'var(--positive-trend)'
                         }}
                       />
                     </div>

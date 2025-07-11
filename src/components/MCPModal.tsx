@@ -334,7 +334,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className={`w-[90vw] p-0 ${currentView === 'tool-detail' ? 'max-w-2xl max-h-[80vh] [&>button]:hidden' : 'max-w-md'}`}
+        className={`w-full h-screen p-0 md:w-[90vw] md:max-h-[90vh] md:rounded-lg ${currentView === 'tool-detail' ? 'md:max-w-2xl [&>button]:hidden' : 'md:max-w-md'}`}
       >
         <div className="flex flex-col h-full">
           <DialogHeader className="p-6 pb-4 text-center">

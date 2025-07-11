@@ -43,7 +43,7 @@ const AgenticSearchLogsView: React.FC<AgenticSearchLogsViewProps> = ({ logs }) =
     <div className="ml-6 mt-2">
       <div 
         ref={logsContainerRef}
-        className="bg-muted/30 border-2 border-positive-trend/30 rounded-md p-3 overflow-y-auto text-xs font-mono max-h-[4.5rem] leading-[1.5rem]"
+        className="bg-muted/30 border-2 border-positive-trend/30 rounded-md p-3 overflow-y-auto text-xs md:text-sm font-mono max-h-[4.5rem] leading-[1.5rem]"
         style={{ 
           scrollbarWidth: 'thin'
         }}

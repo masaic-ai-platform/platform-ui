@@ -1,4 +1,5 @@
 import React from 'react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { 
   MessageSquare, 
@@ -14,11 +15,13 @@ import {
 interface PlaygroundSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  className?: string;
 }
 
 const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({ 
   activeTab, 
-  onTabChange 
+  onTabChange,
+  className = ''
 }) => {
   const mainOptions = [
     { id: 'responses', label: 'Responses', icon: MessageSquare },
@@ -39,7 +42,7 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
   ];
 
   return (
-    <div className="w-[10%] min-w-[160px] bg-background border-r border-border h-full flex flex-col">
+    <div className={cn("bg-background border-r border-border h-full flex flex-col", className)}>
       {/* Header */}
       <div className="p-4 border-b border-border">
         <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">

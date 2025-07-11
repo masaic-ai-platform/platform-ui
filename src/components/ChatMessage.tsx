@@ -549,7 +549,7 @@ print(response.json())`;
                   <img 
                     src={dataUrl}
                     alt="Generated"
-                    className="max-w-full h-auto rounded-md shadow-sm max-h-[512px]"
+                    className="max-w-full h-auto rounded-md shadow-sm max-h-[60vh] md:max-h-[512px]"
                     onError={(e) => {
                       console.error('Image failed to load');
                       console.log('Validation issues:', validation.issues);
@@ -604,7 +604,7 @@ print(response.json())`;
         <img 
             src={dataUrl}
             alt="Generated"
-            className="max-w-full h-auto rounded-md shadow-sm max-h-[512px]"
+            className="max-w-full h-auto rounded-md shadow-sm max-h-[60vh] md:max-h-[512px]"
           onError={(e) => {
               console.error('Image failed to load');
               console.log('Validation issues:', validation.issues);
@@ -685,7 +685,7 @@ print(response.json())`;
           {isError ? <AlertTriangle className="w-5 h-5 text-red-500" /> : <Bot className="w-5 h-5 text-foreground" />}
             </div>
       )}
-      <div className={`flex-grow max-w-[80%] ${role === 'user' ? 'order-1' : ''}`}>
+      <div className={`flex-grow max-w-full sm:max-w-[80%] ${role === 'user' ? 'order-1' : ''}`}>
         <div className="flex items-center justify-between mb-1">
           <span className="font-bold text-sm text-foreground">
             {role === 'assistant' ? 'Assistant' : 'User'}

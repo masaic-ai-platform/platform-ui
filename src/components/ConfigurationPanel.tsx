@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -125,6 +126,7 @@ interface ConfigurationPanelProps {
   setJsonSchemaContent: (content: string) => void;
   jsonSchemaName: string | null;
   setJsonSchemaName: (name: string | null) => void;
+  className?: string;
 }
 
 const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
@@ -170,7 +172,8 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   jsonSchemaContent,
   setJsonSchemaContent,
   jsonSchemaName,
-  setJsonSchemaName
+  setJsonSchemaName,
+  className = ''
 }) => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(false);
@@ -378,7 +381,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
 
 
   return (
-    <div className="w-[30%] bg-background border-r border-border h-full overflow-y-auto">
+    <div className={cn("bg-background border-r border-border h-full overflow-y-auto", className)}>
       <div className="p-4 h-full flex flex-col">
         
         {/* Header with Model Selection and Config Icons */}

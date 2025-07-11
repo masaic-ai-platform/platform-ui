@@ -144,7 +144,7 @@ const ApiKeysModal: React.FC<ApiKeysModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md w-[90vw] max-h-[80vh] flex flex-col overflow-hidden">
+      <DialogContent className="w-full h-screen flex flex-col overflow-hidden md:max-w-md md:h-auto md:rounded-lg md:w-[90vw] md:max-h-[80vh]">
         <DialogHeader className="pb-4 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-positive-trend/10 rounded-lg flex items-center justify-center">
