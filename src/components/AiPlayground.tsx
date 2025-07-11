@@ -600,6 +600,9 @@ const AiPlayground: React.FC = () => {
       let currentTextBlock: ContentBlock | null = null;
       let activeToolExecutions = new Map<string, ToolExecution>();
 
+      // Track the last SSE event name to properly handle custom events like "error"
+      let lastEvent: string | null = null;
+
       const updateMessage = (blocks: ContentBlock[], fullContent: string) => {
         setMessages(prev => prev.map(msg =>
           msg.id === assistantMessageId
@@ -637,10 +640,44 @@ const AiPlayground: React.FC = () => {
             buffer = lines.pop() || '';
 
             for (const line of lines) {
+              // Capture event name if present
+              if (line.startsWith('event: ')) {
+                lastEvent = line.slice(7).trim();
+                continue;
+              }
               if (line.startsWith('data: ')) {
                 try {
                   const data = JSON.parse(line.slice(6));
-                  
+
+                  // Handle explicit error events from SSE stream
+                  if (lastEvent === 'error' || (data.code && data.message && !data.type)) {
+                    const errorCode = data.code || 'error';
+                    const errorMsg = data.message || 'Unknown error';
+                    const errorContent = `Error: [${errorCode}] ${errorMsg}`;
+
+                    // Update assistant message with error content, stop loading state
+                    setMessages(prev => prev.map(msg =>
+                      msg.id === assistantMessageId
+                        ? {
+                            ...msg,
+                            content: errorContent,
+                            contentBlocks: [
+                              {
+                                type: 'text',
+                                content: `[${errorCode}] ${errorMsg}`
+                              }
+                            ],
+                            type: 'text',
+                            hasThinkTags: false,
+                            isLoading: false
+                          }
+                        : msg
+                    ));
+
+                    // Exit streaming loop on error
+                    reader.cancel().catch(() => {});
+                    break;
+                  }
                   // Handle different event types
                   if (data.type === 'response.completed') {
                     if (data.response?.id) {
@@ -908,6 +945,24 @@ const AiPlayground: React.FC = () => {
     }
   };
 
+  // Retry logic for error messages
+  const handleRetry = (errorMessageId: string) => {
+    // Find the index of the error message and its preceding user prompt
+    const errorIndex = messages.findIndex(msg => msg.id === errorMessageId);
+    if (errorIndex <= 0) return;
+
+    const userMessage = messages[errorIndex - 1];
+    if (userMessage.role !== 'user') return;
+
+    const promptToReplay = userMessage.content;
+
+    // Remove the user + error messages from chat history
+    setMessages(prev => prev.filter((_, idx) => idx < errorIndex - 1));
+
+    // Trigger the prompt again
+    generateResponse(promptToReplay);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputValue.trim() && !isLoading) {
@@ -1148,6 +1203,7 @@ const AiPlayground: React.FC = () => {
             {messages.map((message) => (
               <ChatMessage
                 key={message.id}
+                id={message.id}
                 role={message.role}
                 content={message.content}
                 contentBlocks={message.contentBlocks}
@@ -1165,6 +1221,7 @@ const AiPlayground: React.FC = () => {
                 selectedVectorStore={selectedVectorStore}
                 instructions={instructions}
                 isLoading={message.isLoading}
+                onRetry={handleRetry}
               />
             ))}
           </div>

@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Code, Copy, Check, X, User, Bot, AlertTriangle } from 'lucide-react';
+import { Code, Copy, Check, X, User, Bot, AlertTriangle, RotateCcw } from 'lucide-react';
 import ToolExecutionProgress from './ToolExecutionProgress';
 
 interface ToolExecution {
@@ -186,6 +186,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, formatType =
 };
 
 interface ChatMessageProps {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
   contentBlocks?: ContentBlock[];
@@ -204,9 +205,11 @@ interface ChatMessageProps {
   imageProviderKey?: string;
   selectedVectorStore?: string;
   instructions?: string;
+  onRetry?: (errorMessageId: string) => void;
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = React.memo(({ 
+  id,
   role, 
   content, 
   contentBlocks,
@@ -223,7 +226,8 @@ const ChatMessage: React.FC<ChatMessageProps> = React.memo(({
   imageProviderKey = '',
   selectedVectorStore = '',
   instructions = '',
-  isLoading = false
+  isLoading = false,
+  onRetry
 }) => {
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'curl' | 'python'>('curl');
@@ -697,6 +701,20 @@ print(response.json())`;
         <ChatBubble role={role} isError={isError} content={content}>
           {renderContent()}
         </ChatBubble>
+        {isError && role === 'assistant' && onRetry && (
+          <div className="mt-2 flex">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onRetry(id)}
+              className="flex items-center space-x-1 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              title="Retry"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span className="text-xs">Retry</span>
+            </Button>
+          </div>
+        )}
       </div>
       {role === 'user' && (
         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-card flex items-center justify-center">
@@ -769,6 +787,7 @@ print(response.json())`;
   // Only compare props that actually affect the visual rendering
   // Exclude props like 'instructions' that are only used for code generation modal
   return (
+    prevProps.id === nextProps.id &&
     prevProps.role === nextProps.role &&
     prevProps.content === nextProps.content &&
     prevProps.contentBlocks === nextProps.contentBlocks &&
