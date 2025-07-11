@@ -1124,7 +1124,7 @@ const AiPlayground: React.FC = () => {
                     title="Copy response ID"
                   >
                     {copiedResponseId ? (
-                      <Check className="w-3 h-3 text-green-500" />
+                      <Check className="w-3 h-3 text-positive-trend" />
                     ) : (
                       <Copy className="w-3 h-3" />
                     )}

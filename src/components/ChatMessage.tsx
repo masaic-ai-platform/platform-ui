@@ -62,7 +62,7 @@ const ChatBubble: React.FC<{
           aria-label="Copy message"
         >
           {copied ? (
-            <Check className="w-3 h-3 text-green-500" />
+            <Check className="w-3 h-3 text-positive-trend" />
           ) : (
             <Copy className="w-3 h-3 text-muted-foreground hover:text-foreground" />
           )}
@@ -741,7 +741,7 @@ print(response.json())`;
                       onClick={() => copyToClipboard(generateCurlCode(), 'curl')}
                       className="absolute top-2 right-2"
                 >
-                      {copiedCurl ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
+                      {copiedCurl ? <Check className="w-5 h-5 text-positive-trend" /> : <Copy className="w-5 h-5" />}
                     </Button>
                   </>
                 )}
@@ -754,7 +754,7 @@ print(response.json())`;
                       onClick={() => copyToClipboard(generatePythonCode(), 'python')}
                       className="absolute top-2 right-2"
                     >
-                      {copiedPython ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
+                      {copiedPython ? <Check className="w-5 h-5 text-positive-trend" /> : <Copy className="w-5 h-5" />}
                     </Button>
                   </>
                 )}

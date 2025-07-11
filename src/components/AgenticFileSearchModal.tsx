@@ -800,7 +800,7 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                           <div className="flex items-center space-x-2 flex-shrink-0">
                             {progress.status === 'uploading' && <Loader2 className="h-3 w-3 animate-spin" />}
                             {progress.status === 'processing' && <Loader2 className="h-3 w-3 animate-spin text-amber-500" />}
-                            {progress.status === 'completed' && <Badge className="text-xs bg-green-500">Added</Badge>}
+                            {progress.status === 'completed' && <Badge className="text-xs bg-positive-trend text-white">Added</Badge>}
                             {progress.status === 'failed' && <Badge variant="destructive" className="text-xs">Failed</Badge>}
                           </div>
                         </div>
