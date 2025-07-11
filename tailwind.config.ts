@@ -50,12 +50,34 @@ const config: Config = {
 					8: "hsl(var(--gray-700))",  
 				},
 				
-				// Semantic Colors (Geist UI)
+				// New Masaic Brand Colors
+				'warm-whisper-grey': "hsl(var(--warm-whisper-grey))",
+				'soft-neutral-white': "hsl(var(--soft-neutral-white))",
+				'cool-silver-grey': "hsl(var(--cool-silver-grey))",
+				'pure-white': "hsl(var(--pure-white))",
+				
+				// Semantic Colors (Updated)
 				primary: {
 					DEFAULT: "hsl(var(--primary))",
 					foreground: "hsl(var(--primary-foreground))",
 					light: "hsl(var(--gray-400))",
 					dark: "hsl(var(--gray-600))",
+				},
+				'positive-trend': {
+					DEFAULT: "#2e7d32",
+					foreground: "#ffffff",
+				},
+				'negative-trend': {
+					DEFAULT: "#ef6c00",
+					foreground: "#ffffff",
+				},
+				'critical-alert': {
+					DEFAULT: "#c62828",
+					foreground: "#ffffff",
+				},
+				'opportunity': {
+					DEFAULT: "#c49b0b",
+					foreground: "#ffffff",
 				},
 				success: {
 					DEFAULT: "#22c55e",
@@ -150,6 +172,7 @@ const config: Config = {
 				md: '0 4px 8px rgba(0,0,0,0.10)',    /* Card */
 				lg: '0 8px 16px rgba(0,0,0,0.12)',   /* Raised card / popover */
 				xl: '0 12px 24px rgba(0,0,0,0.15)',  /* Deep modal shadow */
+				'tile-glow-semantic': '0 0 20px var(--tile-glow-color-semantic)',
 			},
 			keyframes: {
 				'accordion-down': {
@@ -167,11 +190,20 @@ const config: Config = {
 					to: {
 						height: '0'
 					}
+				},
+				'pulse-faint': {
+					'0%, 100%': {
+						opacity: '1'
+					},
+					'50%': {
+						opacity: '0.6'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-faint': 'pulse-faint 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
 			}
 		}
 	},

@@ -120,14 +120,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setImageProviderKey(tempImageProviderKey);
     setInstructions(tempInstructions);
     
-    localStorage.setItem('imageGen_apiKey', tempApiKey);
-    localStorage.setItem('imageGen_baseUrl', tempBaseUrl);
-    localStorage.setItem('imageGen_modelProvider', finalChatProvider);
-    localStorage.setItem('imageGen_modelName', tempModelName);
-    localStorage.setItem('imageGen_imageModelProvider', finalImageProvider);
-    localStorage.setItem('imageGen_imageModelName', tempImageModelName);
-    localStorage.setItem('imageGen_imageProviderKey', tempImageProviderKey);
-    localStorage.setItem('imageGen_instructions', tempInstructions);
+          localStorage.setItem('aiPlayground_apiKey', tempApiKey);
+      localStorage.setItem('aiPlayground_baseUrl', tempBaseUrl);
+              localStorage.setItem('platform_modelProvider', finalChatProvider);
+        localStorage.setItem('platform_modelName', tempModelName);
+      localStorage.setItem('aiPlayground_imageModelProvider', finalImageProvider);
+      localStorage.setItem('aiPlayground_imageModelName', tempImageModelName);
+      localStorage.setItem('aiPlayground_imageProviderKey', tempImageProviderKey);
+      localStorage.setItem('platform_instructions', tempInstructions);
     
     toast.success('Settings saved successfully!');
     setIsOpen(false);
@@ -174,7 +174,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <Settings className="h-4 w-4 text-muted-foreground" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col bg-card border border-border">
+              <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col bg-card/80 backdrop-blur-md border border-border">
         <DialogHeader className="shrink-0 pb-6 border-b border-border">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-primary/10 dark:bg-primary/20 rounded-lg flex items-center justify-center">
@@ -183,7 +183,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             <div>
               <DialogTitle className="text-xl font-semibold text-foreground">API Settings</DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground mt-1">
-                Configure your OpenResponses API settings
+                Configure your Masaic Dev Platform API settings
               </DialogDescription>
             </div>
           </div>

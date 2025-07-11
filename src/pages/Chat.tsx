@@ -1,8 +1,8 @@
 import React from 'react';
-import ImageGenerator from '@/components/ImageGenerator';
+import AiPlayground from '@/components/AiPlayground';
 
 const Chat: React.FC = () => {
-  return <ImageGenerator />;
+  return <AiPlayground />;
 };
 
 export default Chat; 
