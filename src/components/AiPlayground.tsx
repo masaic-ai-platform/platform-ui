@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import UnifiedCard from '@/components/ui/unified-card';
-import { Loader2, Send, Sparkles, RotateCcw, Copy, Check, Menu } from 'lucide-react';
+import { Loader2, Send, Sparkles, RotateCcw, Copy, Check, Menu, Code } from 'lucide-react';
 import { toast } from 'sonner';
 import ChatMessage from './ChatMessage';
 import ConfigurationPanel from './ConfigurationPanel';
 import PlaygroundSidebar from './PlaygroundSidebar';
+import CodeTabs from '@/playground/CodeTabs';
+import { PlaygroundRequest } from '@/playground/PlaygroundRequest';
 
 interface ToolExecution {
   serverName: string;
@@ -108,6 +110,10 @@ const AiPlayground: React.FC = () => {
 
   // Chat header state
   const [copiedResponseId, setCopiedResponseId] = useState(false);
+  
+  // Code snippet generator state
+  const [codeModalOpen, setCodeModalOpen] = useState(false);
+  const [lastRequest, setLastRequest] = useState<PlaygroundRequest | null>(null);
   
   // API URL from environment variable
   const apiUrl = import.meta.env.VITE_DASHBOARD_API_URL || 'http://localhost:6644';
@@ -543,6 +549,18 @@ const AiPlayground: React.FC = () => {
     if (previousResponseId) {
       requestBody.previous_response_id = previousResponseId;
     }
+
+    // Capture request for code snippet generation
+    const playgroundRequest: PlaygroundRequest = {
+      method: 'POST',
+      url: '/v1/responses',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKeyForProvider}`
+      },
+      body: requestBody
+    };
+    setLastRequest(playgroundRequest);
 
     try {
       const response = await fetch(`${apiUrl}/v1/responses`, {
@@ -1060,20 +1078,34 @@ const AiPlayground: React.FC = () => {
       <div className="flex-1 md:w-[60%] flex flex-col">
         {/* Sticky Header */}
         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border px-6 py-3">
-          <div className="max-w-4xl mx-auto flex items-center justify-between">
-            {/* Reset Chat Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={resetConversation}
-              className="flex items-center space-x-2 text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              title="Reset conversation"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span className="text-sm">Reset Chat</span>
-            </Button>
+          <div className="flex items-center justify-between w-full">
+            {/* Action Buttons - Moved to extreme left */}
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={resetConversation}
+                className="flex items-center space-x-2 text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                title="Reset conversation"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span className="text-sm">Reset Chat</span>
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCodeModalOpen(true)}
+                disabled={!lastRequest}
+                className="flex items-center space-x-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={lastRequest ? "View code snippets for last request" : "Send a message to generate code snippets"}
+              >
+                <Code className="w-4 h-4" />
+                <span className="text-sm">View Code</span>
+              </Button>
+            </div>
 
-            {/* Response ID Display */}
+            {/* Response ID Display - Moved to right */}
             {previousResponseId && (
               <div className="flex items-center space-x-2">
                 <span className="text-xs text-muted-foreground">Response ID:</span>
@@ -1179,6 +1211,14 @@ const AiPlayground: React.FC = () => {
         </div>
       </div>
     </div>
+    
+    {/* Code Snippets Modal */}
+    <CodeTabs
+      open={codeModalOpen}
+      onOpenChange={setCodeModalOpen}
+      lastRequest={lastRequest}
+      baseUrl={apiUrl}
+    />
     </>
   );
 };
