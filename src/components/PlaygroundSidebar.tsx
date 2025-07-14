@@ -31,7 +31,7 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
   // Static options that appear under Completions
   const staticCompletionOptions = [
     { id: 'vector-store', label: 'Vector Store', icon: Database },
-    { id: 'observability', label: 'Observability', icon: BarChart3 },
+    { id: 'observability', label: 'Observability', icon: BarChart3, link: 'https://communal-lionfish.in.signoz.cloud/home' },
     { id: 'compliance', label: 'Compliance', icon: Shield },
   ];
 
@@ -76,17 +76,32 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
         })}
 
         {/* Static Completion Options */}
-        <div className="ml-3 space-y-1 mt-1">
+        <div className="space-y-1 mt-1">
           {staticCompletionOptions.map((option) => {
             const Icon = option.icon;
+            if ('link' in option && option.link) {
+              return (
+                <Button
+                  key={option.id}
+                  variant="ghost"
+                  className="w-full justify-start text-xs h-8 text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                  onClick={() => window.open(option.link, '_blank')}
+                >
+                  <Icon className="h-3 w-3 mr-2" />
+                  {option.label}
+                </Button>
+              );
+            }
             return (
-              <div
+              <Button
                 key={option.id}
-                className="w-full justify-start text-xs h-8 text-muted-foreground opacity-50 cursor-default flex items-center px-2"
+                variant="ghost"
+                className="w-full justify-start text-xs h-8 text-muted-foreground opacity-50 cursor-default"
+                disabled
               >
                 <Icon className="h-3 w-3 mr-2" />
                 {option.label}
-              </div>
+              </Button>
             );
           })}
         </div>
