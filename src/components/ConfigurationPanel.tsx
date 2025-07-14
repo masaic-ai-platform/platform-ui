@@ -26,7 +26,8 @@ import {
   FileSearch,
   Brain,
   Globe,
-  Terminal
+  Terminal,
+  Loader2
 } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
 import ToolConfigModal from './ToolConfigModal';
@@ -35,6 +36,7 @@ import PromptMessagesInline from './PromptMessagesInline';
 import ApiKeysModal from './ApiKeysModal';
 import ModelSelectionModal from './ModelSelectionModal';
 import ConfigurationSettingsModal from './ConfigurationSettingsModal';
+import SystemPromptGenerator from './SystemPromptGenerator';
 
 interface Model {
   name: string;
@@ -185,6 +187,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const [apiKeysModalOpen, setApiKeysModalOpen] = useState(false);
   const [requiredProvider, setRequiredProvider] = useState<string | undefined>(undefined);
   const [pendingModelSelection, setPendingModelSelection] = useState<string | null>(null);
+  const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
 
   // Fetch models from API
   useEffect(() => {
@@ -539,28 +542,42 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
         <div className="flex-1 flex flex-col mt-6 min-h-0">
           <div className="flex items-center justify-between mb-3">
             <Label className="text-sm font-medium">System message</Label>
+            <SystemPromptGenerator 
+              onGenerate={setInstructions} 
+              existingPrompt={instructions} 
+              isLoading={isGeneratingPrompt}
+              onLoadingChange={setIsGeneratingPrompt}
+            />
           </div>
-          <Textarea
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
-            placeholder="Describe desired model behavior (tone, tool, usage, response style)"
-            className="flex-1 text-sm resize-none bg-muted/50 border border-border focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
-            style={{ 
-              minHeight: '300px',
-              boxShadow: 'none !important',
-              outline: 'none !important'
-            }}
-          />
+          <div className="relative flex-1 min-h-[300px]">
+            <Textarea
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder="Describe desired model behavior (tone, tool, usage, response style)"
+              className="absolute inset-0 w-full h-full text-sm resize-none bg-muted/50 border border-border focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
+              style={{ 
+                boxShadow: 'none !important',
+                outline: 'none !important'
+              }}
+              disabled={isGeneratingPrompt}
+            />
+            {isGeneratingPrompt && (
+              <div className="absolute inset-0 bg-muted/50 border border-border rounded-md flex items-center justify-center">
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="w-8 h-8 border-2 border-positive-trend border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-sm text-muted-foreground">Generating prompt...</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Add messages to prompt - Inline expandable */}
-        <div className="mt-4 pb-4">
-          <PromptMessagesInline
-            promptMessages={promptMessages}
-            onAddPromptMessage={onAddPromptMessage}
-            onRemovePromptMessage={onRemovePromptMessage}
-          />
-        </div>
+        {/* Remove or comment out the PromptMessagesInline component */}
+        {/* <PromptMessagesInline
+          promptMessages={promptMessages}
+          onAddPromptMessage={onAddPromptMessage}
+          onRemovePromptMessage={onRemovePromptMessage}
+        /> */}
 
       </div>
 
