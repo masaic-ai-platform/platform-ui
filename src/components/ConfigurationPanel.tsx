@@ -27,7 +27,9 @@ import {
   Brain,
   Globe,
   Terminal,
-  Loader2
+  Loader2,
+  Copy,
+  Check
 } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
 import ToolConfigModal from './ToolConfigModal';
@@ -188,6 +190,18 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const [requiredProvider, setRequiredProvider] = useState<string | undefined>(undefined);
   const [pendingModelSelection, setPendingModelSelection] = useState<string | null>(null);
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+
+  // Handle copy to clipboard
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(instructions);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  };
 
   // Fetch models from API
   useEffect(() => {
@@ -539,7 +553,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
         </div>
 
         {/* System Message - Takes most available space */}
-        <div className="flex-1 flex flex-col mt-6 min-h-0">
+        <div className="flex-1 flex flex-col mt-6">
           <div className="flex items-center justify-between mb-3">
             <Label className="text-sm font-medium">System message</Label>
             <SystemPromptGenerator 
@@ -549,7 +563,19 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
               onLoadingChange={setIsGeneratingPrompt}
             />
           </div>
-          <div className="relative flex-1 min-h-[300px]">
+          <div className="relative h-[calc(100vh-350px)] min-h-[400px]">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2 h-6 w-6 text-muted-foreground hover:text-foreground z-10"
+              onClick={handleCopy}
+            >
+              {isCopied ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+            </Button>
             <Textarea
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}

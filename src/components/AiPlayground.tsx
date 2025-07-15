@@ -969,12 +969,10 @@ const AiPlayground: React.FC = () => {
       generateResponse(inputValue.trim());
       setInputValue('');
       
-      // Reset textarea height
-      const textarea = document.querySelector('textarea');
+      // Reset textarea height to default
+      const textarea = document.querySelector('.chat-input-textarea') as HTMLTextAreaElement;
       if (textarea) {
-        textarea.style.height = 'auto';
-        const maxHeight = Math.round(window.innerHeight * 0.4);
-        textarea.style.height = Math.max(Math.min(textarea.scrollHeight, maxHeight), 96) + 'px';
+        textarea.style.height = '96px';
       }
     }
   };
@@ -990,9 +988,16 @@ const AiPlayground: React.FC = () => {
     const textarea = e.target;
     setInputValue(textarea.value);
     
-    // Auto-resize functionality
+    // Auto-resize functionality with minimum and maximum heights
+    const minHeight = 96;
     const maxHeight = Math.round(window.innerHeight * 0.4);
-    textarea.style.height = Math.max(Math.min(textarea.scrollHeight, maxHeight), 96) + 'px';
+    
+    // Reset height to auto to get proper scrollHeight
+    textarea.style.height = 'auto';
+    
+    // Set new height
+    const newHeight = Math.max(Math.min(textarea.scrollHeight, maxHeight), minHeight);
+    textarea.style.height = `${newHeight}px`;
   };
 
   const handleTabChange = (tab: string) => {
@@ -1238,7 +1243,7 @@ const AiPlayground: React.FC = () => {
                 onChange={handleTextareaChange}
                 onKeyPress={handleKeyPress}
                 placeholder="Chat with your prompt..."
-                className="w-full min-h-[96px] max-h-[40vh] resize-none rounded-xl border border-border bg-muted/50 px-4 py-4 pr-12 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
+                className="chat-input-textarea w-full min-h-[96px] max-h-[40vh] resize-none rounded-xl border border-border bg-muted/50 px-4 py-4 pr-12 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
                 disabled={isLoading}
                 rows={1}
                 style={{ 
