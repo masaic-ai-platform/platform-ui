@@ -929,6 +929,74 @@ const AiPlayground: React.FC = () => {
                       const blocksWithLoading = addInlineLoading(contentBlocks);
                       updateMessage(blocksWithLoading, streamingContent);
                     }
+                  } else if (data.type === 'response.fun_req_gathering_tool.in_progress') {
+                    // Handle fun req assembler start
+                    const toolExecution: ToolExecution = {
+                      serverName: 'fun_req_gathering_tool',
+                      toolName: 'assemble',
+                      status: 'in_progress'
+                    };
+                    activeToolExecutions.set('fun_req_gathering_tool', toolExecution);
+
+                    let toolProgressBlock = contentBlocks.find(block => block.type === 'tool_progress');
+                    if (!toolProgressBlock) {
+                      toolProgressBlock = {
+                        type: 'tool_progress',
+                        toolExecutions: Array.from(activeToolExecutions.values())
+                      };
+                      contentBlocks.push(toolProgressBlock);
+                    } else {
+                      toolProgressBlock.toolExecutions = Array.from(activeToolExecutions.values());
+                    }
+                    currentTextBlock = null;
+                    updateMessage(contentBlocks, streamingContent);
+                  } else if (data.type === 'response.fun_req_gathering_tool.completed') {
+                    const toolExecution = activeToolExecutions.get('fun_req_gathering_tool');
+                    if (toolExecution) {
+                      toolExecution.status = 'completed';
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'tool_progress') {
+                          contentBlocks[i].toolExecutions = Array.from(activeToolExecutions.values());
+                          break;
+                        }
+                      }
+                      const blocksWithLoading = addInlineLoading(contentBlocks);
+                      updateMessage(blocksWithLoading, streamingContent);
+                    }
+                  } else if (data.type === 'response.fun_def_generation_tool.in_progress') {
+                    // Handle fun def generator start
+                    const toolExecution: ToolExecution = {
+                      serverName: 'fun_def_generation_tool',
+                      toolName: 'generate',
+                      status: 'in_progress'
+                    };
+                    activeToolExecutions.set('fun_def_generation_tool', toolExecution);
+
+                    let toolProgressBlock = contentBlocks.find(block => block.type === 'tool_progress');
+                    if (!toolProgressBlock) {
+                      toolProgressBlock = {
+                        type: 'tool_progress',
+                        toolExecutions: Array.from(activeToolExecutions.values())
+                      };
+                      contentBlocks.push(toolProgressBlock);
+                    } else {
+                      toolProgressBlock.toolExecutions = Array.from(activeToolExecutions.values());
+                    }
+                    currentTextBlock = null;
+                    updateMessage(contentBlocks, streamingContent);
+                  } else if (data.type === 'response.fun_def_generation_tool.completed') {
+                    const toolExecution = activeToolExecutions.get('fun_def_generation_tool');
+                    if (toolExecution) {
+                      toolExecution.status = 'completed';
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'tool_progress') {
+                          contentBlocks[i].toolExecutions = Array.from(activeToolExecutions.values());
+                          break;
+                        }
+                      }
+                      const blocksWithLoading = addInlineLoading(contentBlocks);
+                      updateMessage(blocksWithLoading, streamingContent);
+                    }
                   }
                 } catch (parseError) {
                   console.error('Error parsing SSE data:', parseError);
