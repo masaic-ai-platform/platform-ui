@@ -402,7 +402,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
       <div className="p-4 h-full flex flex-col">
         
         {/* Header with Model Selection and Config Icons */}
-        <div className="space-y-3">
+        <div className="space-y-3 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 flex-1">
               <Label className="text-sm font-medium whitespace-nowrap">Model</Label>
@@ -448,7 +448,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
         </div>
 
         {/* Tools Section */}
-        <div className="mt-6">
+        <div className="mt-6 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center flex-wrap gap-2">
               <Label className="text-sm font-medium">Tools:</Label>
@@ -552,9 +552,9 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           </div>
         </div>
 
-        {/* System Message - Takes most available space */}
-        <div className="flex-1 flex flex-col mt-6">
-          <div className="flex items-center justify-between mb-3">
+        {/* System Message - Takes remaining space */}
+        <div className="mt-6 flex flex-col flex-grow min-h-0">
+          <div className="flex items-center justify-between mb-3 flex-shrink-0">
             <Label className="text-sm font-medium">System message</Label>
             <SystemPromptGenerator 
               onGenerate={setInstructions} 
@@ -563,7 +563,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
               onLoadingChange={setIsGeneratingPrompt}
             />
           </div>
-          <div className="relative h-[calc(100vh-350px)] min-h-[400px]">
+          <div className="relative flex-grow min-h-0">
             <Button
               variant="ghost"
               size="icon"
@@ -580,7 +580,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
               placeholder="Describe desired model behavior (tone, tool, usage, response style)"
-              className="absolute inset-0 w-full h-full text-sm resize-none bg-muted/50 border border-border focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
+              className="h-full w-full text-sm resize-none bg-muted/50 border border-border focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
               style={{ 
                 boxShadow: 'none !important',
                 outline: 'none !important'
