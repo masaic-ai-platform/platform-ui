@@ -10,7 +10,8 @@ import {
   Search, 
   FileSearch,
   Image,
-  Brain
+  Brain,
+  Puzzle
 } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
 import FunctionModal from './FunctionModal';
@@ -49,7 +50,9 @@ const availableTools: Tool[] = [
   { id: 'agentic_file_search', name: 'Agentic File Search', icon: FileSearch },
   { id: 'function', name: 'Function', icon: Code },
   { id: 'image_generation', name: 'Image Generation', icon: Image },
-  { id: 'think', name: 'Think', icon: Brain }
+  { id: 'think', name: 'Think', icon: Brain },
+  { id: 'fun_req_gathering_tool', name: 'Fun Req Assembler', icon: Puzzle },
+  { id: 'fun_def_generation_tool', name: 'Fun Def Generator', icon: Code }
 ];
 
 const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
@@ -265,7 +268,7 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
           <div className="space-y-1">
             {availableTools.map((tool) => {
               const IconComponent = tool.icon;
-              const isDisabled = ['function', 'image_generation', 'think'].includes(tool.id);
+              const isDisabled = ['image_generation', 'think'].includes(tool.id);
               
               return (
                 <Button

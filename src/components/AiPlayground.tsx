@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import UnifiedCard from '@/components/ui/unified-card';
-import { Loader2, Send, Sparkles, RotateCcw, Copy, Check, Menu, Code } from 'lucide-react';
+import { Loader2, Send, Sparkles, RotateCcw, Copy, Check, Menu, Code, Brain, Image, Puzzle } from 'lucide-react';
 import { toast } from 'sonner';
 import ChatMessage from './ChatMessage';
 import ConfigurationPanel from './ConfigurationPanel';
@@ -137,7 +137,28 @@ const AiPlayground: React.FC = () => {
     const savedTextFormat = (localStorage.getItem('aiPlayground_textFormat') || 'text') as 'text' | 'json_object' | 'json_schema';
     const savedToolChoice = (localStorage.getItem('aiPlayground_toolChoice') || 'auto') as 'auto' | 'none';
     const savedPromptMessages = JSON.parse(localStorage.getItem('aiPlayground_promptMessages') || '[]');
-    const savedOtherTools = JSON.parse(localStorage.getItem('aiPlayground_otherTools') || '[]');
+    const savedOtherToolsRaw = JSON.parse(localStorage.getItem('aiPlayground_otherTools') || '[]');
+
+    // Helper to map tool id to its icon component
+    const getIconForTool = (id: string) => {
+      switch (id) {
+        case 'image_generation':
+          return Image;
+        case 'think':
+          return Brain;
+        case 'fun_req_gathering_tool':
+          return Puzzle;
+        case 'fun_def_generation_tool':
+          return Code;
+        default:
+          return Code; // fallback
+      }
+    };
+
+    const savedOtherTools = savedOtherToolsRaw.map((tool: any) => ({
+      ...tool,
+      icon: getIconForTool(tool.id)
+    }));
     const savedMCPTools = loadMCPToolsFromStorage();
     const savedFileSearchTools = loadFileSearchToolsFromStorage();
     const savedAgenticFileSearchTools = loadAgenticFileSearchToolsFromStorage();
@@ -539,6 +560,16 @@ const AiPlayground: React.FC = () => {
             vector_store_ids: tool.agenticFileSearchConfig.selectedVectorStores,
             max_iterations: tool.agenticFileSearchConfig.iterations,
             max_num_results: tool.agenticFileSearchConfig.maxResults
+          };
+        } else if (tool.id === 'fun_req_gathering_tool') {
+          // Add Fun Req Assembler tool
+          return {
+            type: 'fun_req_gathering_tool'
+          };
+        } else if (tool.id === 'fun_def_generation_tool') {
+          // Add Fun Def Generator tool
+          return {
+            type: 'fun_def_generation_tool'
           };
         }
         // Add other tool types as needed

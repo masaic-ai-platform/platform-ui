@@ -390,6 +390,9 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
         return 'neutral';
       case 'think':
         return 'positive-trend';
+      case 'fun_req_gathering_tool':
+      case 'fun_def_generation_tool':
+        return 'positive-trend';
       default:
         return 'positive-trend';
     }
