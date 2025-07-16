@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Plus, X, Loader2, Check, Edit } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
+import { API_URL } from '@/config';
 
 interface MCPModalProps {
   open: boolean;
@@ -63,7 +64,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
   const [selectedTool, setSelectedTool] = useState<MCPTool | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  const apiUrl = import.meta.env.VITE_DASHBOARD_API_URL || 'http://localhost:6644';
+  const apiUrl = API_URL;
 
   const handleConnect = async () => {
     setIsConnecting(true);
