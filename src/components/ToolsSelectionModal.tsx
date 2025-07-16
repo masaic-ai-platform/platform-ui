@@ -11,7 +11,9 @@ import {
   FileSearch,
   Image,
   Brain,
-  Puzzle
+  Puzzle,
+  Save,
+  Layers
 } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
 import FunctionModal from './FunctionModal';
@@ -52,7 +54,10 @@ const availableTools: Tool[] = [
   { id: 'image_generation', name: 'Image Generation', icon: Image },
   { id: 'think', name: 'Think', icon: Brain },
   { id: 'fun_req_gathering_tool', name: 'Fun Req Assembler', icon: Puzzle },
-  { id: 'fun_def_generation_tool', name: 'Fun Def Generator', icon: Code }
+  { id: 'fun_def_generation_tool', name: 'Fun Def Generator', icon: Code },
+  { id: 'mock_fun_save_tool', name: 'Mock Fun Save', icon: Save },
+  { id: 'mock_generation_tool', name: 'Mock Generator', icon: Layers },
+  { id: 'mock_save_tool', name: 'Mock Save', icon: Save }
 ];
 
 const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({

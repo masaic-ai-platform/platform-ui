@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import UnifiedCard from '@/components/ui/unified-card';
-import { Loader2, Send, Sparkles, RotateCcw, Copy, Check, Menu, Code, Brain, Image, Puzzle } from 'lucide-react';
+import { Loader2, Send, Sparkles, RotateCcw, Copy, Check, Menu, Code, Brain, Image, Puzzle, Save, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import ChatMessage from './ChatMessage';
 import ConfigurationPanel from './ConfigurationPanel';
@@ -150,6 +150,12 @@ const AiPlayground: React.FC = () => {
           return Puzzle;
         case 'fun_def_generation_tool':
           return Code;
+        case 'mock_fun_save_tool':
+          return Save;
+        case 'mock_generation_tool':
+          return Layers;
+        case 'mock_save_tool':
+          return Save;
         default:
           return Code; // fallback
       }
@@ -571,6 +577,12 @@ const AiPlayground: React.FC = () => {
           return {
             type: 'fun_def_generation_tool'
           };
+        } else if (tool.id === 'mock_fun_save_tool') {
+          return { type: 'mock_fun_save_tool' };
+        } else if (tool.id === 'mock_generation_tool') {
+          return { type: 'mock_generation_tool' };
+        } else if (tool.id === 'mock_save_tool') {
+          return { type: 'mock_save_tool' };
         }
         // Add other tool types as needed
         return null;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, Search, FileSearch, ChevronDown, ChevronRight, Puzzle, Code } from 'lucide-react';
+import { Loader2, Search, FileSearch, ChevronDown, ChevronRight, Puzzle, Code, Save, Layers } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
 
 interface AgenticSearchLog {
@@ -122,6 +122,12 @@ const ToolExecutionProgress: React.FC<ToolExecutionProgressProps> = ({ toolExecu
         return 'Fun Req Assembler';
       case 'fun_def_generation_tool':
         return 'Fun Def Generator';
+      case 'mock_fun_save_tool':
+        return 'Mock Fun Save';
+      case 'mock_generation_tool':
+        return 'Mock Generator';
+      case 'mock_save_tool':
+        return 'Mock Save';
       default:
         return serverName;
     }
@@ -147,6 +153,12 @@ const ToolExecutionProgress: React.FC<ToolExecutionProgressProps> = ({ toolExecu
                 <Puzzle className="w-3 h-3 text-positive-trend" />
               ) : serverName === 'fun_def_generation_tool' ? (
                 <Code className="w-3 h-3 text-positive-trend" />
+              ) : serverName === 'mock_fun_save_tool' ? (
+                <Save className="w-3 h-3 text-positive-trend" />
+              ) : serverName === 'mock_generation_tool' ? (
+                <Layers className="w-3 h-3 text-positive-trend" />
+              ) : serverName === 'mock_save_tool' ? (
+                <Save className="w-3 h-3 text-positive-trend" />
               ) : (
                 <MCP className="w-3 h-3 text-positive-trend" />
               )}

@@ -393,6 +393,11 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
       case 'fun_req_gathering_tool':
       case 'fun_def_generation_tool':
         return 'positive-trend';
+      case 'mock_fun_save_tool':
+        return 'positive-trend';
+      case 'mock_generation_tool':
+      case 'mock_save_tool':
+        return 'positive-trend';
       default:
         return 'positive-trend';
     }
