@@ -16,6 +16,11 @@ const mimes = {
 };
 
 const server = http.createServer((req, res) => {
+  // Simple health-check endpoint
+  if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    return res.end('OK');
+  }
   if (req.url === '/env.js') {
     res.writeHead(200, { 'Content-Type': 'application/javascript' });
     const env = {
