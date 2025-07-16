@@ -1,37 +1,32 @@
-# Build stage
+# ─── BUILD STAGE ───────────────────────────────────────────────────────────────
 FROM node:18-alpine AS build
-
-# Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY bun.lockb ./
-
-# Install dependencies with legacy peer deps to handle conflicts
+# 1) Install dependencies
+COPY package*.json bun.lockb ./
 RUN npm ci --legacy-peer-deps
 
-# Copy source code
+# 2) Copy all source (including index.html & server.js)
 COPY . .
 
-# Copy production environment file if it exists
-COPY .env.prod* ./
+# 3) Build your frontend into /app/dist
+RUN npm run build -- --mode prod
 
-# Build the application (skipping lint) with increased memory limit
-# Use .env.prod for production build
-RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build -- --mode prod
+# 4) Prune devDependencies
+RUN npm prune --production
 
-# Production stage
-FROM nginx:alpine AS production
 
-# Copy built assets from build stage
-COPY --from=build /app/dist /usr/share/nginx/html
+# ─── PRODUCTION STAGE ──────────────────────────────────────────────────────────
+FROM node:18-alpine AS production
+WORKDIR /app
 
-# Copy nginx configuration (optional - nginx default works for SPA)
-# COPY nginx.conf /etc/nginx/nginx.conf
+# 5) Bring in built frontend + pruned modules
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules ./node_modules
 
-# Expose port 80
+# 6) Copy your server entrypoint
+COPY server.js .
+
+# 7) Expose and start
 EXPOSE 80
-
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"] 
+CMD ["node", "server.js"]

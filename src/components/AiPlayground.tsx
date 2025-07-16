@@ -11,6 +11,7 @@ import ConfigurationPanel from './ConfigurationPanel';
 import PlaygroundSidebar from './PlaygroundSidebar';
 import CodeTabs from '@/playground/CodeTabs';
 import { PlaygroundRequest } from '@/playground/PlaygroundRequest';
+import { API_URL } from '@/config';
 
 interface ToolExecution {
   serverName: string;
@@ -115,8 +116,8 @@ const AiPlayground: React.FC = () => {
   const [codeModalOpen, setCodeModalOpen] = useState(false);
   const [lastRequest, setLastRequest] = useState<PlaygroundRequest | null>(null);
   
-  // API URL from environment variable
-  const apiUrl = import.meta.env.VITE_DASHBOARD_API_URL || 'http://localhost:6644';
+  // Import API_URL from central config
+  const apiUrl = API_URL;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 

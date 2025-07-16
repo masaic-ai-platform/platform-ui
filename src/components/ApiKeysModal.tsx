@@ -9,9 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { API_URL } from '@/config';
 import { Key, Loader2, Eye, EyeOff } from 'lucide-react';
 
-const apiUrl = import.meta.env.VITE_DASHBOARD_API_URL || 'http://localhost:6644';
+const apiUrl = API_URL;
 
 interface ApiKeysModalProps {
   open: boolean;

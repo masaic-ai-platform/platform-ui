@@ -29,6 +29,7 @@ import {
   Terminal
 } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
+import { API_URL } from '@/config';
 import ToolConfigModal from './ToolConfigModal';
 import ToolsSelectionModal from './ToolsSelectionModal';
 import PromptMessagesInline from './PromptMessagesInline';
@@ -193,7 +194,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
       setError(null);
       
       try {
-        const apiUrl = import.meta.env.VITE_DASHBOARD_API_URL || 'http://localhost:6644';
+        const apiUrl = API_URL;
         const response = await fetch(`${apiUrl}/v1/dashboard/models`);
         
         if (!response.ok) {

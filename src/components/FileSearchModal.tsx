@@ -8,6 +8,7 @@ import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Loader2, Upload, Search, Copy, Plus, Check, Trash2 } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
+import { API_URL } from '@/config';
 
 interface FileSearchModalProps {
   open: boolean;
@@ -84,7 +85,7 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
   const [vectorStoreType, setVectorStoreType] = useState<string>('qdrant-cloud');
 
   const { toast } = useToast();
-  const apiUrl = import.meta.env.VITE_DASHBOARD_API_URL || 'http://localhost:6644';
+  const apiUrl = API_URL;
 
   // Get selected vector store names
   const selectedVectorStoreNames = vectorStores

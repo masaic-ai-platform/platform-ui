@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles } from 'lucide-react';
+import { API_URL } from '@/config';
 
 interface JsonSchemaModalProps {
   open: boolean;
@@ -49,7 +50,7 @@ const JsonSchemaModal: React.FC<JsonSchemaModalProps> = ({
     setGenerateModalOpen(false);
     
     try {
-      const apiUrl = import.meta.env.VITE_DASHBOARD_API_URL || 'http://localhost:6644';
+      const apiUrl = API_URL;
       const response = await fetch(`${apiUrl}/v1/dashboard/generate/schema`, {
         method: 'POST',
         headers: {
