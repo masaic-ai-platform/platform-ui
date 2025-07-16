@@ -123,7 +123,7 @@ const ToolExecutionProgress: React.FC<ToolExecutionProgressProps> = ({ toolExecu
       case 'fun_def_generation_tool':
         return 'Fun Def Generator';
       case 'mock_fun_save_tool':
-        return 'Mock Fun Save';
+        return 'Mock Function Save';
       case 'mock_generation_tool':
         return 'Mock Generator';
       case 'mock_save_tool':
@@ -183,6 +183,12 @@ const ToolExecutionProgress: React.FC<ToolExecutionProgressProps> = ({ toolExecu
                   return tool.status === 'in_progress' ? 'Understanding requirement' : 'Completed';
                 } else if (tool.serverName === 'fun_def_generation_tool') {
                   return tool.status === 'in_progress' ? 'Function definition generating' : 'Function definition generated';
+                } else if (tool.serverName === 'mock_fun_save_tool') {
+                  return tool.status === 'in_progress' ? 'Saving mock function' : 'Mock function saved';
+                } else if (tool.serverName === 'mock_generation_tool') {
+                  return tool.status === 'in_progress' ? 'Understanding mock requirements' : 'Completed';
+                } else if (tool.serverName === 'mock_save_tool') {
+                  return tool.status === 'in_progress' ? 'Saving mock' : 'Mock saved';
                 }
                 return tool.toolName;
               };

@@ -1009,6 +1009,94 @@ const AiPlayground: React.FC = () => {
                       const blocksWithLoading = addInlineLoading(contentBlocks);
                       updateMessage(blocksWithLoading, streamingContent);
                     }
+                  } else if (data.type === 'response.mock_fun_save_tool.in_progress') {
+                    const toolExecution: ToolExecution = {
+                      serverName: 'mock_fun_save_tool',
+                      toolName: 'save_function',
+                      status: 'in_progress'
+                    };
+                    activeToolExecutions.set('mock_fun_save_tool', toolExecution);
+
+                    let toolProgressBlock = contentBlocks.find(block => block.type === 'tool_progress');
+                    if (!toolProgressBlock) {
+                      toolProgressBlock = { type: 'tool_progress', toolExecutions: Array.from(activeToolExecutions.values()) };
+                      contentBlocks.push(toolProgressBlock);
+                    } else {
+                      toolProgressBlock.toolExecutions = Array.from(activeToolExecutions.values());
+                    }
+                    currentTextBlock = null;
+                    updateMessage(contentBlocks, streamingContent);
+                  } else if (data.type === 'response.mock_fun_save_tool.completed') {
+                    const toolExecution = activeToolExecutions.get('mock_fun_save_tool');
+                    if (toolExecution) {
+                      toolExecution.status = 'completed';
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'tool_progress') {
+                          contentBlocks[i].toolExecutions = Array.from(activeToolExecutions.values());
+                          break;
+                        }
+                      }
+                      const blocksWithLoading = addInlineLoading(contentBlocks);
+                      updateMessage(blocksWithLoading, streamingContent);
+                    }
+                  } else if (data.type === 'response.mock_generation_tool.in_progress') {
+                    const toolExecution: ToolExecution = {
+                      serverName: 'mock_generation_tool',
+                      toolName: 'generate',
+                      status: 'in_progress'
+                    };
+                    activeToolExecutions.set('mock_generation_tool', toolExecution);
+                    let toolProgressBlock = contentBlocks.find(block => block.type === 'tool_progress');
+                    if (!toolProgressBlock) {
+                      toolProgressBlock = { type: 'tool_progress', toolExecutions: Array.from(activeToolExecutions.values()) };
+                      contentBlocks.push(toolProgressBlock);
+                    } else {
+                      toolProgressBlock.toolExecutions = Array.from(activeToolExecutions.values());
+                    }
+                    currentTextBlock = null;
+                    updateMessage(contentBlocks, streamingContent);
+                  } else if (data.type === 'response.mock_generation_tool.completed') {
+                    const toolExecution = activeToolExecutions.get('mock_generation_tool');
+                    if (toolExecution) {
+                      toolExecution.status = 'completed';
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'tool_progress') {
+                          contentBlocks[i].toolExecutions = Array.from(activeToolExecutions.values());
+                          break;
+                        }
+                      }
+                      const blocksWithLoading = addInlineLoading(contentBlocks);
+                      updateMessage(blocksWithLoading, streamingContent);
+                    }
+                  } else if (data.type === 'response.mock_save_tool.in_progress') {
+                    const toolExecution: ToolExecution = {
+                      serverName: 'mock_save_tool',
+                      toolName: 'save',
+                      status: 'in_progress'
+                    };
+                    activeToolExecutions.set('mock_save_tool', toolExecution);
+                    let toolProgressBlock = contentBlocks.find(block => block.type === 'tool_progress');
+                    if (!toolProgressBlock) {
+                      toolProgressBlock = { type: 'tool_progress', toolExecutions: Array.from(activeToolExecutions.values()) };
+                      contentBlocks.push(toolProgressBlock);
+                    } else {
+                      toolProgressBlock.toolExecutions = Array.from(activeToolExecutions.values());
+                    }
+                    currentTextBlock = null;
+                    updateMessage(contentBlocks, streamingContent);
+                  } else if (data.type === 'response.mock_save_tool.completed') {
+                    const toolExecution = activeToolExecutions.get('mock_save_tool');
+                    if (toolExecution) {
+                      toolExecution.status = 'completed';
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'tool_progress') {
+                          contentBlocks[i].toolExecutions = Array.from(activeToolExecutions.values());
+                          break;
+                        }
+                      }
+                      const blocksWithLoading = addInlineLoading(contentBlocks);
+                      updateMessage(blocksWithLoading, streamingContent);
+                    }
                   }
                 } catch (parseError) {
                   console.error('Error parsing SSE data:', parseError);
