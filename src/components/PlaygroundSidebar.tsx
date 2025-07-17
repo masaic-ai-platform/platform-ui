@@ -9,7 +9,8 @@ import {
   MessageCircle,
   Database,
   BarChart3,
-  Shield
+  Shield,
+  Sparkles
 } from 'lucide-react';
 
 interface PlaygroundSidebarProps {
@@ -32,6 +33,8 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
   const staticCompletionOptions = [
     { id: 'vector-store', label: 'Vector Store', icon: Database },
     { id: 'observability', label: 'Observability', icon: BarChart3, link: 'https://communal-lionfish.in.signoz.cloud/home' },
+    // New clickable option directly below Observability
+    { id: 'masaic-mocky', label: 'Masaic Mocky', icon: Sparkles, clickable: true },
     { id: 'compliance', label: 'Compliance', icon: Shield },
   ];
 
@@ -79,6 +82,8 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
         <div className="space-y-1 mt-1">
           {staticCompletionOptions.map((option) => {
             const Icon = option.icon;
+
+            // External link behaviour
             if ('link' in option && option.link) {
               return (
                 <Button
@@ -92,6 +97,27 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
                 </Button>
               );
             }
+
+            // Clickable internal option (e.g., Masaic Mocky)
+            if ('clickable' in option && option.clickable) {
+              return (
+                <Button
+                  key={option.id}
+                  variant={activeTab === option.id ? 'secondary' : 'ghost'}
+                  className={`w-full justify-start text-xs h-8 ${
+                    activeTab === option.id
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                  }`}
+                  onClick={() => onTabChange(option.id)}
+                >
+                  <Icon className="h-3 w-3 mr-2" />
+                  {option.label}
+                </Button>
+              );
+            }
+
+            // Default disabled static option
             return (
               <Button
                 key={option.id}

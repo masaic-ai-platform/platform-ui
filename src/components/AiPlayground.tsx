@@ -109,6 +109,10 @@ const AiPlayground: React.FC = () => {
   const [jsonSchemaContent, setJsonSchemaContent] = useState('');
   const [jsonSchemaName, setJsonSchemaName] = useState<string | null>(null);
 
+  // Masaic Mocky mode state
+  const [mockyMode, setMockyMode] = useState(false);
+  const [mockyAgentData, setMockyAgentData] = useState<null | { systemPrompt: string; greetingMessage: string; tools: any[] }>(null);
+
   // Chat header state
   const [copiedResponseId, setCopiedResponseId] = useState(false);
   
@@ -520,9 +524,11 @@ const AiPlayground: React.FC = () => {
       };
     }
 
+    const effectiveInstructions = mockyMode && mockyAgentData ? mockyAgentData.systemPrompt : instructions;
+
     const requestBody: any = {
       model: `${modelProvider}@${modelName}`,
-      instructions: instructions,
+      instructions: effectiveInstructions,
       input,
       text: {
         format: textFormatBlock
@@ -534,8 +540,10 @@ const AiPlayground: React.FC = () => {
       stream: true
     };
     
-    // Add tools if any are selected
-    if (selectedTools.length > 0) {
+    // Tools handling
+    if (mockyMode && mockyAgentData && Array.isArray(mockyAgentData.tools) && mockyAgentData.tools.length > 0) {
+      requestBody.tools = mockyAgentData.tools;
+    } else if (selectedTools.length > 0) {
       requestBody.tools = selectedTools.map(tool => {
         if (tool.id === 'mcp_server' && tool.mcpConfig) {
           return {
@@ -1201,6 +1209,64 @@ const AiPlayground: React.FC = () => {
   };
 
   const handleTabChange = (tab: string) => {
+    // Special handling for Masaic Mocky option
+    if (tab === 'masaic-mocky') {
+      setActiveTab(tab);
+      // Fetch agent definition
+      fetch('http://localhost:6644/v1/agents/Masaic-Mocky')
+        .then(res => res.json())
+        .then(data => {
+          if (data) {
+            setMockyMode(true);
+            setMockyAgentData({
+              systemPrompt: data.systemPrompt || '',
+              greetingMessage: data.greetingMessage || '',
+              tools: data.tools || []
+            });
+
+            // Reset previous conversation and show greeting
+            setMessages([]);
+
+            const greetingId = Date.now().toString() + '_assistant';
+            const greetingMessage: Message = {
+              id: greetingId,
+              role: 'assistant',
+              content: '',
+              type: 'text',
+              timestamp: new Date(),
+              isLoading: true
+            };
+            setMessages([greetingMessage]);
+
+            // Artificial streaming of greeting text
+            const greetingText: string = data.greetingMessage || '';
+            let idx = 0;
+            const interval = setInterval(() => {
+              idx += 1;
+              const partial = greetingText.slice(0, idx);
+              setMessages(prev => prev.map(msg => msg.id === greetingId ? { ...msg, content: partial } : msg));
+              if (idx >= greetingText.length) {
+                clearInterval(interval);
+                setMessages(prev => prev.map(msg => msg.id === greetingId ? { ...msg, isLoading: false } : msg));
+              }
+            }, 25);
+          } else {
+            toast.error('Failed to load Masaic Mocky agent data');
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          toast.error('Error fetching Masaic Mocky agent');
+        });
+      return;
+    }
+
+    // Exiting Masaic Mocky mode if active and user selects other tab
+    if (mockyMode) {
+      setMockyMode(false);
+      setMockyAgentData(null);
+    }
+
     setActiveTab(tab);
     // Handle API Keys tab by opening the API keys modal
     if (tab === 'api-keys') {
@@ -1274,6 +1340,7 @@ const AiPlayground: React.FC = () => {
           jsonSchemaName={jsonSchemaName}
           setJsonSchemaName={setJsonSchemaName}
           className="w-full"
+          mockyMode={mockyMode}
         />
       </DrawerContent>
     </Drawer>
@@ -1332,6 +1399,7 @@ const AiPlayground: React.FC = () => {
         jsonSchemaName={jsonSchemaName}
         setJsonSchemaName={setJsonSchemaName}
         className="hidden md:block md:w-[30%]"
+        mockyMode={mockyMode}
       />
 
       {/* Chat Area */}

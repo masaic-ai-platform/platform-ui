@@ -131,6 +131,8 @@ interface ConfigurationPanelProps {
   setJsonSchemaContent: (content: string) => void;
   jsonSchemaName: string | null;
   setJsonSchemaName: (name: string | null) => void;
+  // When true, advanced sections (settings, tools, system prompt) are hidden for Masaic Mocky mode
+  mockyMode?: boolean;
   className?: string;
 }
 
@@ -178,6 +180,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   setJsonSchemaContent,
   jsonSchemaName,
   setJsonSchemaName,
+  mockyMode = false,
   className = ''
 }) => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -423,40 +426,46 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                 error={error}
               />
             </div>
-            <div className="flex items-center space-x-2">
-              <ConfigurationSettingsModal
-                textFormat={textFormat}
-                setTextFormat={setTextFormat}
-                toolChoice={toolChoice}
-                setToolChoice={setToolChoice}
-                temperature={temperature}
-                setTemperature={setTemperature}
-                maxTokens={maxTokens}
-                setMaxTokens={setMaxTokens}
-                topP={topP}
-                setTopP={setTopP}
-                jsonSchemaContent={jsonSchemaContent}
-                setJsonSchemaContent={setJsonSchemaContent}
-                jsonSchemaName={jsonSchemaName}
-                setJsonSchemaName={setJsonSchemaName}
-              />
-            </div>
+            {/* Settings icon hidden in Masaic Mocky mode */}
+            {!mockyMode && (
+              <div className="flex items-center space-x-2">
+                <ConfigurationSettingsModal
+                  textFormat={textFormat}
+                  setTextFormat={setTextFormat}
+                  toolChoice={toolChoice}
+                  setToolChoice={setToolChoice}
+                  temperature={temperature}
+                  setTemperature={setTemperature}
+                  maxTokens={maxTokens}
+                  setMaxTokens={setMaxTokens}
+                  topP={topP}
+                  setTopP={setTopP}
+                  jsonSchemaContent={jsonSchemaContent}
+                  setJsonSchemaContent={setJsonSchemaContent}
+                  jsonSchemaName={jsonSchemaName}
+                  setJsonSchemaName={setJsonSchemaName}
+                />
+              </div>
+            )}
           </div>
           
-          {/* Configuration Parameters */}
-          <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
-            <span>text_format:</span>
-            <span className="text-positive-trend font-medium">{textFormat}</span>
-            <span className="ml-2">tool_choice:</span>
-            <span className="text-positive-trend font-medium">{toolChoice}</span>
-            <span className="ml-2">temp:</span>
-            <span className="text-positive-trend font-medium">{temperature}</span>
-            <span className="ml-2">tokens:</span>
-            <span className="text-positive-trend font-medium">{maxTokens}</span>
-          </div>
+          {/* Configuration Parameters summary hidden in Masaic Mocky mode */}
+          {!mockyMode && (
+            <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
+              <span>text_format:</span>
+              <span className="text-positive-trend font-medium">{textFormat}</span>
+              <span className="ml-2">tool_choice:</span>
+              <span className="text-positive-trend font-medium">{toolChoice}</span>
+              <span className="ml-2">temp:</span>
+              <span className="text-positive-trend font-medium">{temperature}</span>
+              <span className="ml-2">tokens:</span>
+              <span className="text-positive-trend font-medium">{maxTokens}</span>
+            </div>
+          )}
         </div>
 
-        {/* Tools Section */}
+        {/* Tools Section (hidden in Masaic Mocky mode) */}
+        {!mockyMode && (
         <div className="mt-6 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center flex-wrap gap-2">
@@ -560,8 +569,10 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             </ToolsSelectionModal>
           </div>
         </div>
+        )}
 
-        {/* System Message - Takes remaining space */}
+        {/* System Message - hidden in Masaic Mocky mode */}
+        {!mockyMode && (
         <div className="mt-6 flex flex-col flex-grow min-h-0">
           <div className="flex items-center justify-between mb-3 flex-shrink-0">
             <Label className="text-sm font-medium">System message</Label>
@@ -606,6 +617,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             )}
           </div>
         </div>
+        )}
 
         {/* Remove or comment out the PromptMessagesInline component */}
         {/* <PromptMessagesInline
