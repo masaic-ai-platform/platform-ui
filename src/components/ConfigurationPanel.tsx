@@ -40,6 +40,7 @@ import ApiKeysModal from './ApiKeysModal';
 import ModelSelectionModal from './ModelSelectionModal';
 import ConfigurationSettingsModal from './ConfigurationSettingsModal';
 import SystemPromptGenerator from './SystemPromptGenerator';
+import MCPModal from './MCPModal';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
@@ -206,6 +207,8 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const [addServerModalOpen, setAddServerModalOpen] = useState(false);
   const [viewingFunction, setViewingFunction] = useState<any|null>(null);
   const [viewingMocks, setViewingMocks] = useState<string[] | null>(null);
+  const [mcpPreview, setMcpPreview] = useState<{tools:any[], serverLabel:string}|null>(null);
+  interface MCPTool { name:string; description:string; parameters:any; strict?:boolean; type?:string; }
 
   useEffect(() => {
     if(mockyMode){
@@ -516,6 +519,22 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
     }
   };
 
+  const handleServerClick = async (server:{id:string,url:string,serverLabel:string})=>{
+    try{
+      const res = await fetch(`${'http://localhost:6644'}/v1/dashboard/mcp/list_actions`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ serverLabel: server.serverLabel, serverUrl: server.url, headers:{} })
+      });
+      if(res.ok){
+        const tools: MCPTool[] = await res.json();
+        setMcpPreview({tools, serverLabel: server.serverLabel});
+      } else {
+        toast.error('Failed to load tools');
+      }
+    }catch(err){ console.error(err); toast.error('Error fetching tools'); }
+  };
+
 
   return (
     <div className={cn("bg-background border-r border-border h-full overflow-y-auto", className)}>
@@ -536,39 +555,39 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             </div>
             {/* Settings icon hidden in Masaic Mocky mode */}
             {!mockyMode && (
-              <div className="flex items-center space-x-2">
-                <ConfigurationSettingsModal
-                  textFormat={textFormat}
-                  setTextFormat={setTextFormat}
-                  toolChoice={toolChoice}
-                  setToolChoice={setToolChoice}
-                  temperature={temperature}
-                  setTemperature={setTemperature}
-                  maxTokens={maxTokens}
-                  setMaxTokens={setMaxTokens}
-                  topP={topP}
-                  setTopP={setTopP}
-                  jsonSchemaContent={jsonSchemaContent}
-                  setJsonSchemaContent={setJsonSchemaContent}
-                  jsonSchemaName={jsonSchemaName}
-                  setJsonSchemaName={setJsonSchemaName}
-                />
-              </div>
+            <div className="flex items-center space-x-2">
+              <ConfigurationSettingsModal
+                textFormat={textFormat}
+                setTextFormat={setTextFormat}
+                toolChoice={toolChoice}
+                setToolChoice={setToolChoice}
+                temperature={temperature}
+                setTemperature={setTemperature}
+                maxTokens={maxTokens}
+                setMaxTokens={setMaxTokens}
+                topP={topP}
+                setTopP={setTopP}
+                jsonSchemaContent={jsonSchemaContent}
+                setJsonSchemaContent={setJsonSchemaContent}
+                jsonSchemaName={jsonSchemaName}
+                setJsonSchemaName={setJsonSchemaName}
+              />
+            </div>
             )}
           </div>
           
           {/* Configuration Parameters summary hidden in Masaic Mocky mode */}
           {!mockyMode && (
-            <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
-              <span>text_format:</span>
-              <span className="text-positive-trend font-medium">{textFormat}</span>
-              <span className="ml-2">tool_choice:</span>
-              <span className="text-positive-trend font-medium">{toolChoice}</span>
-              <span className="ml-2">temp:</span>
-              <span className="text-positive-trend font-medium">{temperature}</span>
-              <span className="ml-2">tokens:</span>
-              <span className="text-positive-trend font-medium">{maxTokens}</span>
-            </div>
+          <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
+            <span>text_format:</span>
+            <span className="text-positive-trend font-medium">{textFormat}</span>
+            <span className="ml-2">tool_choice:</span>
+            <span className="text-positive-trend font-medium">{toolChoice}</span>
+            <span className="ml-2">temp:</span>
+            <span className="text-positive-trend font-medium">{temperature}</span>
+            <span className="ml-2">tokens:</span>
+            <span className="text-positive-trend font-medium">{maxTokens}</span>
+          </div>
           )}
         </div>
 
@@ -704,7 +723,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                   <p className="text-xs text-muted-foreground">No mock servers found.</p>
                 ) : (
                   mockServers.map(server => (
-                    <div key={server.id} className="flex items-start justify-between p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-positive-trend/20 border-border/20 hover:border-positive-trend/40 hover:bg-positive-trend/5">
+                    <div key={server.id} className="flex items-start justify-between p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-positive-trend/20 border-border/20 hover:border-positive-trend/40 hover:bg-positive-trend/5" onClick={() => handleServerClick(server)}>
                       <div className="flex-1 min-w-0">
                         <h5 className="text-xs font-semibold text-foreground truncate">{server.serverLabel}</h5>
                         <p className="text-xs text-muted-foreground truncate">{server.url}</p>
@@ -712,10 +731,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => {
-                          navigator.clipboard.writeText(server.id);
-                          toast.success('Server ID copied');
-                        }}
+                        onClick={(e)=>{e.stopPropagation(); navigator.clipboard.writeText(server.url); toast.success('Server URL copied');}}
                         className="border-border text-foreground hover:bg-positive-trend/10 focus:outline-none focus:ring-2 focus:ring-positive-trend/50"
                       >
                         <Copy className="h-3 w-3" />
@@ -826,6 +842,18 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                 </DialogHeader>
               </DialogContent>
             </Dialog>
+
+            {/* MCP Server Preview Modal (read-only) */}
+            {mcpPreview && (
+              <MCPModal
+                open={true}
+                onOpenChange={(open)=>{ if(!open) setMcpPreview(null); }}
+                onConnect={()=>{}}
+                readOnly
+                preloadedTools={mcpPreview.tools}
+                initialConfig={{ url:'', label:mcpPreview.serverLabel, authentication:'none', selectedTools:[] }}
+              />
+            )}
           </div>
         )}
 

@@ -14,12 +14,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Plus, X, Loader2, Check, Edit } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
 import { API_URL } from '@/config';
+import { useEffect } from 'react';
 
 interface MCPModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConnect: (config: MCPServerConfig & { selectedTools: string[] }) => void;
   initialConfig?: MCPServerConfig & { selectedTools: string[] };
+  readOnly?: boolean;
+  preloadedTools?: MCPTool[];
 }
 
 interface MCPServerConfig {
@@ -49,7 +52,9 @@ const MCPModal: React.FC<MCPModalProps> = ({
   open,
   onOpenChange,
   onConnect,
-  initialConfig
+  initialConfig,
+  readOnly = false,
+  preloadedTools = []
 }) => {
   const [url, setUrl] = useState('');
   const [label, setLabel] = useState('');
@@ -58,8 +63,8 @@ const MCPModal: React.FC<MCPModalProps> = ({
   const [showToken, setShowToken] = useState(false);
   const [customHeaders, setCustomHeaders] = useState<{ key: string; value: string }[]>([{ key: '', value: '' }]);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [currentView, setCurrentView] = useState<ModalView>('connect');
-  const [tools, setTools] = useState<MCPTool[]>([]);
+  const [currentView, setCurrentView] = useState<ModalView>(readOnly ? 'connected' : 'connect');
+  const [tools, setTools] = useState<MCPTool[]>(preloadedTools);
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [selectedTool, setSelectedTool] = useState<MCPTool | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -304,6 +309,14 @@ const MCPModal: React.FC<MCPModalProps> = ({
     }
   }, [initialConfig, open]);
 
+  // If readOnly and preloadedTools provided, preselect all tools
+  useEffect(()=>{
+    if(readOnly && preloadedTools.length>0){
+      setSelectedTools(preloadedTools.map(t=>t.name));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+
   const getAuthenticationDisplayValue = () => {
     switch (authentication) {
       case 'none': return 'None';
@@ -523,6 +536,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-medium">URL</Label>
+                    {!readOnly && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -530,7 +544,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
                       className="h-6 w-6 p-0 hover:bg-muted/50"
                     >
                       <Edit className="h-3 w-3 text-muted-foreground" />
-                    </Button>
+                    </Button>) }
                   </div>
                   <div className="text-sm text-muted-foreground bg-muted/30 p-2 rounded">
                     {url}
@@ -547,27 +561,29 @@ const MCPModal: React.FC<MCPModalProps> = ({
                 {/* Tools Section */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Label className="text-sm font-medium">Tools</Label>
-                      <Checkbox
-                        checked={selectedTools.length === tools.length && tools.length > 0}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedTools(tools.map(tool => tool.name));
-                          } else {
-                            setSelectedTools([]);
-                          }
-                        }}
-                        disabled={isConnecting || tools.length === 0}
-                        className="data-[state=checked]:bg-positive-trend data-[state=checked]:border-positive-trend"
-                      />
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Check className="h-3 w-3 text-positive-trend" />
-                      <span className="text-xs text-muted-foreground">
-                        {selectedTools.length} selected
-                      </span>
-                    </div>
+                    <Label className="text-sm font-medium">Tools</Label>
+                    {!readOnly && (
+                      <div className="flex items-center space-x-3">
+                        <Checkbox
+                          checked={selectedTools.length === tools.length && tools.length > 0}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedTools(tools.map(tool => tool.name));
+                            } else {
+                              setSelectedTools([]);
+                            }
+                          }}
+                          disabled={isConnecting || tools.length === 0}
+                          className="data-[state=checked]:bg-positive-trend data-[state=checked]:border-positive-trend"
+                        />
+                        <div className="flex items-center space-x-1">
+                          <Check className="h-3 w-3 text-positive-trend" />
+                          <span className="text-xs text-muted-foreground">
+                            {selectedTools.length} selected
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   {isConnecting ? (
@@ -579,11 +595,13 @@ const MCPModal: React.FC<MCPModalProps> = ({
                     <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent pr-2">
                       {tools.map((tool) => (
                         <div key={tool.name} className="flex items-center space-x-3 p-2 hover:bg-muted/30 rounded transition-colors">
+                          {!readOnly && (
                           <Checkbox
                             checked={selectedTools.includes(tool.name)}
                             onCheckedChange={() => handleToolToggle(tool.name)}
                             className="data-[state=checked]:bg-positive-trend data-[state=checked]:border-positive-trend"
                           />
+                          )}
                           <button
                             onClick={() => handleToolClick(tool)}
                             className="flex-1 text-left flex items-center justify-between hover:text-positive-trend transition-colors"
@@ -630,6 +648,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
 
           {/* Footer */}
           <div className="flex items-center justify-between p-6 pt-4 border-t border-border">
+            {!(readOnly && currentView === 'connected') && (
             <Button
               variant="ghost"
               onClick={handleBack}
@@ -639,10 +658,12 @@ const MCPModal: React.FC<MCPModalProps> = ({
               <ChevronLeft className="h-4 w-4" />
               <span>Back</span>
             </Button>
+            )}
             
             {currentView === 'tool-detail' ? (
               <div></div>
             ) : currentView === 'connected' ? (
+              readOnly ? <div></div> : (
               <Button
                 onClick={handleAddToTools}
                 disabled={isConnecting || selectedTools.length === 0}
@@ -650,7 +671,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
               >
                 <span>{isEditing ? 'Update' : 'Add'}</span>
               </Button>
-            ) : currentView === 'connect' ? (
+            ) ) : !readOnly && currentView === 'connect' ? (
               <Button
                 onClick={handleConnect}
                 disabled={
