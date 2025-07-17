@@ -40,6 +40,8 @@ import ApiKeysModal from './ApiKeysModal';
 import ModelSelectionModal from './ModelSelectionModal';
 import ConfigurationSettingsModal from './ConfigurationSettingsModal';
 import SystemPromptGenerator from './SystemPromptGenerator';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
 interface Model {
   name: string;
@@ -195,6 +197,65 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const [pendingModelSelection, setPendingModelSelection] = useState<string | null>(null);
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+
+  /* ---------------- Mocky Mode data ---------------- */
+  const [mockServers, setMockServers] = useState<{id:string,url:string,serverLabel:string}[]>([]);
+  const [mockFunctions, setMockFunctions] = useState<any[]>([]);
+  const [loadingServers, setLoadingServers] = useState(false);
+  const [loadingFunctions, setLoadingFunctions] = useState(false);
+  const [addServerModalOpen, setAddServerModalOpen] = useState(false);
+  const [viewingFunction, setViewingFunction] = useState<any|null>(null);
+  const [viewingMocks, setViewingMocks] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    if(mockyMode){
+      loadMockServers();
+      loadMockFunctions();
+    }
+  }, [mockyMode]);
+
+  const loadMockServers = async () => {
+    setLoadingServers(true);
+    try{
+      const res = await fetch('http://localhost:6644/v1/dashboard/mcp/mock/servers');
+      if(res.ok){
+        const data = await res.json();
+        setMockServers(data);
+      }
+    }catch(err){
+      console.error(err);
+    }finally{
+      setLoadingServers(false);
+    }
+  };
+
+  const loadMockFunctions = async () => {
+    setLoadingFunctions(true);
+    try{
+      const res = await fetch('http://localhost:6644/v1/dashboard/mcp/mock/functions');
+      if(res.ok){
+        const data = await res.json();
+        setMockFunctions(data);
+      }
+    }catch(err){
+      console.error(err);
+    }finally{
+      setLoadingFunctions(false);
+    }
+  };
+
+  const loadFunctionMocks = async (funcId: string) => {
+    try {
+      const res = await fetch(`http://localhost:6644/v1/dashboard/mcp/mock/functions/${funcId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const jsonArr: string[] = data?.mocks?.mockJsons || [];
+        setViewingMocks(jsonArr);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Handle copy to clipboard
   const handleCopy = async () => {
@@ -407,6 +468,53 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
     }
   };
 
+  // --- JSON highlighting helpers (copy from JsonSchemaModal) ---
+  const highlightLine = (line: string) => {
+    // Regex patterns
+    if (line.includes(':') && line.includes('"')) {
+      const keyMatch = line.match(/"([^\"]+)"(\s*:)/);
+      if (keyMatch) {
+        const beforeKey = line.substring(0, line.indexOf(keyMatch[0]));
+        const key = keyMatch[1];
+        const afterKey = line.substring(line.indexOf(keyMatch[0]) + keyMatch[0].length);
+        return (
+          <span>
+            <span className="text-muted-foreground">{beforeKey}</span>
+            <span className="text-positive-trend">"{key}"</span>
+            <span className="text-muted-foreground">:</span>
+            <span className="text-foreground">{afterKey}</span>
+          </span>
+        );
+      }
+    } else if (line.includes('"') && !line.includes(':')) {
+      return <span className="text-positive-trend">{line}</span>;
+    } else if (line.match(/\b(true|false|null)\b/)) {
+      return <span className="text-positive-trend">{line}</span>;
+    } else if (line.match(/\b\d+\b/)) {
+      return <span className="text-foreground">{line}</span>;
+    }
+    return <span className="text-muted-foreground">{line}</span>;
+  };
+
+  const highlightJson = (jsonString: string) => {
+    if (!jsonString.trim()) return null;
+    try {
+      const parsed = JSON.parse(jsonString);
+      const formatted = JSON.stringify(parsed, null, 2);
+      const lines = formatted.split('\n');
+      return (
+        <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap">
+          {lines.map((line, idx) => (<div key={idx}>{highlightLine(line)}</div>))}
+        </pre>
+      );
+    } catch {
+      return (
+        <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap text-foreground">
+          {jsonString}
+        </pre>
+      );
+    }
+  };
 
 
   return (
@@ -569,6 +677,156 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             </ToolsSelectionModal>
           </div>
         </div>
+        )}
+
+        {/* Mocky Mode Lists */}
+        {mockyMode && (
+          <div className="mt-6 flex flex-col flex-grow min-h-0 space-y-6">
+            {/* Mock Servers List */}
+            <Card className="flex flex-col flex-1 min-h-0">
+              <div className="p-4 border-b border-border flex items-center justify-between">
+                <h4 className="text-sm font-medium">Mock Servers</h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAddServerModalOpen(true)}
+                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="p-4 space-y-2 flex-1 overflow-y-auto min-h-0" style={{ scrollbarWidth:'thin' }}>
+                {loadingServers ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  </div>
+                ) : mockServers.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No mock servers found.</p>
+                ) : (
+                  mockServers.map(server => (
+                    <div key={server.id} className="flex items-start justify-between p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-positive-trend/20 border-border/20 hover:border-positive-trend/40 hover:bg-positive-trend/5">
+                      <div className="flex-1 min-w-0">
+                        <h5 className="text-xs font-semibold text-foreground truncate">{server.serverLabel}</h5>
+                        <p className="text-xs text-muted-foreground truncate">{server.url}</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(server.id);
+                          toast.success('Server ID copied');
+                        }}
+                        className="border-border text-foreground hover:bg-positive-trend/10 focus:outline-none focus:ring-2 focus:ring-positive-trend/50"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+
+            {/* Mock Functions List */}
+            <Card className="flex flex-col flex-1 min-h-0">
+              <div className="p-4 border-b border-border flex items-center justify-between">
+                <h4 className="text-sm font-medium">Mock Functions</h4>
+              </div>
+              <div className="p-4 space-y-2 flex-1 overflow-y-auto min-h-0" style={{ scrollbarWidth:'thin' }}>
+                {loadingFunctions ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  </div>
+                ) : mockFunctions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No mock functions found.</p>
+                ) : (
+                  mockFunctions.map(func => (
+                    <div key={func.id} className="p-3 rounded-lg border transition-all duration-200 border-border/20 hover:border-positive-trend/40 hover:bg-positive-trend/5">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0 space-y-0.5">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs font-semibold text-foreground truncate max-w-[160px]">{func.name}</span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => { navigator.clipboard.writeText(func.id); toast.success('Function ID copied'); }}
+                              className="border-border text-foreground hover:bg-positive-trend/10 focus:outline-none focus:ring-2 focus:ring-positive-trend/50"
+                              title="Copy ID"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{func.description}</p>
+                        </div>
+                        <div className="flex-shrink-0 flex flex-row items-center space-x-2 pl-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs bg-positive-trend/10 text-positive-trend hover:bg-positive-trend/20 focus:outline-none focus:ring-2 focus:ring-positive-trend/20 rounded-full"
+                            onClick={() => setViewingFunction(func)}
+                          >
+                            View Function
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs bg-positive-trend/10 text-positive-trend hover:bg-positive-trend/20 focus:outline-none focus:ring-2 focus:ring-positive-trend/20 rounded-full"
+                            onClick={() => loadFunctionMocks(func.id)}
+                          >
+                            View Mocks
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+
+            {/* Add Mock Server Modal (blank) */}
+            <Dialog open={addServerModalOpen} onOpenChange={setAddServerModalOpen}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add Mock Server</DialogTitle>
+                  <DialogDescription>
+                    {/* Blank modal per requirement */}
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
+
+            {/* Function Detail Modal */}
+            <Dialog open={!!viewingFunction} onOpenChange={(open)=>{ if(!open) setViewingFunction(null); }}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Function Details</DialogTitle>
+                  <DialogDescription className="max-h-[70vh] overflow-y-auto">
+                    <div className="bg-muted/50 border border-border rounded-lg p-4 max-h-[60vh] overflow-auto" style={{ scrollbarWidth:'thin' }}>
+                      {highlightJson(viewingFunction ? JSON.stringify(viewingFunction, null, 2) : '')}
+                    </div>
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
+
+            {/* Function Mocks Modal */}
+            <Dialog open={viewingMocks !== null} onOpenChange={(open)=>{ if(!open) setViewingMocks(null); }}>
+              <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>Function Mocks</DialogTitle>
+                  <DialogDescription className="space-y-4 max-h-[70vh] overflow-y-auto">
+                    {viewingMocks?.length === 0 && (
+                      <p className="text-sm text-muted-foreground">No mocks available.</p>
+                    )}
+                    {viewingMocks?.map((mockJson, idx)=>(
+                      <div key={idx} className="bg-muted/50 border border-border rounded-lg p-4 overflow-auto" style={{ scrollbarWidth:'thin' }}>
+                        {highlightJson(mockJson)}
+                      </div>
+                    ))}
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
+          </div>
         )}
 
         {/* System Message - hidden in Masaic Mocky mode */}
