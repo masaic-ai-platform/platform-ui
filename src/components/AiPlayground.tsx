@@ -111,7 +111,7 @@ const AiPlayground: React.FC = () => {
 
   // Masaic Mocky mode state
   const [mockyMode, setMockyMode] = useState(false);
-  const [mockyAgentData, setMockyAgentData] = useState<null | { systemPrompt: string; greetingMessage: string; tools: any[] }>(null);
+  const [mockyAgentData, setMockyAgentData] = useState<null | { systemPrompt: string; greetingMessage: string; description: string; tools: any[] }>(null);
 
   // Chat header state
   const [copiedResponseId, setCopiedResponseId] = useState(false);
@@ -1221,8 +1221,13 @@ const AiPlayground: React.FC = () => {
             setMockyAgentData({
               systemPrompt: data.systemPrompt || '',
               greetingMessage: data.greetingMessage || '',
+              description: data.description || '',
               tools: data.tools || []
             });
+
+            // reset conversation tracking ids
+            setConversationId(null);
+            setPreviousResponseId(null);
 
             // Reset previous conversation and show greeting
             setMessages([]);
@@ -1265,6 +1270,9 @@ const AiPlayground: React.FC = () => {
     if (mockyMode) {
       setMockyMode(false);
       setMockyAgentData(null);
+      setMessages([]);
+      setConversationId(null);
+      setPreviousResponseId(null);
     }
 
     setActiveTab(tab);
@@ -1432,6 +1440,12 @@ const AiPlayground: React.FC = () => {
                 <span className="text-sm">View Code</span>
               </Button>
             </div>
+
+            {mockyMode && mockyAgentData?.description && (
+              <span className="absolute left-1/2 transform -translate-x-1/2 text-xs text-muted-foreground truncate max-w-[60%] text-center">
+                {mockyAgentData.description}
+              </span>
+            )}
 
             {/* Response ID Display - Moved to right */}
             {previousResponseId && (

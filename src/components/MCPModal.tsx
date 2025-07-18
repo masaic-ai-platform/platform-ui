@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Plus, X, Loader2, Check, Edit } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
 import { API_URL } from '@/config';
-import { useEffect } from 'react';
 
 interface MCPModalProps {
   open: boolean;
@@ -68,8 +67,39 @@ const MCPModal: React.FC<MCPModalProps> = ({
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [selectedTool, setSelectedTool] = useState<MCPTool | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [serverSuggestions, setServerSuggestions] = useState<{url:string,label:string}[]>([]);
+  const [showUrlSuggestions, setShowUrlSuggestions] = useState(false);
+  const filteredUrlSuggestions = serverSuggestions.filter(sug => {
+    if (!url.trim()) return false;
+    const query = url.toLowerCase();
+    const urlStr = (sug.url || '').toLowerCase();
+    const labelStr = (sug.label || '').toLowerCase();
+    return urlStr.includes(query) || labelStr.includes(query);
+  });
 
   const apiUrl = API_URL;
+
+  useEffect(()=>{
+    if(readOnly) return;
+    // fetch suggestions once when modal opens
+    if(open){
+      fetch(`${apiUrl}/v1/dashboard/mcp/mock/servers`)
+        .then(res=>res.json())
+        .then((data:any[])=>{
+          const mapped = data.map(item=>({ url:item.url, label:item.serverLabel || item.label || item.url }));
+          setServerSuggestions(mapped);
+        })
+        .catch(()=>{});
+    }
+  },[open, readOnly]);
+
+  useEffect(() => {
+    const handler = () => setShowUrlSuggestions(false);
+    if(showUrlSuggestions){
+      window.addEventListener('click', handler);
+    }
+    return () => window.removeEventListener('click', handler);
+  }, [showUrlSuggestions]);
 
   const handleConnect = async () => {
     setIsConnecting(true);
@@ -378,14 +408,17 @@ const MCPModal: React.FC<MCPModalProps> = ({
             {currentView === 'connect' && (
               <div className="space-y-4">
                 {/* URL Field */}
-                <div className="space-y-2">
+                <div className="space-y-2 relative">
                   <Label htmlFor="url" className="text-sm font-medium">
                     URL
                   </Label>
                   <Input
                     id="url"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
+                    onFocus={()=> setShowUrlSuggestions(true)}
+                    onChange={(e) => {
+                      setUrl(e.target.value);
+                      setShowUrlSuggestions(true);
+                    }}
                     placeholder="https://mcp.example.com"
                     disabled={isConnecting}
                     className="bg-muted/50 border border-border focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
@@ -394,6 +427,27 @@ const MCPModal: React.FC<MCPModalProps> = ({
                       outline: 'none !important'
                     }}
                   />
+                   {showUrlSuggestions && filteredUrlSuggestions.length>0 && (
+                     <div className="absolute z-50 mt-1 left-0 max-h-48 overflow-y-auto bg-background border border-border rounded-md shadow-lg w-auto min-w-full max-w-xs" style={{scrollbarWidth:'thin'}}>
+                       {filteredUrlSuggestions.map(sug => (
+                         <button
+                           key={sug.url}
+                           type="button"
+                           className="w-full text-left px-3 py-2 text-sm hover:bg-positive-trend/10 focus:bg-positive-trend/10"
+                           onClick={()=>{
+                             setUrl(sug.url);
+                             setLabel(sug.label);
+                             setAuthentication('none');
+                             setShowUrlSuggestions(false);
+                           }}
+                         >
+                           <span className="font-medium">{sug.label}</span>
+                           <br/>
+                           <span className="text-xs text-muted-foreground">{sug.url}</span>
+                         </button>
+                       ))}
+                     </div>
+                   )}
                 </div>
 
                 {/* Label Field */}
