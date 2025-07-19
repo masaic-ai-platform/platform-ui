@@ -1213,7 +1213,7 @@ const AiPlayground: React.FC = () => {
     if (tab === 'masaic-mocky') {
       setActiveTab(tab);
       // Fetch agent definition
-      fetch('http://localhost:6644/v1/agents/Masaic-Mocky')
+      fetch(`${API_URL}/v1/agents/Masaic-Mocky`)
         .then(res => res.json())
         .then(data => {
           if (data) {

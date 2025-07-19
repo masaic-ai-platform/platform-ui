@@ -2,31 +2,28 @@
 FROM node:18-alpine AS build
 WORKDIR /app
 
-# 1) Install dependencies
-COPY package*.json bun.lockb ./
+# Install dependencies for build
+COPY package*.json ./
 RUN npm ci --legacy-peer-deps
 
-# 2) Copy all source (including index.html & server.js)
+# Copy source code
 COPY . .
 
-# 3) Build your frontend into /app/dist
+# Build the frontend
 RUN npm run build -- --mode prod
 
-# 4) Prune devDependencies
-RUN npm prune --production
-
-
 # ─── PRODUCTION STAGE ──────────────────────────────────────────────────────────
-FROM node:18-alpine AS production
+FROM gcr.io/distroless/nodejs18-debian12 AS production
 WORKDIR /app
 
-# 5) Bring in built frontend + pruned modules
+# Copy built frontend
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules ./node_modules
 
-# 6) Copy your server entrypoint
+# Copy server entrypoint
 COPY server.js .
 
-# 7) Expose and start
+# Expose port 80
 EXPOSE 80
-CMD ["node", "server.js"]
+
+# Start the server
+CMD ["server.js"]

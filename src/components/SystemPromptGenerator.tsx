@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Sparkles } from 'lucide-react';
+import { API_URL } from '@/config';
 
 interface SystemPromptGeneratorProps {
   onGenerate: (prompt: string) => void;
@@ -38,8 +39,7 @@ const SystemPromptGenerator: React.FC<SystemPromptGeneratorProps> = ({
     setGenerateModalOpen(false);
     
     try {
-      const apiUrl = import.meta.env.VITE_DASHBOARD_API_URL || 'http://localhost:6644';
-      const response = await fetch(`${apiUrl}/v1/dashboard/generate/prompt`, {
+      const response = await fetch(`${API_URL}/v1/dashboard/generate/prompt`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

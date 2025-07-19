@@ -174,13 +174,13 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   onAddPromptMessage = () => {},
   onRemovePromptMessage = () => {},
   selectedTools = [],
-  onSelectedToolsChange = () => {},
+  onSelectedToolsChange = (tools: Tool[]) => {},
   getMCPToolByLabel = () => null,
   selectedVectorStore,
   onVectorStoreSelect,
   onResetConversation,
   openApiKeysModal = false,
-  onApiKeysModalChange = () => {},
+  onApiKeysModalChange = (open: boolean) => {},
   jsonSchemaContent,
   setJsonSchemaContent,
   jsonSchemaName,
@@ -225,7 +225,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const loadMockServers = async () => {
     setLoadingServers(true);
     try{
-      const res = await fetch('http://localhost:6644/v1/dashboard/mcp/mock/servers');
+      const res = await fetch(`${API_URL}/v1/dashboard/mcp/mock/servers`);
       if(res.ok){
         const data = await res.json();
         setMockServers(data);
@@ -240,7 +240,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const loadMockFunctions = async () => {
     setLoadingFunctions(true);
     try{
-      const res = await fetch('http://localhost:6644/v1/dashboard/mcp/mock/functions');
+      const res = await fetch(`${API_URL}/v1/dashboard/mcp/mock/functions`);
       if(res.ok){
         const data = await res.json();
         setMockFunctions(data);
@@ -254,7 +254,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
 
   const loadFunctionMocks = async (funcId: string) => {
     try {
-      const res = await fetch(`http://localhost:6644/v1/dashboard/mcp/mock/functions/${funcId}`);
+      const res = await fetch(`${API_URL}/v1/dashboard/mcp/mock/functions/${funcId}`);
       if (res.ok) {
         const data = await res.json();
         const jsonArr: string[] = data?.mocks?.mockJsons || [];
@@ -294,7 +294,10 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
         setProviders(data);
       } catch (err) {
         console.error('Error fetching models:', err);
-        setError('Failed to load models. Using fallback models.');
+        const errorMessage = err instanceof Error && err.message.includes('Failed to fetch') 
+          ? 'Cannot connect to API server. Using fallback models.'
+          : 'Failed to load models. Using fallback models.';
+        setError(errorMessage);
         
         // Fallback models
         setProviders([
@@ -526,7 +529,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
 
   const handleServerClick = async (server:{id:string,url:string,serverLabel:string})=>{
     try{
-      const res = await fetch(`${'http://localhost:6644'}/v1/dashboard/mcp/list_actions`,{
+      const res = await fetch(`${API_URL}/v1/dashboard/mcp/list_actions`,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ serverLabel: server.serverLabel, serverUrl: server.url, headers:{} })
@@ -547,6 +550,20 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
         
         {/* Header with Model Selection and Config Icons */}
         <div className="space-y-3 flex-shrink-0">
+          {/* Error Banner for API Connection Issues */}
+          {error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                <span className="text-sm text-red-600 font-medium">API Connection Error</span>
+              </div>
+              <p className="text-xs text-red-500/80 mt-1">{error}</p>
+              <p className="text-xs text-red-500/60 mt-1">
+                The application is using fallback models. Please check your API server connection.
+              </p>
+            </div>
+          )}
+          
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 flex-1">
               <Label className="text-sm font-medium whitespace-nowrap">Model</Label>
