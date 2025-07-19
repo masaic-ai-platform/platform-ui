@@ -10,7 +10,10 @@ import {
   Search, 
   FileSearch,
   Image,
-  Brain
+  Brain,
+  Puzzle,
+  Save,
+  Layers
 } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
 import FunctionModal from './FunctionModal';

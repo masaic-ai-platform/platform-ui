@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import UnifiedCard from '@/components/ui/unified-card';
-import { Loader2, Send, Sparkles, RotateCcw, Copy, Check, Menu, Code } from 'lucide-react';
+import { Loader2, Send, Sparkles, RotateCcw, Copy, Check, Menu, Code, Brain, Image, Puzzle, Save, Layers } from 'lucide-react';
 import { toast } from 'sonner';
 import ChatMessage from './ChatMessage';
 import ConfigurationPanel from './ConfigurationPanel';
@@ -109,6 +109,10 @@ const AiPlayground: React.FC = () => {
   const [jsonSchemaContent, setJsonSchemaContent] = useState('');
   const [jsonSchemaName, setJsonSchemaName] = useState<string | null>(null);
 
+  // Masaic Mocky mode state
+  const [mockyMode, setMockyMode] = useState(false);
+  const [mockyAgentData, setMockyAgentData] = useState<null | { systemPrompt: string; greetingMessage: string; description: string; tools: any[] }>(null);
+
   // Chat header state
   const [copiedResponseId, setCopiedResponseId] = useState(false);
   
@@ -138,7 +142,34 @@ const AiPlayground: React.FC = () => {
     const savedTextFormat = (localStorage.getItem('aiPlayground_textFormat') || 'text') as 'text' | 'json_object' | 'json_schema';
     const savedToolChoice = (localStorage.getItem('aiPlayground_toolChoice') || 'auto') as 'auto' | 'none';
     const savedPromptMessages = JSON.parse(localStorage.getItem('aiPlayground_promptMessages') || '[]');
-    const savedOtherTools = JSON.parse(localStorage.getItem('aiPlayground_otherTools') || '[]');
+    const savedOtherToolsRaw = JSON.parse(localStorage.getItem('aiPlayground_otherTools') || '[]');
+
+    // Helper to map tool id to its icon component
+    const getIconForTool = (id: string) => {
+      switch (id) {
+        case 'image_generation':
+          return Image;
+        case 'think':
+          return Brain;
+        case 'fun_req_gathering_tool':
+          return Puzzle;
+        case 'fun_def_generation_tool':
+          return Code;
+        case 'mock_fun_save_tool':
+          return Save;
+        case 'mock_generation_tool':
+          return Layers;
+        case 'mock_save_tool':
+          return Save;
+        default:
+          return Code; // fallback
+      }
+    };
+
+    const savedOtherTools = savedOtherToolsRaw.map((tool: any) => ({
+      ...tool,
+      icon: getIconForTool(tool.id)
+    }));
     const savedMCPTools = loadMCPToolsFromStorage();
     const savedFileSearchTools = loadFileSearchToolsFromStorage();
     const savedAgenticFileSearchTools = loadAgenticFileSearchToolsFromStorage();
@@ -493,9 +524,11 @@ const AiPlayground: React.FC = () => {
       };
     }
 
+    const effectiveInstructions = mockyMode && mockyAgentData ? mockyAgentData.systemPrompt : instructions;
+
     const requestBody: any = {
       model: `${modelProvider}@${modelName}`,
-      instructions: instructions,
+      instructions: effectiveInstructions,
       input,
       text: {
         format: textFormatBlock
@@ -507,8 +540,10 @@ const AiPlayground: React.FC = () => {
       stream: true
     };
     
-    // Add tools if any are selected
-    if (selectedTools.length > 0) {
+    // Tools handling
+    if (mockyMode && mockyAgentData && Array.isArray(mockyAgentData.tools) && mockyAgentData.tools.length > 0) {
+      requestBody.tools = mockyAgentData.tools;
+    } else if (selectedTools.length > 0) {
       requestBody.tools = selectedTools.map(tool => {
         if (tool.id === 'mcp_server' && tool.mcpConfig) {
           return {
@@ -541,6 +576,22 @@ const AiPlayground: React.FC = () => {
             max_iterations: tool.agenticFileSearchConfig.iterations,
             max_num_results: tool.agenticFileSearchConfig.maxResults
           };
+        } else if (tool.id === 'fun_req_gathering_tool') {
+          // Add Fun Req Assembler tool
+          return {
+            type: 'fun_req_gathering_tool'
+          };
+        } else if (tool.id === 'fun_def_generation_tool') {
+          // Add Fun Def Generator tool
+          return {
+            type: 'fun_def_generation_tool'
+          };
+        } else if (tool.id === 'mock_fun_save_tool') {
+          return { type: 'mock_fun_save_tool' };
+        } else if (tool.id === 'mock_generation_tool') {
+          return { type: 'mock_generation_tool' };
+        } else if (tool.id === 'mock_save_tool') {
+          return { type: 'mock_save_tool' };
         }
         // Add other tool types as needed
         return null;
@@ -899,6 +950,162 @@ const AiPlayground: React.FC = () => {
                       const blocksWithLoading = addInlineLoading(contentBlocks);
                       updateMessage(blocksWithLoading, streamingContent);
                     }
+                  } else if (data.type === 'response.fun_req_gathering_tool.in_progress') {
+                    // Handle fun req assembler start
+                    const toolExecution: ToolExecution = {
+                      serverName: 'fun_req_gathering_tool',
+                      toolName: 'assemble',
+                      status: 'in_progress'
+                    };
+                    activeToolExecutions.set('fun_req_gathering_tool', toolExecution);
+
+                    let toolProgressBlock = contentBlocks.find(block => block.type === 'tool_progress');
+                    if (!toolProgressBlock) {
+                      toolProgressBlock = {
+                        type: 'tool_progress',
+                        toolExecutions: Array.from(activeToolExecutions.values())
+                      };
+                      contentBlocks.push(toolProgressBlock);
+                    } else {
+                      toolProgressBlock.toolExecutions = Array.from(activeToolExecutions.values());
+                    }
+                    currentTextBlock = null;
+                    updateMessage(contentBlocks, streamingContent);
+                  } else if (data.type === 'response.fun_req_gathering_tool.completed') {
+                    const toolExecution = activeToolExecutions.get('fun_req_gathering_tool');
+                    if (toolExecution) {
+                      toolExecution.status = 'completed';
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'tool_progress') {
+                          contentBlocks[i].toolExecutions = Array.from(activeToolExecutions.values());
+                          break;
+                        }
+                      }
+                      const blocksWithLoading = addInlineLoading(contentBlocks);
+                      updateMessage(blocksWithLoading, streamingContent);
+                    }
+                  } else if (data.type === 'response.fun_def_generation_tool.in_progress') {
+                    // Handle fun def generator start
+                    const toolExecution: ToolExecution = {
+                      serverName: 'fun_def_generation_tool',
+                      toolName: 'generate',
+                      status: 'in_progress'
+                    };
+                    activeToolExecutions.set('fun_def_generation_tool', toolExecution);
+
+                    let toolProgressBlock = contentBlocks.find(block => block.type === 'tool_progress');
+                    if (!toolProgressBlock) {
+                      toolProgressBlock = {
+                        type: 'tool_progress',
+                        toolExecutions: Array.from(activeToolExecutions.values())
+                      };
+                      contentBlocks.push(toolProgressBlock);
+                    } else {
+                      toolProgressBlock.toolExecutions = Array.from(activeToolExecutions.values());
+                    }
+                    currentTextBlock = null;
+                    updateMessage(contentBlocks, streamingContent);
+                  } else if (data.type === 'response.fun_def_generation_tool.completed') {
+                    const toolExecution = activeToolExecutions.get('fun_def_generation_tool');
+                    if (toolExecution) {
+                      toolExecution.status = 'completed';
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'tool_progress') {
+                          contentBlocks[i].toolExecutions = Array.from(activeToolExecutions.values());
+                          break;
+                        }
+                      }
+                      const blocksWithLoading = addInlineLoading(contentBlocks);
+                      updateMessage(blocksWithLoading, streamingContent);
+                    }
+                  } else if (data.type === 'response.mock_fun_save_tool.in_progress') {
+                    const toolExecution: ToolExecution = {
+                      serverName: 'mock_fun_save_tool',
+                      toolName: 'save_function',
+                      status: 'in_progress'
+                    };
+                    activeToolExecutions.set('mock_fun_save_tool', toolExecution);
+
+                    let toolProgressBlock = contentBlocks.find(block => block.type === 'tool_progress');
+                    if (!toolProgressBlock) {
+                      toolProgressBlock = { type: 'tool_progress', toolExecutions: Array.from(activeToolExecutions.values()) };
+                      contentBlocks.push(toolProgressBlock);
+                    } else {
+                      toolProgressBlock.toolExecutions = Array.from(activeToolExecutions.values());
+                    }
+                    currentTextBlock = null;
+                    updateMessage(contentBlocks, streamingContent);
+                  } else if (data.type === 'response.mock_fun_save_tool.completed') {
+                    const toolExecution = activeToolExecutions.get('mock_fun_save_tool');
+                    if (toolExecution) {
+                      toolExecution.status = 'completed';
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'tool_progress') {
+                          contentBlocks[i].toolExecutions = Array.from(activeToolExecutions.values());
+                          break;
+                        }
+                      }
+                      const blocksWithLoading = addInlineLoading(contentBlocks);
+                      updateMessage(blocksWithLoading, streamingContent);
+                    }
+                  } else if (data.type === 'response.mock_generation_tool.in_progress') {
+                    const toolExecution: ToolExecution = {
+                      serverName: 'mock_generation_tool',
+                      toolName: 'generate',
+                      status: 'in_progress'
+                    };
+                    activeToolExecutions.set('mock_generation_tool', toolExecution);
+                    let toolProgressBlock = contentBlocks.find(block => block.type === 'tool_progress');
+                    if (!toolProgressBlock) {
+                      toolProgressBlock = { type: 'tool_progress', toolExecutions: Array.from(activeToolExecutions.values()) };
+                      contentBlocks.push(toolProgressBlock);
+                    } else {
+                      toolProgressBlock.toolExecutions = Array.from(activeToolExecutions.values());
+                    }
+                    currentTextBlock = null;
+                    updateMessage(contentBlocks, streamingContent);
+                  } else if (data.type === 'response.mock_generation_tool.completed') {
+                    const toolExecution = activeToolExecutions.get('mock_generation_tool');
+                    if (toolExecution) {
+                      toolExecution.status = 'completed';
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'tool_progress') {
+                          contentBlocks[i].toolExecutions = Array.from(activeToolExecutions.values());
+                          break;
+                        }
+                      }
+                      const blocksWithLoading = addInlineLoading(contentBlocks);
+                      updateMessage(blocksWithLoading, streamingContent);
+                    }
+                  } else if (data.type === 'response.mock_save_tool.in_progress') {
+                    const toolExecution: ToolExecution = {
+                      serverName: 'mock_save_tool',
+                      toolName: 'save',
+                      status: 'in_progress'
+                    };
+                    activeToolExecutions.set('mock_save_tool', toolExecution);
+                    let toolProgressBlock = contentBlocks.find(block => block.type === 'tool_progress');
+                    if (!toolProgressBlock) {
+                      toolProgressBlock = { type: 'tool_progress', toolExecutions: Array.from(activeToolExecutions.values()) };
+                      contentBlocks.push(toolProgressBlock);
+                    } else {
+                      toolProgressBlock.toolExecutions = Array.from(activeToolExecutions.values());
+                    }
+                    currentTextBlock = null;
+                    updateMessage(contentBlocks, streamingContent);
+                  } else if (data.type === 'response.mock_save_tool.completed') {
+                    const toolExecution = activeToolExecutions.get('mock_save_tool');
+                    if (toolExecution) {
+                      toolExecution.status = 'completed';
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'tool_progress') {
+                          contentBlocks[i].toolExecutions = Array.from(activeToolExecutions.values());
+                          break;
+                        }
+                      }
+                      const blocksWithLoading = addInlineLoading(contentBlocks);
+                      updateMessage(blocksWithLoading, streamingContent);
+                    }
                   }
                 } catch (parseError) {
                   console.error('Error parsing SSE data:', parseError);
@@ -970,12 +1177,10 @@ const AiPlayground: React.FC = () => {
       generateResponse(inputValue.trim());
       setInputValue('');
       
-      // Reset textarea height
-      const textarea = document.querySelector('textarea');
+      // Reset textarea height to default
+      const textarea = document.querySelector('.chat-input-textarea') as HTMLTextAreaElement;
       if (textarea) {
-        textarea.style.height = 'auto';
-        const maxHeight = Math.round(window.innerHeight * 0.4);
-        textarea.style.height = Math.max(Math.min(textarea.scrollHeight, maxHeight), 96) + 'px';
+        textarea.style.height = '96px';
       }
     }
   };
@@ -991,12 +1196,85 @@ const AiPlayground: React.FC = () => {
     const textarea = e.target;
     setInputValue(textarea.value);
     
-    // Auto-resize functionality
+    // Auto-resize functionality with minimum and maximum heights
+    const minHeight = 96;
     const maxHeight = Math.round(window.innerHeight * 0.4);
-    textarea.style.height = Math.max(Math.min(textarea.scrollHeight, maxHeight), 96) + 'px';
+    
+    // Reset height to auto to get proper scrollHeight
+    textarea.style.height = 'auto';
+    
+    // Set new height
+    const newHeight = Math.max(Math.min(textarea.scrollHeight, maxHeight), minHeight);
+    textarea.style.height = `${newHeight}px`;
   };
 
   const handleTabChange = (tab: string) => {
+    // Special handling for Masaic Mocky option
+    if (tab === 'masaic-mocky') {
+      setActiveTab(tab);
+      // Fetch agent definition
+      fetch('http://localhost:6644/v1/agents/Masaic-Mocky')
+        .then(res => res.json())
+        .then(data => {
+          if (data) {
+            setMockyMode(true);
+            setMockyAgentData({
+              systemPrompt: data.systemPrompt || '',
+              greetingMessage: data.greetingMessage || '',
+              description: data.description || '',
+              tools: data.tools || []
+            });
+
+            // reset conversation tracking ids
+            setConversationId(null);
+            setPreviousResponseId(null);
+
+            // Reset previous conversation and show greeting
+            setMessages([]);
+
+            const greetingId = Date.now().toString() + '_assistant';
+            const greetingMessage: Message = {
+              id: greetingId,
+              role: 'assistant',
+              content: '',
+              type: 'text',
+              timestamp: new Date(),
+              isLoading: true
+            };
+            setMessages([greetingMessage]);
+
+            // Artificial streaming of greeting text
+            const greetingText: string = data.greetingMessage || '';
+            let idx = 0;
+            const interval = setInterval(() => {
+              idx += 1;
+              const partial = greetingText.slice(0, idx);
+              setMessages(prev => prev.map(msg => msg.id === greetingId ? { ...msg, content: partial } : msg));
+              if (idx >= greetingText.length) {
+                clearInterval(interval);
+                setMessages(prev => prev.map(msg => msg.id === greetingId ? { ...msg, isLoading: false } : msg));
+              }
+            }, 25);
+          } else {
+            toast.error('Failed to load Masaic Mocky agent data');
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          toast.error('Error fetching Masaic Mocky agent');
+        });
+      return;
+    }
+
+    // Exiting Masaic Mocky mode if active and user selects other tab
+    if (mockyMode) {
+      setMockyMode(false);
+      setMockyAgentData(null);
+      setMessages([]);
+      setConversationId(null);
+      setPreviousResponseId(null);
+    }
+
     setActiveTab(tab);
     // Handle API Keys tab by opening the API keys modal
     if (tab === 'api-keys') {
@@ -1070,6 +1348,7 @@ const AiPlayground: React.FC = () => {
           jsonSchemaName={jsonSchemaName}
           setJsonSchemaName={setJsonSchemaName}
           className="w-full"
+          mockyMode={mockyMode}
         />
       </DrawerContent>
     </Drawer>
@@ -1128,6 +1407,7 @@ const AiPlayground: React.FC = () => {
         jsonSchemaName={jsonSchemaName}
         setJsonSchemaName={setJsonSchemaName}
         className="hidden md:block md:w-[30%]"
+        mockyMode={mockyMode}
       />
 
       {/* Chat Area */}
@@ -1160,6 +1440,12 @@ const AiPlayground: React.FC = () => {
                 <span className="text-sm">View Code</span>
               </Button>
             </div>
+
+            {mockyMode && mockyAgentData?.description && (
+              <span className="absolute left-1/2 transform -translate-x-1/2 text-xs text-muted-foreground truncate max-w-[60%] text-center">
+                {mockyAgentData.description}
+              </span>
+            )}
 
             {/* Response ID Display - Moved to right */}
             {previousResponseId && (
@@ -1239,7 +1525,7 @@ const AiPlayground: React.FC = () => {
                 onChange={handleTextareaChange}
                 onKeyPress={handleKeyPress}
                 placeholder="Chat with your prompt..."
-                className="w-full min-h-[96px] max-h-[40vh] resize-none rounded-xl border border-border bg-muted/50 px-4 py-4 pr-12 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
+                className="chat-input-textarea w-full min-h-[96px] max-h-[40vh] resize-none rounded-xl border border-border bg-muted/50 px-4 py-4 pr-12 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
                 disabled={isLoading}
                 rows={1}
                 style={{ 

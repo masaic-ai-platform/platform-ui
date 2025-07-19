@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   ChevronDown, 
   ChevronRight, 
@@ -26,7 +27,11 @@ import {
   FileSearch,
   Brain,
   Globe,
-  Terminal
+  Terminal,
+  Loader2,
+  Copy,
+  Check,
+  RefreshCw
 } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
 import { API_URL } from '@/config';
@@ -36,6 +41,10 @@ import PromptMessagesInline from './PromptMessagesInline';
 import ApiKeysModal from './ApiKeysModal';
 import ModelSelectionModal from './ModelSelectionModal';
 import ConfigurationSettingsModal from './ConfigurationSettingsModal';
+import SystemPromptGenerator from './SystemPromptGenerator';
+import MCPModal from './MCPModal';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
 interface Model {
   name: string;
@@ -127,6 +136,8 @@ interface ConfigurationPanelProps {
   setJsonSchemaContent: (content: string) => void;
   jsonSchemaName: string | null;
   setJsonSchemaName: (name: string | null) => void;
+  // When true, advanced sections (settings, tools, system prompt) are hidden for Masaic Mocky mode
+  mockyMode?: boolean;
   className?: string;
 }
 
@@ -174,6 +185,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   setJsonSchemaContent,
   jsonSchemaName,
   setJsonSchemaName,
+  mockyMode = false,
   className = ''
 }) => {
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -186,6 +198,83 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const [apiKeysModalOpen, setApiKeysModalOpen] = useState(false);
   const [requiredProvider, setRequiredProvider] = useState<string | undefined>(undefined);
   const [pendingModelSelection, setPendingModelSelection] = useState<string | null>(null);
+  const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
+
+  /* ---------------- Mocky Mode data ---------------- */
+  const [mockServers, setMockServers] = useState<{id:string,url:string,serverLabel:string}[]>([]);
+  const [mockFunctions, setMockFunctions] = useState<any[]>([]);
+  const [loadingServers, setLoadingServers] = useState(false);
+  const [loadingFunctions, setLoadingFunctions] = useState(false);
+  const [addServerModalOpen, setAddServerModalOpen] = useState(false);
+  const [newServerLabel, setNewServerLabel] = useState('');
+  const [selectedFunctionIds, setSelectedFunctionIds] = useState<string[]>([]);
+  const [creatingServer, setCreatingServer] = useState(false);
+  const [viewingFunction, setViewingFunction] = useState<any|null>(null);
+  const [viewingMocks, setViewingMocks] = useState<string[] | null>(null);
+  const [mcpPreview, setMcpPreview] = useState<{tools:any[], serverLabel:string}|null>(null);
+  interface MCPTool { name:string; description:string; parameters:any; strict?:boolean; type?:string; }
+
+  useEffect(() => {
+    if(mockyMode){
+      loadMockServers();
+      loadMockFunctions();
+    }
+  }, [mockyMode]);
+
+  const loadMockServers = async () => {
+    setLoadingServers(true);
+    try{
+      const res = await fetch('http://localhost:6644/v1/dashboard/mcp/mock/servers');
+      if(res.ok){
+        const data = await res.json();
+        setMockServers(data);
+      }
+    }catch(err){
+      console.error(err);
+    }finally{
+      setLoadingServers(false);
+    }
+  };
+
+  const loadMockFunctions = async () => {
+    setLoadingFunctions(true);
+    try{
+      const res = await fetch('http://localhost:6644/v1/dashboard/mcp/mock/functions');
+      if(res.ok){
+        const data = await res.json();
+        setMockFunctions(data);
+      }
+    }catch(err){
+      console.error(err);
+    }finally{
+      setLoadingFunctions(false);
+    }
+  };
+
+  const loadFunctionMocks = async (funcId: string) => {
+    try {
+      const res = await fetch(`http://localhost:6644/v1/dashboard/mcp/mock/functions/${funcId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const jsonArr: string[] = data?.mocks?.mockJsons || [];
+        setViewingMocks(jsonArr);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // Handle copy to clipboard
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(instructions);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  };
 
   // Fetch models from API
   useEffect(() => {
@@ -374,11 +463,82 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
         return 'neutral';
       case 'think':
         return 'positive-trend';
+      case 'fun_req_gathering_tool':
+      case 'fun_def_generation_tool':
+        return 'positive-trend';
+      case 'mock_fun_save_tool':
+        return 'positive-trend';
+      case 'mock_generation_tool':
+      case 'mock_save_tool':
+        return 'positive-trend';
       default:
         return 'positive-trend';
     }
   };
 
+  // --- JSON highlighting helpers (copy from JsonSchemaModal) ---
+  const highlightLine = (line: string) => {
+    // Regex patterns
+    if (line.includes(':') && line.includes('"')) {
+      const keyMatch = line.match(/"([^\"]+)"(\s*:)/);
+      if (keyMatch) {
+        const beforeKey = line.substring(0, line.indexOf(keyMatch[0]));
+        const key = keyMatch[1];
+        const afterKey = line.substring(line.indexOf(keyMatch[0]) + keyMatch[0].length);
+        return (
+          <span>
+            <span className="text-muted-foreground">{beforeKey}</span>
+            <span className="text-positive-trend">"{key}"</span>
+            <span className="text-muted-foreground">:</span>
+            <span className="text-foreground">{afterKey}</span>
+          </span>
+        );
+      }
+    } else if (line.includes('"') && !line.includes(':')) {
+      return <span className="text-positive-trend">{line}</span>;
+    } else if (line.match(/\b(true|false|null)\b/)) {
+      return <span className="text-positive-trend">{line}</span>;
+    } else if (line.match(/\b\d+\b/)) {
+      return <span className="text-foreground">{line}</span>;
+    }
+    return <span className="text-muted-foreground">{line}</span>;
+  };
+
+  const highlightJson = (jsonString: string) => {
+    if (!jsonString.trim()) return null;
+    try {
+      const parsed = JSON.parse(jsonString);
+      const formatted = JSON.stringify(parsed, null, 2);
+      const lines = formatted.split('\n');
+      return (
+        <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap">
+          {lines.map((line, idx) => (<div key={idx}>{highlightLine(line)}</div>))}
+        </pre>
+      );
+    } catch {
+      return (
+        <pre className="font-mono text-xs leading-relaxed whitespace-pre-wrap text-foreground">
+          {jsonString}
+        </pre>
+      );
+    }
+  };
+
+  const handleServerClick = async (server:{id:string,url:string,serverLabel:string})=>{
+    try{
+      const res = await fetch(`${'http://localhost:6644'}/v1/dashboard/mcp/list_actions`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ serverLabel: server.serverLabel, serverUrl: server.url, headers:{} })
+      });
+      if(res.ok){
+        const tools: MCPTool[] = await res.json();
+        setMcpPreview({tools, serverLabel: server.serverLabel});
+      } else {
+        toast.error('Failed to load tools');
+      }
+    }catch(err){ console.error(err); toast.error('Error fetching tools'); }
+  };
 
 
   return (
@@ -386,7 +546,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
       <div className="p-4 h-full flex flex-col">
         
         {/* Header with Model Selection and Config Icons */}
-        <div className="space-y-3">
+        <div className="space-y-3 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 flex-1">
               <Label className="text-sm font-medium whitespace-nowrap">Model</Label>
@@ -398,6 +558,8 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                 error={error}
               />
             </div>
+            {/* Settings icon hidden in Masaic Mocky mode */}
+            {!mockyMode && (
             <div className="flex items-center space-x-2">
               <ConfigurationSettingsModal
                 textFormat={textFormat}
@@ -416,9 +578,11 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                 setJsonSchemaName={setJsonSchemaName}
               />
             </div>
+            )}
           </div>
           
-          {/* Configuration Parameters */}
+          {/* Configuration Parameters summary hidden in Masaic Mocky mode */}
+          {!mockyMode && (
           <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
             <span>text_format:</span>
             <span className="text-positive-trend font-medium">{textFormat}</span>
@@ -429,10 +593,12 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             <span className="ml-2">tokens:</span>
             <span className="text-positive-trend font-medium">{maxTokens}</span>
           </div>
+          )}
         </div>
 
-        {/* Tools Section */}
-        <div className="mt-6">
+        {/* Tools Section (hidden in Masaic Mocky mode) */}
+        {!mockyMode && (
+        <div className="mt-6 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center flex-wrap gap-2">
               <Label className="text-sm font-medium">Tools:</Label>
@@ -535,33 +701,308 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             </ToolsSelectionModal>
           </div>
         </div>
+        )}
 
-        {/* System Message - Takes most available space */}
-        <div className="flex-1 flex flex-col mt-6 min-h-0">
-          <div className="flex items-center justify-between mb-3">
-            <Label className="text-sm font-medium">System message</Label>
+        {/* Mocky Mode Lists */}
+        {mockyMode && (
+          <div className="mt-6 flex flex-col flex-grow min-h-0 space-y-6">
+            {/* Mock Servers List */}
+            <Card className="flex flex-col flex-1 min-h-0">
+              <div className="p-4 border-b border-border flex items-center justify-between">
+                <h4 className="text-sm font-medium">Mock Servers</h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAddServerModalOpen(true)}
+                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="p-4 space-y-2 flex-1 overflow-y-auto min-h-0" style={{ scrollbarWidth:'thin' }}>
+                {loadingServers ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  </div>
+                ) : mockServers.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No mock servers found.</p>
+                ) : (
+                  mockServers.map(server => (
+                    <div key={server.id} className="flex items-start justify-between p-3 rounded-lg border transition-all duration-200 cursor-pointer hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-positive-trend/20 border-border/20 hover:border-positive-trend/40 hover:bg-positive-trend/5" onClick={() => handleServerClick(server)}>
+                      <div className="flex-1 min-w-0">
+                        <h5 className="text-xs font-semibold text-foreground truncate">{server.serverLabel}</h5>
+                        <p className="text-xs text-muted-foreground truncate">{server.url}</p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e)=>{e.stopPropagation(); navigator.clipboard.writeText(server.url); toast.success('Server URL copied');}}
+                        className="border-border text-foreground hover:bg-positive-trend/10 focus:outline-none focus:ring-2 focus:ring-positive-trend/50"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+
+            {/* Mock Functions List */}
+            <Card className="flex flex-col flex-1 min-h-0">
+              <div className="p-4 border-b border-border flex items-center justify-between">
+                <h4 className="text-sm font-medium">Mock Functions</h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={loadMockFunctions}
+                  className="h-6 w-6 p-0 hover:bg-muted/50"
+                  title="Refresh functions"
+                >
+                  <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </div>
+              <div className="p-4 space-y-2 flex-1 overflow-y-auto min-h-0" style={{ scrollbarWidth:'thin' }}>
+                {loadingFunctions ? (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  </div>
+                ) : mockFunctions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No mock functions found.</p>
+                ) : (
+                  mockFunctions.map(func => (
+                    <div key={func.id} className="p-3 rounded-lg border transition-all duration-200 border-border/20 hover:border-positive-trend/40 hover:bg-positive-trend/5">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0 space-y-0.5">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs font-semibold text-foreground truncate max-w-[160px]">{func.name}</span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => { navigator.clipboard.writeText(func.id); toast.success('Function ID copied'); }}
+                              className="border-border text-foreground hover:bg-positive-trend/10 focus:outline-none focus:ring-2 focus:ring-positive-trend/50"
+                              title="Copy ID"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{func.description}</p>
+                        </div>
+                        <div className="flex-shrink-0 flex flex-row items-center space-x-2 pl-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs bg-positive-trend/10 text-positive-trend hover:bg-positive-trend/20 focus:outline-none focus:ring-2 focus:ring-positive-trend/20 rounded-full"
+                            onClick={() => setViewingFunction(func)}
+                          >
+                            View Function
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs bg-positive-trend/10 text-positive-trend hover:bg-positive-trend/20 focus:outline-none focus:ring-2 focus:ring-positive-trend/20 rounded-full"
+                            onClick={() => loadFunctionMocks(func.id)}
+                          >
+                            View Mocks
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+
+            {/* Add Mock Server Modal (blank) */}
+            <Dialog open={addServerModalOpen} onOpenChange={(open)=>{ if(!open){ setAddServerModalOpen(false); setNewServerLabel(''); setSelectedFunctionIds([]);} }}>
+              <DialogContent className="max-w-lg w-full">
+                <DialogHeader>
+                  <DialogTitle>Add Mock Server</DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground">Provide a label and select mock functions to include.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 max-h-[70vh] overflow-y-auto" style={{scrollbarWidth:'thin'}}>
+                  {/* Label input */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Server label</Label>
+                    <Input
+                      value={newServerLabel}
+                      onChange={(e)=> setNewServerLabel(e.target.value)}
+                      placeholder="my-mock-server"
+                      disabled={creatingServer}
+                    />
+                  </div>
+
+                  {/* Functions list */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Select Functions</Label>
+                    {loadingFunctions ? (
+                      <div className="flex items-center justify-center py-6"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                    ): (
+                      <div className="max-h-60 overflow-y-auto space-y-1 border border-border rounded-lg p-2" style={{scrollbarWidth:'thin'}}>
+                        {mockFunctions.map(func=>{
+                          const selected = selectedFunctionIds.includes(func.id);
+                          return (
+                            <div
+                              key={func.id}
+                              className={`grid grid-cols-[1.25rem_1fr_auto] gap-3 p-3 rounded-lg border transition-all duration-200 cursor-pointer ${selected ? 'border-positive-trend bg-positive-trend/10' : 'border-border/20 hover:border-positive-trend/40 hover:bg-positive-trend/5'}`}
+                              onClick={()=> setSelectedFunctionIds(prev=> prev.includes(func.id)? prev.filter(id=>id!==func.id):[...prev,func.id])}
+                            >
+                              {/* Icon column */}
+                              <div className="pt-0.5">
+                                {selected && <Check className="h-4 w-4 text-positive-trend"/>}
+                              </div>
+
+                              {/* Name + description */}
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium truncate max-w-[160px]">{func.name}</p>
+                                <p className="text-xs text-muted-foreground truncate">{func.description}</p>
+                              </div>
+
+                              {/* CTA column */}
+                              <div className="flex space-x-2 items-start">
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs bg-positive-trend/10 text-positive-trend hover:bg-positive-trend/20" onClick={(e)=>{e.stopPropagation(); setViewingFunction(func);}}>View Function</Button>
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs bg-positive-trend/10 text-positive-trend hover:bg-positive-trend/20" onClick={(e)=>{e.stopPropagation(); loadFunctionMocks(func.id);}}>View Mocks</Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {mockFunctions.length===0 && <p className="text-xs text-muted-foreground">No functions available.</p>}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end space-x-2 pt-4">
+                    <Button variant="ghost" onClick={()=> setAddServerModalOpen(false)} disabled={creatingServer}>Cancel</Button>
+                    <Button
+                      onClick={async()=>{
+                        if(!newServerLabel.trim() || selectedFunctionIds.length===0) return;
+                        setCreatingServer(true);
+                        try{
+                          const res = await fetch(`${API_URL}/v1/dashboard/mcp/mock/servers`,{
+                            method:'POST',
+                            headers:{'Content-Type':'application/json'},
+                            body: JSON.stringify({ serverLabel:newServerLabel.trim(), toolIds:selectedFunctionIds })
+                          });
+                          if(res.ok){
+                            toast.success('Mock server created');
+                            setAddServerModalOpen(false);
+                            setNewServerLabel('');
+                            setSelectedFunctionIds([]);
+                            loadMockServers();
+                          }else{
+                            toast.error('Failed to create mock server');
+                          }
+                        }catch(err){ toast.error('Error creating server'); } finally{ setCreatingServer(false);}                        
+                      }}
+                      disabled={creatingServer || !newServerLabel.trim() || selectedFunctionIds.length===0}
+                      className="bg-positive-trend hover:bg-positive-trend/90 text-white"
+                    >{creatingServer? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create'}</Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Function Detail Modal */}
+            <Dialog open={!!viewingFunction} onOpenChange={(open)=>{ if(!open) setViewingFunction(null); }}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Function Details</DialogTitle>
+                  <DialogDescription className="max-h-[70vh] overflow-y-auto">
+                    <div className="bg-muted/50 border border-border rounded-lg p-4 max-h-[60vh] overflow-auto" style={{ scrollbarWidth:'thin' }}>
+                      {highlightJson(viewingFunction ? JSON.stringify(viewingFunction, null, 2) : '')}
+                    </div>
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
+
+            {/* Function Mocks Modal */}
+            <Dialog open={viewingMocks !== null} onOpenChange={(open)=>{ if(!open) setViewingMocks(null); }}>
+              <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>Function Mocks</DialogTitle>
+                  <DialogDescription className="space-y-4 max-h-[70vh] overflow-y-auto">
+                    {viewingMocks?.length === 0 && (
+                      <p className="text-sm text-muted-foreground">No mocks available.</p>
+                    )}
+                    {viewingMocks?.map((mockJson, idx)=>(
+                      <div key={idx} className="bg-muted/50 border border-border rounded-lg p-4 overflow-auto" style={{ scrollbarWidth:'thin' }}>
+                        {highlightJson(mockJson)}
+                      </div>
+                    ))}
+                  </DialogDescription>
+                </DialogHeader>
+              </DialogContent>
+            </Dialog>
+
+            {/* MCP Server Preview Modal (read-only) */}
+            {mcpPreview && (
+              <MCPModal
+                open={true}
+                onOpenChange={(open)=>{ if(!open) setMcpPreview(null); }}
+                onConnect={()=>{}}
+                readOnly
+                preloadedTools={mcpPreview.tools}
+                initialConfig={{ url:'', label:mcpPreview.serverLabel, authentication:'none', selectedTools:[] }}
+              />
+            )}
           </div>
-          <Textarea
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
-            placeholder="Describe desired model behavior (tone, tool, usage, response style)"
-            className="flex-1 text-sm resize-none bg-muted/50 border border-border focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
-            style={{ 
-              minHeight: '300px',
-              boxShadow: 'none !important',
-              outline: 'none !important'
-            }}
-          />
-        </div>
+        )}
 
-        {/* Add messages to prompt - Inline expandable */}
-        <div className="mt-4 pb-4">
-          <PromptMessagesInline
-            promptMessages={promptMessages}
-            onAddPromptMessage={onAddPromptMessage}
-            onRemovePromptMessage={onRemovePromptMessage}
-          />
+        {/* System Message - hidden in Masaic Mocky mode */}
+        {!mockyMode && (
+        <div className="mt-6 flex flex-col flex-grow min-h-0">
+          <div className="flex items-center justify-between mb-3 flex-shrink-0">
+            <Label className="text-sm font-medium">System message</Label>
+            <SystemPromptGenerator 
+              onGenerate={setInstructions} 
+              existingPrompt={instructions} 
+              isLoading={isGeneratingPrompt}
+              onLoadingChange={setIsGeneratingPrompt}
+            />
+          </div>
+          <div className="relative flex-grow min-h-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2 h-6 w-6 text-muted-foreground hover:text-foreground z-10"
+              onClick={handleCopy}
+            >
+              {isCopied ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+            </Button>
+            <Textarea
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder="Describe desired model behavior (tone, tool, usage, response style)"
+              className="h-full w-full text-sm resize-none bg-muted/50 border border-border focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
+              style={{ 
+                boxShadow: 'none !important',
+                outline: 'none !important'
+              }}
+              disabled={isGeneratingPrompt}
+            />
+            {isGeneratingPrompt && (
+              <div className="absolute inset-0 bg-muted/50 border border-border rounded-md flex items-center justify-center">
+                <div className="flex flex-col items-center space-y-3">
+                  <div className="w-8 h-8 border-2 border-positive-trend border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-sm text-muted-foreground">Generating prompt...</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+        )}
+
+        {/* Remove or comment out the PromptMessagesInline component */}
+        {/* <PromptMessagesInline
+          promptMessages={promptMessages}
+          onAddPromptMessage={onAddPromptMessage}
+          onRemovePromptMessage={onRemovePromptMessage}
+        /> */}
 
       </div>
 

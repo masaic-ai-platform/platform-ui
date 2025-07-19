@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, Search, FileSearch, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, Search, FileSearch, ChevronDown, ChevronRight, Puzzle, Code, Save, Layers } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
 
 interface AgenticSearchLog {
@@ -112,6 +112,27 @@ const ToolExecutionProgress: React.FC<ToolExecutionProgressProps> = ({ toolExecu
     setExpandedTools(newExpanded);
   };
 
+  const getServerDisplayName = (serverName: string) => {
+    switch (serverName) {
+      case 'file_search':
+        return 'File Search';
+      case 'agentic_search':
+        return 'Agentic Search';
+      case 'fun_req_gathering_tool':
+        return 'Fun Req Assembler';
+      case 'fun_def_generation_tool':
+        return 'Fun Def Generator';
+      case 'mock_fun_save_tool':
+        return 'Mock Function Save';
+      case 'mock_generation_tool':
+        return 'Mock Generator';
+      case 'mock_save_tool':
+        return 'Mock Save';
+      default:
+        return serverName;
+    }
+  };
+
   return (
     <div className="mb-4 space-y-3">
       {serverNames.map((serverName, serverIndex) => (
@@ -128,11 +149,21 @@ const ToolExecutionProgress: React.FC<ToolExecutionProgressProps> = ({ toolExecu
                 <Search className="w-3 h-3 text-positive-trend" />
               ) : serverName === 'agentic_search' ? (
                 <FileSearch className="w-3 h-3 text-positive-trend" />
+              ) : serverName === 'fun_req_gathering_tool' ? (
+                <Puzzle className="w-3 h-3 text-positive-trend" />
+              ) : serverName === 'fun_def_generation_tool' ? (
+                <Code className="w-3 h-3 text-positive-trend" />
+              ) : serverName === 'mock_fun_save_tool' ? (
+                <Save className="w-3 h-3 text-positive-trend" />
+              ) : serverName === 'mock_generation_tool' ? (
+                <Layers className="w-3 h-3 text-positive-trend" />
+              ) : serverName === 'mock_save_tool' ? (
+                <Save className="w-3 h-3 text-positive-trend" />
               ) : (
                 <MCP className="w-3 h-3 text-positive-trend" />
               )}
             </div>
-            <span className="text-sm font-medium text-positive-trend">{serverName}</span>
+            <span className="text-sm font-medium text-positive-trend">{getServerDisplayName(serverName)}</span>
           </div>
           
           {/* Tools under this server */}
@@ -148,6 +179,16 @@ const ToolExecutionProgress: React.FC<ToolExecutionProgressProps> = ({ toolExecu
                   return tool.status === 'in_progress' ? 'Search in progress' : 'Search completed';
                 } else if (tool.serverName === 'agentic_search') {
                   return tool.status === 'in_progress' ? 'Agentic Search in progress' : 'Agentic Search completed';
+                } else if (tool.serverName === 'fun_req_gathering_tool') {
+                  return tool.status === 'in_progress' ? 'Understanding requirement' : 'Completed';
+                } else if (tool.serverName === 'fun_def_generation_tool') {
+                  return tool.status === 'in_progress' ? 'Function definition generating' : 'Function definition generated';
+                } else if (tool.serverName === 'mock_fun_save_tool') {
+                  return tool.status === 'in_progress' ? 'Saving mock function' : 'Mock function saved';
+                } else if (tool.serverName === 'mock_generation_tool') {
+                  return tool.status === 'in_progress' ? 'Understanding mock requirements' : 'Completed';
+                } else if (tool.serverName === 'mock_save_tool') {
+                  return tool.status === 'in_progress' ? 'Saving mock' : 'Mock saved';
                 }
                 return tool.toolName;
               };
