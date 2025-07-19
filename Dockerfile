@@ -2,6 +2,9 @@
 FROM node:18-alpine AS build
 WORKDIR /app
 
+# Set environment variables for build
+ENV VITE_APP_VERSION=0.0.1
+
 # Install dependencies for build
 COPY package*.json ./
 RUN npm ci --legacy-peer-deps
@@ -15,6 +18,9 @@ RUN npm run build -- --mode prod
 # ─── PRODUCTION STAGE ──────────────────────────────────────────────────────────
 FROM gcr.io/distroless/nodejs18-debian12 AS production
 WORKDIR /app
+
+# Set environment variables for runtime
+ENV APP_VERSION=0.0.1
 
 # Copy built frontend
 COPY --from=build /app/dist ./dist

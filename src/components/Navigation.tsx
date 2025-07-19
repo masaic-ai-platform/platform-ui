@@ -1,4 +1,5 @@
 import React from 'react';
+import VersionBadge from './VersionBadge';
 
 const Navigation: React.FC = () => {
 
@@ -23,7 +24,10 @@ const Navigation: React.FC = () => {
             </div>
           </div>
           
-          {/* Navigation section removed - no tabs needed */}
+          {/* Version Badge in top-right corner */}
+          <div className="flex items-center">
+            <VersionBadge />
+          </div>
         </div>
       </div>
 
