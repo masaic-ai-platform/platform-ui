@@ -18,9 +18,10 @@ This is user interface to access Masaic's Agent development platform.
 
 ## Environment Properties
 
-| Property | Default | Description |
-|----------|---------|-------------|
-| `VITE_APP_VERSION` | `0.0.1` | Application version |
+| Property | Default | Description                        |
+|----------|---------|------------------------------------|
+| `VITE_APP_VERSION` | `0.0.1` | Application version                |
+| `VITE_DASHBOARD_API_URL` | `http://localhost:6644` | API Server endpoint                |
 | `MODE` | `development` | Build mode (development/production) |
 
 ## Available Scripts
