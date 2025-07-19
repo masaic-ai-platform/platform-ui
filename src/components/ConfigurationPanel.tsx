@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   ChevronDown, 
   ChevronRight, 
@@ -29,7 +30,8 @@ import {
   Terminal,
   Loader2,
   Copy,
-  Check
+  Check,
+  RefreshCw
 } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
 import { API_URL } from '@/config';
@@ -205,6 +207,9 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const [loadingServers, setLoadingServers] = useState(false);
   const [loadingFunctions, setLoadingFunctions] = useState(false);
   const [addServerModalOpen, setAddServerModalOpen] = useState(false);
+  const [newServerLabel, setNewServerLabel] = useState('');
+  const [selectedFunctionIds, setSelectedFunctionIds] = useState<string[]>([]);
+  const [creatingServer, setCreatingServer] = useState(false);
   const [viewingFunction, setViewingFunction] = useState<any|null>(null);
   const [viewingMocks, setViewingMocks] = useState<string[] | null>(null);
   const [mcpPreview, setMcpPreview] = useState<{tools:any[], serverLabel:string}|null>(null);
@@ -746,6 +751,15 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             <Card className="flex flex-col flex-1 min-h-0">
               <div className="p-4 border-b border-border flex items-center justify-between">
                 <h4 className="text-sm font-medium">Mock Functions</h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={loadMockFunctions}
+                  className="h-6 w-6 p-0 hover:bg-muted/50"
+                  title="Refresh functions"
+                >
+                  <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                </Button>
               </div>
               <div className="p-4 space-y-2 flex-1 overflow-y-auto min-h-0" style={{ scrollbarWidth:'thin' }}>
                 {loadingFunctions ? (
@@ -799,14 +813,92 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             </Card>
 
             {/* Add Mock Server Modal (blank) */}
-            <Dialog open={addServerModalOpen} onOpenChange={setAddServerModalOpen}>
-              <DialogContent className="max-w-md">
+            <Dialog open={addServerModalOpen} onOpenChange={(open)=>{ if(!open){ setAddServerModalOpen(false); setNewServerLabel(''); setSelectedFunctionIds([]);} }}>
+              <DialogContent className="max-w-lg w-full">
                 <DialogHeader>
                   <DialogTitle>Add Mock Server</DialogTitle>
-                  <DialogDescription>
-                    {/* Blank modal per requirement */}
-                  </DialogDescription>
+                  <DialogDescription className="text-sm text-muted-foreground">Provide a label and select mock functions to include.</DialogDescription>
                 </DialogHeader>
+                <div className="space-y-4 max-h-[70vh] overflow-y-auto" style={{scrollbarWidth:'thin'}}>
+                  {/* Label input */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Server label</Label>
+                    <Input
+                      value={newServerLabel}
+                      onChange={(e)=> setNewServerLabel(e.target.value)}
+                      placeholder="my-mock-server"
+                      disabled={creatingServer}
+                    />
+                  </div>
+
+                  {/* Functions list */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Select Functions</Label>
+                    {loadingFunctions ? (
+                      <div className="flex items-center justify-center py-6"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                    ): (
+                      <div className="max-h-60 overflow-y-auto space-y-1 border border-border rounded-lg p-2" style={{scrollbarWidth:'thin'}}>
+                        {mockFunctions.map(func=>{
+                          const selected = selectedFunctionIds.includes(func.id);
+                          return (
+                            <div
+                              key={func.id}
+                              className={`grid grid-cols-[1.25rem_1fr_auto] gap-3 p-3 rounded-lg border transition-all duration-200 cursor-pointer ${selected ? 'border-positive-trend bg-positive-trend/10' : 'border-border/20 hover:border-positive-trend/40 hover:bg-positive-trend/5'}`}
+                              onClick={()=> setSelectedFunctionIds(prev=> prev.includes(func.id)? prev.filter(id=>id!==func.id):[...prev,func.id])}
+                            >
+                              {/* Icon column */}
+                              <div className="pt-0.5">
+                                {selected && <Check className="h-4 w-4 text-positive-trend"/>}
+                              </div>
+
+                              {/* Name + description */}
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium truncate max-w-[160px]">{func.name}</p>
+                                <p className="text-xs text-muted-foreground truncate">{func.description}</p>
+                              </div>
+
+                              {/* CTA column */}
+                              <div className="flex space-x-2 items-start">
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs bg-positive-trend/10 text-positive-trend hover:bg-positive-trend/20" onClick={(e)=>{e.stopPropagation(); setViewingFunction(func);}}>View Function</Button>
+                                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs bg-positive-trend/10 text-positive-trend hover:bg-positive-trend/20" onClick={(e)=>{e.stopPropagation(); loadFunctionMocks(func.id);}}>View Mocks</Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {mockFunctions.length===0 && <p className="text-xs text-muted-foreground">No functions available.</p>}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end space-x-2 pt-4">
+                    <Button variant="ghost" onClick={()=> setAddServerModalOpen(false)} disabled={creatingServer}>Cancel</Button>
+                    <Button
+                      onClick={async()=>{
+                        if(!newServerLabel.trim() || selectedFunctionIds.length===0) return;
+                        setCreatingServer(true);
+                        try{
+                          const res = await fetch(`${API_URL}/v1/dashboard/mcp/mock/servers`,{
+                            method:'POST',
+                            headers:{'Content-Type':'application/json'},
+                            body: JSON.stringify({ serverLabel:newServerLabel.trim(), toolIds:selectedFunctionIds })
+                          });
+                          if(res.ok){
+                            toast.success('Mock server created');
+                            setAddServerModalOpen(false);
+                            setNewServerLabel('');
+                            setSelectedFunctionIds([]);
+                            loadMockServers();
+                          }else{
+                            toast.error('Failed to create mock server');
+                          }
+                        }catch(err){ toast.error('Error creating server'); } finally{ setCreatingServer(false);}                        
+                      }}
+                      disabled={creatingServer || !newServerLabel.trim() || selectedFunctionIds.length===0}
+                      className="bg-positive-trend hover:bg-positive-trend/90 text-white"
+                    >{creatingServer? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create'}</Button>
+                  </div>
+                </div>
               </DialogContent>
             </Dialog>
 

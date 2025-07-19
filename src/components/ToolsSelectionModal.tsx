@@ -52,12 +52,7 @@ const availableTools: Tool[] = [
   { id: 'agentic_file_search', name: 'Agentic File Search', icon: FileSearch },
   { id: 'function', name: 'Function', icon: Code },
   { id: 'image_generation', name: 'Image Generation', icon: Image },
-  { id: 'think', name: 'Think', icon: Brain },
-  { id: 'fun_req_gathering_tool', name: 'Fun Req Assembler', icon: Puzzle },
-  { id: 'fun_def_generation_tool', name: 'Fun Def Generator', icon: Code },
-  { id: 'mock_fun_save_tool', name: 'Mock Fun Save', icon: Save },
-  { id: 'mock_generation_tool', name: 'Mock Generator', icon: Layers },
-  { id: 'mock_save_tool', name: 'Mock Save', icon: Save }
+  { id: 'think', name: 'Think', icon: Brain }
 ];
 
 const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
@@ -273,7 +268,7 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
           <div className="space-y-1">
             {availableTools.map((tool) => {
               const IconComponent = tool.icon;
-              const isDisabled = ['image_generation', 'think'].includes(tool.id);
+              const isDisabled = ['function', 'image_generation', 'think'].includes(tool.id);
               
               return (
                 <Button
