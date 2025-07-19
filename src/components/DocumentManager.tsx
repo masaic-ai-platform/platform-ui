@@ -1081,7 +1081,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
 
       {/* Delete Confirmation Dialog - Enhanced with Geist UI */}
       <AlertDialog open={deleteDialog.isOpen} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, isOpen: open })}>
-        <AlertDialogContent className="bg-card border border-border">
+                      <AlertDialogContent className="bg-card/80 backdrop-blur-md border border-border">
           <AlertDialogHeader>
             <div className="flex items-center space-x-3 mb-4">
               <div className="w-10 h-10 bg-error/10 dark:bg-error/20 rounded-lg flex items-center justify-center">
