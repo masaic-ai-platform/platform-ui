@@ -29,7 +29,7 @@ COPY --from=build /app/dist ./dist
 COPY server.js .
 
 # Expose port 80
-EXPOSE 80
+EXPOSE 6645
 
 # Start the server
 CMD ["server.js"]

@@ -17,7 +17,7 @@ This is user interface to access Masaic's Agent development platform.
    npm run dev
    ```
 
-3. Open [http://localhost:8080](http://localhost:8080)
+3. Open [http://localhost:6645](http://localhost:6645)
 
 ## Environment Properties
 
