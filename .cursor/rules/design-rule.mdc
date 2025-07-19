@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Alway follow design/design-guidelines.md while developing UI elements and components.
