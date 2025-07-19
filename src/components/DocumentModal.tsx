@@ -62,7 +62,7 @@ const DocumentModal: React.FC<DocumentModalProps> = ({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-5xl max-h-[85vh] overflow-hidden flex flex-col bg-card border border-border">
+              <DialogContent className="sm:max-w-5xl max-h-[85vh] overflow-hidden flex flex-col bg-card/80 backdrop-blur-md border border-border">
         <DialogHeader className="shrink-0 pb-6 border-b border-border">
           <div className="flex items-center space-x-3">
             <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
