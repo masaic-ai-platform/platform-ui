@@ -6,8 +6,9 @@ import { Label } from './ui/label';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Loader2, Upload, Search, Copy, Plus, Check, Trash2 } from 'lucide-react';
+import { Loader2, Upload, FileSearch, Copy, Plus, Check, Trash2 } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
+import { usePlatformInfo } from '@/contexts/PlatformContext';
 import { API_URL } from '@/config';
 
 interface FileSearchModalProps {
@@ -62,6 +63,20 @@ interface FileUploadProgress {
   error?: string;
 }
 
+interface Model {
+  name: string;
+  modelSyntax: string;
+  isEmbeddingModel?: boolean;
+  providerName?: string;
+  providerDescription?: string;
+}
+
+interface Provider {
+  name: string;
+  description: string;
+  supportedModels: Model[];
+}
+
 const FileSearchModal: React.FC<FileSearchModalProps> = ({
   open,
   onOpenChange,
@@ -83,9 +98,68 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
   const [uploadProgress, setUploadProgress] = useState<FileUploadProgress[]>([]);
   const [deletingStores, setDeletingStores] = useState<string[]>([]);
   const [vectorStoreType, setVectorStoreType] = useState<string>('qdrant-cloud');
+  const [embeddingModels, setEmbeddingModels] = useState<Model[]>([]);
+  const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState<string>('');
 
   const { toast } = useToast();
+  const { platformInfo } = usePlatformInfo();
   const apiUrl = API_URL;
+
+  // Check if we should use runtime model settings
+  const useRuntimeModelSettings = platformInfo?.modelSettings?.settingsType === 'RUNTIME';
+
+  // Fetch embedding models (only if runtime model settings enabled)
+  const fetchEmbeddingModels = async () => {
+    if (!useRuntimeModelSettings) {
+      setEmbeddingModels([]);
+      setSelectedEmbeddingModel('');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiUrl}/v1/dashboard/models`);
+      if (!response.ok) throw new Error('Failed to fetch models');
+      
+      const providers: Provider[] = await response.json();
+      const allEmbeddingModels = providers.flatMap(provider => 
+        provider.supportedModels
+          .filter(model => model.isEmbeddingModel === true) // Only embedding models
+          .map(model => ({
+            ...model,
+            providerName: provider.name,
+            providerDescription: provider.description
+          }))
+      );
+      
+      setEmbeddingModels(allEmbeddingModels);
+      
+      // Auto-select first embedding model
+      if (allEmbeddingModels.length > 0 && !selectedEmbeddingModel) {
+        setSelectedEmbeddingModel(allEmbeddingModels[0].modelSyntax);
+      }
+    } catch (error) {
+      console.error('Error fetching embedding models:', error);
+      setEmbeddingModels([]);
+    }
+  };
+
+  // Check API key for provider
+  const getProviderApiKey = (modelSyntax: string): string => {
+    if (!modelSyntax) return '';
+    
+    const [provider] = modelSyntax.split('@');
+    try {
+      const saved = localStorage.getItem('platform_apiKeys');
+      if (!saved) return '';
+      
+      const savedKeys: { name: string; apiKey: string }[] = JSON.parse(saved);
+      const providerKey = savedKeys.find(item => item.name === provider);
+      return providerKey?.apiKey || '';
+    } catch (error) {
+      console.error('Error getting API key:', error);
+      return '';
+    }
+  };
 
   // Get selected vector store names
   const selectedVectorStoreNames = vectorStores
@@ -205,16 +279,35 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
 
   // Associate file with vector store using the provided API
   const associateFileWithVectorStore = async (vectorStoreId: string, fileId: string): Promise<void> => {
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    
+    // Add Authorization header and modelInfo only if runtime model settings enabled
+    if (useRuntimeModelSettings && selectedEmbeddingModel) {
+      const apiKey = getProviderApiKey(selectedEmbeddingModel);
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+    }
+
+    const body: any = {
+      file_id: fileId,
+      attributes: {
+        category: 'user_document',
+        language: 'en'
+      }
+    };
+
+    // Add modelInfo only if runtime model settings enabled
+    if (useRuntimeModelSettings && selectedEmbeddingModel) {
+      body.modelInfo = {
+        model: selectedEmbeddingModel
+      };
+    }
+
     const response = await fetch(`${apiUrl}/v1/vector_stores/${vectorStoreId}/files`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        file_id: fileId,
-        attributes: {
-          category: 'user_document',
-          language: 'en'
-        }
-      }),
+      headers,
+      body: JSON.stringify(body),
     });
     
     if (!response.ok) {
@@ -440,8 +533,9 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
     if (open) {
       fetchVectorStores();
       fetchFiles();
+      fetchEmbeddingModels();
     }
-  }, [open]);
+  }, [open, useRuntimeModelSettings]);
 
   // Load vector store files when vector stores change
   useEffect(() => {
@@ -470,7 +564,7 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
         <div className="flex flex-col h-full">
           <DialogHeader className="p-4 pb-2">
             <DialogTitle className="text-xl font-semibold flex items-center space-x-2">
-              <Search className="h-5 w-5" />
+              <FileSearch className="h-5 w-5" />
               <span>File Search</span>
             </DialogTitle>
             {/* Show selected store names below title */}
@@ -707,14 +801,44 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
                   </div>
                 </div>
 
-                {/* Associate Files Button */}
+                {/* Embedding Model Selection and Associate Files */}
                 {(() => {
                   const filesToAssociate = getFilesToAssociate();
                   return filesToAssociate.length > 0 && selectedVectorStores.length > 0 && (
-                    <div className="pt-2">
+                    <div className="pt-2 space-y-3">
+                      {/* Show embedding model dropdown only if runtime model settings enabled */}
+                      {useRuntimeModelSettings && (
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Embedding Model</Label>
+                          <Select value={selectedEmbeddingModel} onValueChange={setSelectedEmbeddingModel}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select embedding model..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {embeddingModels.map((model) => (
+                                <SelectItem key={model.modelSyntax} value={model.modelSyntax}>
+                                  <div className="flex items-center space-x-2">
+                                    {model.providerName && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {model.providerName}
+                                      </Badge>
+                                    )}
+                                    <span className="text-sm">{model.name}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {embeddingModels.length === 0 && (
+                            <p className="text-xs text-muted-foreground">No embedding models available</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Associate Files Button */}
                       <Button 
                         onClick={handleAssociateFiles}
-                        disabled={attachingFiles.length > 0}
+                        disabled={attachingFiles.length > 0 || (useRuntimeModelSettings && !selectedEmbeddingModel)}
                         className="w-full bg-positive-trend hover:bg-positive-trend/90 text-white"
                         size="sm"
                       >

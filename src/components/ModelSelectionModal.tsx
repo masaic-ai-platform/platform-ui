@@ -11,6 +11,7 @@ interface Model {
   modelSyntax: string;
   providerName: string;
   providerDescription: string;
+  isEmbeddingModel?: boolean;
 }
 
 interface ModelSelectionModalProps {

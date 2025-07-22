@@ -51,6 +51,7 @@ import { toast } from 'sonner';
 interface Model {
   name: string;
   modelSyntax: string;
+  isEmbeddingModel?: boolean;
 }
 
 interface Provider {
@@ -297,31 +298,10 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
       } catch (err) {
         console.error('Error fetching models:', err);
         const errorMessage = err instanceof Error && err.message.includes('Failed to fetch') 
-          ? 'Cannot connect to API server. Using fallback models.'
-          : 'Failed to load models. Using fallback models.';
+          ? 'Cannot connect to API server.'
+          : 'Failed to load models.';
         setError(errorMessage);
-        
-        // Fallback models
-        setProviders([
-          {
-            name: 'openai',
-            description: 'OpenAI models',
-            supportedModels: [
-              { name: 'gpt-4o', modelSyntax: 'openai@gpt-4o' },
-              { name: 'gpt-4o-mini', modelSyntax: 'openai@gpt-4o-mini' },
-              { name: 'gpt-3.5-turbo', modelSyntax: 'openai@gpt-3.5-turbo' },
-            ]
-          },
-          {
-            name: 'anthropic',
-            description: 'Anthropic models',
-            supportedModels: [
-              { name: 'claude-3-opus', modelSyntax: 'anthropic@claude-3-opus' },
-              { name: 'claude-3-sonnet', modelSyntax: 'anthropic@claude-3-sonnet' },
-              { name: 'claude-3-haiku', modelSyntax: 'anthropic@claude-3-haiku' },
-            ]
-          }
-        ]);
+        setProviders([]);
       } finally {
         setLoading(false);
       }
@@ -333,11 +313,13 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   // Get all available models from providers - memoized to prevent unnecessary recalculations
   const allModels = useMemo(() => {
     return providers.flatMap(provider => 
-      provider.supportedModels.map(model => ({
-        ...model,
-        providerName: provider.name,
-        providerDescription: provider.description
-      }))
+      provider.supportedModels
+        .filter(model => !model.isEmbeddingModel) // Filter out embedding models
+        .map(model => ({
+          ...model,
+          providerName: provider.name,
+          providerDescription: provider.description
+        }))
     );
   }, [providers]);
 
@@ -563,7 +545,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
               </div>
               <p className="text-xs text-red-500/80 mt-1">{error}</p>
               <p className="text-xs text-red-500/60 mt-1">
-                The application is using fallback models. Please check your API server connection.
+                Please check your API server connection and try again.
               </p>
             </div>
           )}
