@@ -16,6 +16,8 @@ import {
   Layers
 } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
+import { usePlatformInfo } from '@/contexts/PlatformContext';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import FunctionModal from './FunctionModal';
 import MCPModal from './MCPModal';
 import FileSearchModal from './FileSearchModal';
@@ -75,6 +77,9 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
   const [mcpModalOpen, setMcpModalOpen] = useState(false);
   const [fileSearchModalOpen, setFileSearchModalOpen] = useState(false);
   const [agenticFileSearchModalOpen, setAgenticFileSearchModalOpen] = useState(false);
+  
+  const { platformInfo } = usePlatformInfo();
+  const isVectorStoreEnabled = platformInfo?.vectorStoreInfo?.isEnabled ?? true;
 
   // Handle editing existing function
   React.useEffect(() => {
@@ -240,6 +245,92 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
     return selectedTools.some(tool => tool.id === toolId);
   };
 
+  const getToolDisabledState = (tool: Tool) => {
+    // Disable file search tools if vector store is not enabled
+    if ((tool.id === 'file_search' || tool.id === 'agentic_file_search') && !isVectorStoreEnabled) {
+      return {
+        isDisabled: true,
+        tooltipMessage: 'To enable, boot up platform with Qdrant vector store'
+      };
+    }
+    
+    // Keep existing disabled state for other tools
+    if (['function', 'image_generation', 'think'].includes(tool.id)) {
+      return {
+        isDisabled: true,
+        tooltipMessage: 'Coming Soon'
+      };
+    }
+
+    return {
+      isDisabled: false,
+      tooltipMessage: null
+    };
+  };
+
+  const renderToolButton = (tool: Tool) => {
+    const IconComponent = tool.icon;
+    const { isDisabled, tooltipMessage } = getToolDisabledState(tool);
+    
+    const toolButton = (
+      <Button
+        key={tool.id}
+        variant="ghost"
+        className={`w-full justify-start h-auto p-3 hover:bg-positive-trend/10 hover:text-positive-trend focus:bg-positive-trend/10 focus:text-positive-trend rounded-md ${
+          isDisabled ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
+        onClick={() => !isDisabled && handleToolSelect(tool)}
+        disabled={isDisabled && !tooltipMessage} // Only disable if no tooltip message
+      >
+        <div className="flex items-center space-x-3 w-full">
+          <IconComponent className="h-4 w-4 shrink-0" />
+          <span className="text-sm font-medium">{tool.name}</span>
+        </div>
+      </Button>
+    );
+
+    // Show tooltip if there's a specific tooltip message, regardless of disabled state
+    if (tooltipMessage) {
+      return (
+        <TooltipProvider key={tool.id}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div 
+                className={`${isDisabled ? 'cursor-not-allowed' : ''}`}
+                onClick={(e) => {
+                  if (isDisabled) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  } else {
+                    handleToolSelect(tool);
+                  }
+                }}
+              >
+                <Button
+                  variant="ghost"
+                  className={`w-full justify-start h-auto p-3 hover:bg-positive-trend/10 hover:text-positive-trend focus:bg-positive-trend/10 focus:text-positive-trend rounded-md ${
+                    isDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
+                  }`}
+                  disabled={false} // Never disable to allow hover events
+                >
+                  <div className="flex items-center space-x-3 w-full">
+                    <IconComponent className="h-4 w-4 shrink-0" />
+                    <span className="text-sm font-medium">{tool.name}</span>
+                  </div>
+                </Button>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{tooltipMessage}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    return toolButton;
+  };
+
   return (
     <>
       <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -266,49 +357,29 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
           align="start"
         >
           <div className="space-y-1">
-            {availableTools.map((tool) => {
-              const IconComponent = tool.icon;
-              const isDisabled = ['function', 'image_generation', 'think'].includes(tool.id);
-              
-              return (
-                <Button
-                  key={tool.id}
-                  variant="ghost"
-                  className={`w-full justify-start h-auto p-3 hover:bg-positive-trend/10 hover:text-positive-trend focus:bg-positive-trend/10 focus:text-positive-trend rounded-md ${
-                    isDisabled ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                  onClick={() => !isDisabled && handleToolSelect(tool)}
-                  disabled={isDisabled}
-                >
-                  <div className="flex items-center space-x-3 w-full">
-                    <IconComponent className="h-4 w-4 shrink-0" />
-                    <span className="text-sm font-medium">{tool.name}</span>
-                  </div>
-                </Button>
-              );
-            })}
+            {availableTools.map((tool) => renderToolButton(tool))}
           </div>
         </PopoverContent>
       </Popover>
       
-              <FunctionModal
-      open={functionModalOpen}
-      onOpenChange={(open) => {
-        setFunctionModalOpen(open);
-        if (!open) {
-          // Clear editing state when modal closes
-          if (onEditingFunctionChange) {
-            onEditingFunctionChange(null);
+      <FunctionModal
+        open={functionModalOpen}
+        onOpenChange={(open) => {
+          setFunctionModalOpen(open);
+          if (!open) {
+            // Clear editing state when modal closes
+            if (onEditingFunctionChange) {
+              onEditingFunctionChange(null);
+            }
+            setFunctionDefinition('');
           }
-          setFunctionDefinition('');
-        }
-      }}
-      functionDefinition={functionDefinition}
-      onFunctionDefinitionChange={setFunctionDefinition}
-      onSave={handleFunctionSave}
-    />
+        }}
+        functionDefinition={functionDefinition}
+        onFunctionDefinitionChange={setFunctionDefinition}
+        onSave={handleFunctionSave}
+      />
     
-          <MCPModal
+      <MCPModal
         open={mcpModalOpen}
         onOpenChange={(open) => {
           setMcpModalOpen(open);
@@ -323,42 +394,42 @@ const ToolsSelectionModal: React.FC<ToolsSelectionModalProps> = ({
         initialConfig={editingMCP?.mcpConfig || (editingMCP?.mcpConfig?.label && getMCPToolByLabel ? getMCPToolByLabel(editingMCP.mcpConfig.label) : undefined)}
       />
     
-    <FileSearchModal
-      open={fileSearchModalOpen}
-      onOpenChange={(open) => {
-        setFileSearchModalOpen(open);
-        if (!open) {
-          // Clear editing state when modal closes
-          if (onEditingFileSearchChange) {
-            onEditingFileSearchChange(null);
+      <FileSearchModal
+        open={fileSearchModalOpen}
+        onOpenChange={(open) => {
+          setFileSearchModalOpen(open);
+          if (!open) {
+            // Clear editing state when modal closes
+            if (onEditingFileSearchChange) {
+              onEditingFileSearchChange(null);
+            }
           }
-        }
-      }}
-      onSave={handleFileSearchSave}
-      initialVectorStores={editingFileSearch?.fileSearchConfig?.selectedVectorStores}
-      initialSelectedFiles={editingFileSearch?.fileSearchConfig?.selectedFiles}
-      initialVectorStoreNames={editingFileSearch?.fileSearchConfig?.vectorStoreNames}
-    />
+        }}
+        onSave={handleFileSearchSave}
+        initialVectorStores={editingFileSearch?.fileSearchConfig?.selectedVectorStores}
+        initialSelectedFiles={editingFileSearch?.fileSearchConfig?.selectedFiles}
+        initialVectorStoreNames={editingFileSearch?.fileSearchConfig?.vectorStoreNames}
+      />
     
-    <AgenticFileSearchModal
-      open={agenticFileSearchModalOpen}
-      onOpenChange={(open) => {
-        setAgenticFileSearchModalOpen(open);
-        if (!open) {
-          // Clear editing state when modal closes
-          if (onEditingAgenticFileSearchChange) {
-            onEditingAgenticFileSearchChange(null);
+      <AgenticFileSearchModal
+        open={agenticFileSearchModalOpen}
+        onOpenChange={(open) => {
+          setAgenticFileSearchModalOpen(open);
+          if (!open) {
+            // Clear editing state when modal closes
+            if (onEditingAgenticFileSearchChange) {
+              onEditingAgenticFileSearchChange(null);
+            }
           }
-        }
-      }}
-      onSave={handleAgenticFileSearchSave}
-      initialVectorStores={editingAgenticFileSearch?.agenticFileSearchConfig?.selectedVectorStores}
-      initialIterations={editingAgenticFileSearch?.agenticFileSearchConfig?.iterations}
-      initialMaxResults={editingAgenticFileSearch?.agenticFileSearchConfig?.maxResults}
-      initialSelectedFiles={editingAgenticFileSearch?.agenticFileSearchConfig?.selectedFiles}
-      initialVectorStoreNames={editingAgenticFileSearch?.agenticFileSearchConfig?.vectorStoreNames}
-    />
-  </>
+        }}
+        onSave={handleAgenticFileSearchSave}
+        initialVectorStores={editingAgenticFileSearch?.agenticFileSearchConfig?.selectedVectorStores}
+        initialIterations={editingAgenticFileSearch?.agenticFileSearchConfig?.iterations}
+        initialMaxResults={editingAgenticFileSearch?.agenticFileSearchConfig?.maxResults}
+        initialSelectedFiles={editingAgenticFileSearch?.agenticFileSearchConfig?.selectedFiles}
+        initialVectorStoreNames={editingAgenticFileSearch?.agenticFileSearchConfig?.vectorStoreNames}
+      />
+    </>
   );
 };
 
