@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { usePlatformInfo } from '@/contexts/PlatformContext';
 import { 
   ChevronDown, 
   ChevronRight, 
@@ -49,6 +51,7 @@ import { toast } from 'sonner';
 interface Model {
   name: string;
   modelSyntax: string;
+  isEmbeddingModel?: boolean;
 }
 
 interface Provider {
@@ -295,31 +298,10 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
       } catch (err) {
         console.error('Error fetching models:', err);
         const errorMessage = err instanceof Error && err.message.includes('Failed to fetch') 
-          ? 'Cannot connect to API server. Using fallback models.'
-          : 'Failed to load models. Using fallback models.';
+          ? 'Cannot connect to API server.'
+          : 'Failed to load models.';
         setError(errorMessage);
-        
-        // Fallback models
-        setProviders([
-          {
-            name: 'openai',
-            description: 'OpenAI models',
-            supportedModels: [
-              { name: 'gpt-4o', modelSyntax: 'openai@gpt-4o' },
-              { name: 'gpt-4o-mini', modelSyntax: 'openai@gpt-4o-mini' },
-              { name: 'gpt-3.5-turbo', modelSyntax: 'openai@gpt-3.5-turbo' },
-            ]
-          },
-          {
-            name: 'anthropic',
-            description: 'Anthropic models',
-            supportedModels: [
-              { name: 'claude-3-opus', modelSyntax: 'anthropic@claude-3-opus' },
-              { name: 'claude-3-sonnet', modelSyntax: 'anthropic@claude-3-sonnet' },
-              { name: 'claude-3-haiku', modelSyntax: 'anthropic@claude-3-haiku' },
-            ]
-          }
-        ]);
+        setProviders([]);
       } finally {
         setLoading(false);
       }
@@ -331,11 +313,13 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   // Get all available models from providers - memoized to prevent unnecessary recalculations
   const allModels = useMemo(() => {
     return providers.flatMap(provider => 
-      provider.supportedModels.map(model => ({
-        ...model,
-        providerName: provider.name,
-        providerDescription: provider.description
-      }))
+      provider.supportedModels
+        .filter(model => !model.isEmbeddingModel) // Filter out embedding models
+        .map(model => ({
+          ...model,
+          providerName: provider.name,
+          providerDescription: provider.description
+        }))
     );
   }, [providers]);
 
@@ -543,6 +527,8 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
     }catch(err){ console.error(err); toast.error('Error fetching tools'); }
   };
 
+  const { platformInfo } = usePlatformInfo();
+  const isVectorStoreEnabled = platformInfo?.vectorStoreInfo?.isEnabled ?? true;
 
   return (
     <div className={cn("bg-background border-r border-border h-full overflow-y-auto", className)}>
@@ -559,7 +545,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
               </div>
               <p className="text-xs text-red-500/80 mt-1">{error}</p>
               <p className="text-xs text-red-500/60 mt-1">
-                The application is using fallback models. Please check your API server connection.
+                Please check your API server connection and try again.
               </p>
             </div>
           )}
@@ -653,29 +639,43 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
               const isClickable = isFunction || isMCP || isFileSearch || isAgenticFileSearch;
               const toolKey = (isFunction || isMCP) ? `${tool.id}-${index}` : tool.id;
               
-              return (
+              // Check if file search tools should be disabled
+              const isToolDisabled = (isFileSearch || isAgenticFileSearch) && !isVectorStoreEnabled;
+              const tooltipMessage = isToolDisabled ? 'To enable, boot up platform with Qdrant vector store' : null;
+              
+              const toolElement = (
                 <div 
                   key={toolKey}
-                  className={`flex items-center space-x-1 bg-positive-trend/10 border border-positive-trend/20 rounded px-2 py-1 focus:ring-2 focus:ring-positive-trend/30 focus:border-positive-trend ${
-                    isClickable ? 'cursor-pointer hover:bg-positive-trend/20' : ''
+                  className={`flex items-center space-x-1 rounded px-2 py-1 focus:ring-2 ${
+                    isToolDisabled 
+                      ? 'bg-gray-400/10 border border-gray-400/20 opacity-50' 
+                      : 'bg-positive-trend/10 border border-positive-trend/20 focus:ring-positive-trend/30 focus:border-positive-trend'
+                  } ${
+                    isClickable && !isToolDisabled ? 'cursor-pointer hover:bg-positive-trend/20' : 
+                    isToolDisabled ? 'cursor-not-allowed' : ''
                   }`}
                   tabIndex={0}
                   onClick={
-                    isFunction ? () => handleFunctionEdit(tool) :
-                    isMCP ? () => handleMCPEdit(tool) :
-                    isFileSearch ? () => handleFileSearchEdit(tool) :
-                    isAgenticFileSearch ? () => handleAgenticFileSearchEdit(tool) :
-                    undefined
+                    !isToolDisabled ? (
+                      isFunction ? () => handleFunctionEdit(tool) :
+                      isMCP ? () => handleMCPEdit(tool) :
+                      isFileSearch ? () => handleFileSearchEdit(tool) :
+                      isAgenticFileSearch ? () => handleAgenticFileSearchEdit(tool) :
+                      undefined
+                    ) : (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }
                   }
                 >
-                  <IconComponent className="h-3 w-3 text-positive-trend" />
-                  <span className="text-xs text-positive-trend font-medium">
+                  <IconComponent className={`h-3 w-3 ${isToolDisabled ? 'text-gray-400' : 'text-positive-trend'}`} />
+                  <span className={`text-xs font-medium ${isToolDisabled ? 'text-gray-400' : 'text-positive-trend'}`}>
                     {displayName}
                   </span>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-4 w-4 p-0 hover:bg-positive-trend/20"
+                    className={`h-4 w-4 p-0 ${isToolDisabled ? 'hover:bg-gray-400/20' : 'hover:bg-positive-trend/20'}`}
                     onClick={(e) => {
                       e.stopPropagation(); // Prevent triggering the edit handler
                       if (tool.id === 'function') {
@@ -687,10 +687,30 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                       }
                     }}
                   >
-                    <X className="h-3 w-3 text-positive-trend" />
+                    <X className={`h-3 w-3 ${isToolDisabled ? 'text-gray-400' : 'text-positive-trend'}`} />
                   </Button>
                 </div>
               );
+              
+              // Return with tooltip if needed
+              if (tooltipMessage) {
+                return (
+                  <TooltipProvider key={toolKey}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          {toolElement}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{tooltipMessage}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              }
+              
+              return toolElement;
             })}
             </div>
             

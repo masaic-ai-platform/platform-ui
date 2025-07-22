@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles } from 'lucide-react';
 import { API_URL } from '@/config';
+import { usePlatformInfo } from '@/contexts/PlatformContext';
 
 interface JsonSchemaModalProps {
   open: boolean;
@@ -38,9 +39,26 @@ const JsonSchemaModal: React.FC<JsonSchemaModalProps> = ({
   const [generateModalOpen, setGenerateModalOpen] = useState(false);
   const [generatePrompt, setGeneratePrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  
+  const { platformInfo } = usePlatformInfo();
 
   const handleGenerate = () => {
     setGenerateModalOpen(true);
+  };
+
+  // Helper function to get API key for a provider from localStorage
+  const getProviderApiKey = (provider: string): string | null => {
+    try {
+      const saved = localStorage.getItem('platform_apiKeys');
+      if (!saved) return null;
+      
+      const apiKeys: { name: string; apiKey: string }[] = JSON.parse(saved);
+      const providerKey = apiKeys.find(key => key.name === provider);
+      return providerKey?.apiKey || null;
+    } catch (error) {
+      console.error('Error getting API key:', error);
+      return null;
+    }
   };
 
   const handleGenerateCreate = async () => {
@@ -50,15 +68,38 @@ const JsonSchemaModal: React.FC<JsonSchemaModalProps> = ({
     setGenerateModalOpen(false);
     
     try {
-      const apiUrl = API_URL;
-      const response = await fetch(`${apiUrl}/v1/dashboard/generate/schema`, {
+      // Get current model settings from localStorage
+      const savedModelProvider = localStorage.getItem('platform_modelProvider') || 'openai';
+      const savedModelName = localStorage.getItem('platform_modelName') || 'gpt-4o';
+      
+      // Prepare headers and payload based on platform settings
+      let headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      let requestBody: any = {
+        description: generatePrompt.trim()
+      };
+
+      // Check if modelSettings.settingsType is RUNTIME
+      if (platformInfo?.modelSettings?.settingsType === 'RUNTIME') {
+        // Add Authorization header with API key of selected model
+        const apiKey = getProviderApiKey(savedModelProvider);
+        if (apiKey) {
+          headers['Authorization'] = `Bearer ${apiKey}`;
+        }
+        
+        // Add modelInfo to payload with modelSyntax
+        const modelSyntax = `${savedModelProvider}@${savedModelName}`;
+        requestBody.modelInfo = {
+          model: modelSyntax
+        };
+      }
+
+      const response = await fetch(`${API_URL}/v1/dashboard/generate/schema`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          description: generatePrompt.trim()
-        }),
+        headers: headers,
+        body: JSON.stringify(requestBody),
       });
       
       if (!response.ok) {

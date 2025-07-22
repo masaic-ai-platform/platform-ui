@@ -25,12 +25,11 @@ const Navigation: React.FC = () => {
           </div>
           
           {/* Version Badge in top-right corner */}
-          <div className="flex items-center">
+          <div className="flex items-center space-x-4">
             <VersionBadge />
           </div>
         </div>
       </div>
-
 
     </div>
   );
