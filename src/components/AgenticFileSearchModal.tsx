@@ -140,9 +140,21 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
       
       setEmbeddingModels(allEmbeddingModels);
       
-      // Auto-select first embedding model
+      // Try to load from localStorage first, then auto-select first model
       if (allEmbeddingModels.length > 0 && !selectedEmbeddingModel) {
-        setSelectedEmbeddingModel(allEmbeddingModels[0].modelSyntax);
+        const savedModel = loadEmbeddingModelFromStorage();
+        
+        // Check if the saved model exists in the available models
+        const modelExists = savedModel && allEmbeddingModels.some(model => model.modelSyntax === savedModel);
+        
+        if (modelExists) {
+          setSelectedEmbeddingModel(savedModel);
+        } else {
+          // Fallback to first model and save it
+          const firstModel = allEmbeddingModels[0].modelSyntax;
+          setSelectedEmbeddingModel(firstModel);
+          saveEmbeddingModelToStorage(firstModel);
+        }
       }
     } catch (error) {
       console.error('Error fetching embedding models:', error);
@@ -166,6 +178,34 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
       console.error('Error getting API key:', error);
       return '';
     }
+  };
+
+  // Save embedding model to localStorage
+  const saveEmbeddingModelToStorage = (modelSyntax: string) => {
+    if (!modelSyntax) return;
+    
+    const [provider, modelName] = modelSyntax.split('@');
+    try {
+      localStorage.setItem('platform_embedding_modelProvider', provider);
+      localStorage.setItem('platform_embedding_modelName', modelName);
+    } catch (error) {
+      console.error('Error saving embedding model to localStorage:', error);
+    }
+  };
+
+  // Load embedding model from localStorage
+  const loadEmbeddingModelFromStorage = (): string => {
+    try {
+      const provider = localStorage.getItem('platform_embedding_modelProvider');
+      const modelName = localStorage.getItem('platform_embedding_modelName');
+      
+      if (provider && modelName) {
+        return `${provider}@${modelName}`;
+      }
+    } catch (error) {
+      console.error('Error loading embedding model from localStorage:', error);
+    }
+    return '';
   };
 
   // Get selected vector store names
@@ -329,6 +369,7 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
   // Save configuration (only vector stores)
   const handleSave = () => {
     if (selectedVectorStores.length === 0) return;
+    if (useRuntimeModelSettings && !selectedEmbeddingModel) return;
 
     const vectorStoreNames = vectorStores
       .filter(vs => selectedVectorStores.includes(vs.id))
@@ -569,8 +610,10 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
 
           <div className="flex-1 overflow-hidden px-6 min-h-0">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full max-h-[calc(80vh-200px)]">
-              {/* Vector Stores Section */}
-              <div className="flex flex-col space-y-3 h-full min-h-0">
+              
+              {/* Left Column - Vector Stores Section */}
+              <div className="flex flex-col space-y-3 h-full min-h-0 overflow-hidden">
+                {/* Vector Stores Dropdown */}
                 <div className="flex-shrink-0">
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-medium">Vector Stores</Label>
@@ -586,14 +629,14 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                             <span>Bring your own vector store</span>
                           )}
                         </SelectValue>
-                                              </SelectTrigger>
-                        <SelectContent 
-                          side="bottom" 
-                          align="start" 
-                          sideOffset={8}
-                          className="z-[9999] pt-2"
-                        >
-                          <SelectItem value="qdrant-cloud">
+                      </SelectTrigger>
+                      <SelectContent 
+                        side="bottom" 
+                        align="start" 
+                        sideOffset={8}
+                        className="z-[9999] pt-2"
+                      >
+                        <SelectItem value="qdrant-cloud">
                           <div className="flex items-center space-x-2">
                             <img src="/qdrant icon.png" alt="Qdrant" className="w-4 h-4" />
                             <span>Qdrant Cloud</span>
@@ -604,6 +647,41 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                     </Select>
                   </div>
                 </div>
+
+                {/* Embedding Model Dropdown */}
+                {useRuntimeModelSettings && (
+                  <div className="space-y-2 flex-shrink-0">
+                    <Label className="text-sm font-medium">Embedding Model</Label>
+                    <Select 
+                      value={selectedEmbeddingModel} 
+                      onValueChange={(value) => {
+                        setSelectedEmbeddingModel(value);
+                        saveEmbeddingModelToStorage(value);
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select embedding model..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {embeddingModels.map((model) => (
+                          <SelectItem key={model.modelSyntax} value={model.modelSyntax}>
+                            <div className="flex items-center space-x-2">
+                              {model.providerName && (
+                                <Badge variant="outline" className="text-xs">
+                                  {model.providerName}
+                                </Badge>
+                              )}
+                              <span className="text-sm">{model.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {embeddingModels.length === 0 && (
+                      <p className="text-xs text-muted-foreground">No embedding models available</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Agentic Configuration */}
                 <div className="space-y-2 flex-shrink-0">
@@ -724,14 +802,14 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                 </div>
               </div>
 
-              {/* Files Section - Always Visible */}
-              <div className="flex flex-col space-y-3 h-full min-h-0">
+              {/* Right Column - Files Section */}
+              <div className="flex flex-col space-y-3 h-full min-h-0 overflow-hidden">
                 <div className="flex-shrink-0">
                   <Label className="text-sm font-medium">Available Files...</Label>
                   <p className="text-xs text-muted-foreground">Select files to associate with vector stores</p>
                 </div>
 
-                {/* Files List - Adaptive height with scrollbar */}
+                {/* Files List */}
                 <div className="flex-1 min-h-0 overflow-hidden">
                   <div className="h-full max-h-64 overflow-y-auto space-y-2 border border-border/40 rounded-lg bg-card/50 p-3" style={{ scrollbarWidth: 'thin' }}>
                     {loading.files ? (
@@ -774,19 +852,10 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                                   )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center space-x-2">
-                                    <p className="font-medium truncate">{file.filename}</p>
-                                    {isInVectorStore && (
-                                      <Badge variant="secondary" className="text-xs">
-                                        In Store
-                                      </Badge>
-                                    )}
-                                  </div>
+                                  <p className="font-medium truncate">{file.filename}</p>
                                   <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                                     <span>{formatBytes(file.bytes)}</span>
-                                    <Badge variant="outline" className="text-xs">
-                                      {file.status}
-                                    </Badge>
+                                    <span>{file.status}</span>
                                   </div>
                                 </div>
                               </div>
@@ -809,41 +878,11 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                   </div>
                 </div>
 
-                {/* Embedding Model Selection and Associate Files */}
+                {/* Associate Files Button */}  
                 {(() => {
                   const filesToAssociate = getFilesToAssociate();
                   return filesToAssociate.length > 0 && selectedVectorStores.length > 0 && (
-                    <div className="pt-2 space-y-3">
-                      {/* Show embedding model dropdown only if runtime model settings enabled */}
-                      {useRuntimeModelSettings && (
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Embedding Model</Label>
-                          <Select value={selectedEmbeddingModel} onValueChange={setSelectedEmbeddingModel}>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select embedding model..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {embeddingModels.map((model) => (
-                                <SelectItem key={model.modelSyntax} value={model.modelSyntax}>
-                                  <div className="flex items-center space-x-2">
-                                    {model.providerName && (
-                                      <Badge variant="outline" className="text-xs">
-                                        {model.providerName}
-                                      </Badge>
-                                    )}
-                                    <span className="text-sm">{model.name}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {embeddingModels.length === 0 && (
-                            <p className="text-xs text-muted-foreground">No embedding models available</p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Associate Files Button */}
+                    <div className="pt-2">
                       <Button 
                         onClick={handleAssociateFiles}
                         disabled={attachingFiles.length > 0 || (useRuntimeModelSettings && !selectedEmbeddingModel)}
@@ -878,7 +917,7 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                 </Button>
                 <Button 
                   onClick={handleSave}
-                  disabled={selectedVectorStores.length === 0}
+                  disabled={selectedVectorStores.length === 0 || (useRuntimeModelSettings && !selectedEmbeddingModel)}
                   className="bg-positive-trend hover:bg-positive-trend/90 text-white"
                 >
                   Save Configuration

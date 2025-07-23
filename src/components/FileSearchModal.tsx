@@ -133,9 +133,21 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
       
       setEmbeddingModels(allEmbeddingModels);
       
-      // Auto-select first embedding model
+      // Try to load from localStorage first, then auto-select first model
       if (allEmbeddingModels.length > 0 && !selectedEmbeddingModel) {
-        setSelectedEmbeddingModel(allEmbeddingModels[0].modelSyntax);
+        const savedModel = loadEmbeddingModelFromStorage();
+        
+        // Check if the saved model exists in the available models
+        const modelExists = savedModel && allEmbeddingModels.some(model => model.modelSyntax === savedModel);
+        
+        if (modelExists) {
+          setSelectedEmbeddingModel(savedModel);
+        } else {
+          // Fallback to first model and save it
+          const firstModel = allEmbeddingModels[0].modelSyntax;
+          setSelectedEmbeddingModel(firstModel);
+          saveEmbeddingModelToStorage(firstModel);
+        }
       }
     } catch (error) {
       console.error('Error fetching embedding models:', error);
@@ -159,6 +171,34 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
       console.error('Error getting API key:', error);
       return '';
     }
+  };
+
+  // Save embedding model to localStorage
+  const saveEmbeddingModelToStorage = (modelSyntax: string) => {
+    if (!modelSyntax) return;
+    
+    const [provider, modelName] = modelSyntax.split('@');
+    try {
+      localStorage.setItem('platform_embedding_modelProvider', provider);
+      localStorage.setItem('platform_embedding_modelName', modelName);
+    } catch (error) {
+      console.error('Error saving embedding model to localStorage:', error);
+    }
+  };
+
+  // Load embedding model from localStorage
+  const loadEmbeddingModelFromStorage = (): string => {
+    try {
+      const provider = localStorage.getItem('platform_embedding_modelProvider');
+      const modelName = localStorage.getItem('platform_embedding_modelName');
+      
+      if (provider && modelName) {
+        return `${provider}@${modelName}`;
+      }
+    } catch (error) {
+      console.error('Error loading embedding model from localStorage:', error);
+    }
+    return '';
   };
 
   // Get selected vector store names
@@ -318,6 +358,7 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
   // Save configuration (only vector stores)
   const handleSave = () => {
     if (selectedVectorStores.length === 0) return;
+    if (useRuntimeModelSettings && !selectedEmbeddingModel) return;
 
     const vectorStoreNames = vectorStores
       .filter(vs => selectedVectorStores.includes(vs.id))
@@ -613,6 +654,41 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
                   </div>
                 </div>
 
+                {/* Embedding Model Dropdown - now below Vector Stores dropdown */}
+                {useRuntimeModelSettings && (
+                  <div className="space-y-2 flex-shrink-0">
+                    <Label className="text-sm font-medium">Embedding Model</Label>
+                    <Select 
+                      value={selectedEmbeddingModel} 
+                      onValueChange={(value) => {
+                        setSelectedEmbeddingModel(value);
+                        saveEmbeddingModelToStorage(value);
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select embedding model..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {embeddingModels.map((model) => (
+                          <SelectItem key={model.modelSyntax} value={model.modelSyntax}>
+                            <div className="flex items-center space-x-2">
+                              {model.providerName && (
+                                <Badge variant="outline" className="text-xs">
+                                  {model.providerName}
+                                </Badge>
+                              )}
+                              <span className="text-sm">{model.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {embeddingModels.length === 0 && (
+                      <p className="text-xs text-muted-foreground">No embedding models available</p>
+                    )}
+                  </div>
+                )}
+
                 {/* Create New Vector Store */}
                 <div className="space-y-2 flex-shrink-0">
                   <Label className="text-sm font-medium">Create New Vector Store</Label>
@@ -801,41 +877,11 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
                   </div>
                 </div>
 
-                {/* Embedding Model Selection and Associate Files */}
+                                {/* Associate Files Button */}
                 {(() => {
                   const filesToAssociate = getFilesToAssociate();
                   return filesToAssociate.length > 0 && selectedVectorStores.length > 0 && (
-                    <div className="pt-2 space-y-3">
-                      {/* Show embedding model dropdown only if runtime model settings enabled */}
-                      {useRuntimeModelSettings && (
-                        <div className="space-y-2">
-                          <Label className="text-sm font-medium">Embedding Model</Label>
-                          <Select value={selectedEmbeddingModel} onValueChange={setSelectedEmbeddingModel}>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select embedding model..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {embeddingModels.map((model) => (
-                                <SelectItem key={model.modelSyntax} value={model.modelSyntax}>
-                                  <div className="flex items-center space-x-2">
-                                    {model.providerName && (
-                                      <Badge variant="outline" className="text-xs">
-                                        {model.providerName}
-                                      </Badge>
-                                    )}
-                                    <span className="text-sm">{model.name}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {embeddingModels.length === 0 && (
-                            <p className="text-xs text-muted-foreground">No embedding models available</p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Associate Files Button */}
+                    <div className="pt-2">
                       <Button 
                         onClick={handleAssociateFiles}
                         disabled={attachingFiles.length > 0 || (useRuntimeModelSettings && !selectedEmbeddingModel)}
@@ -870,7 +916,7 @@ const FileSearchModal: React.FC<FileSearchModalProps> = ({
                 </Button>
                 <Button 
                   onClick={handleSave}
-                  disabled={selectedVectorStores.length === 0}
+                  disabled={selectedVectorStores.length === 0 || (useRuntimeModelSettings && !selectedEmbeddingModel)}
                   className="bg-positive-trend hover:bg-positive-trend/90 text-white"
                 >
                   Save Configuration
