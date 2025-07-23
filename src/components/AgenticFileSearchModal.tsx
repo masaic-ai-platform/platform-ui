@@ -10,6 +10,7 @@ import { Loader2, Upload, FileSearch, Copy, Plus, Check, Search } from 'lucide-r
 import { useToast } from '../hooks/use-toast';
 import { usePlatformInfo } from '@/contexts/PlatformContext';
 import { API_URL } from '@/config';
+import ApiKeysModal from './ApiKeysModal';
 
 interface AgenticFileSearchModalProps {
   open: boolean;
@@ -107,6 +108,9 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
   const [vectorStoreType, setVectorStoreType] = useState<string>('qdrant-cloud');
   const [embeddingModels, setEmbeddingModels] = useState<Model[]>([]);
   const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState<string>('');
+  const [apiKeysModalOpen, setApiKeysModalOpen] = useState(false);
+  const [requiredProvider, setRequiredProvider] = useState<string | undefined>();
+  const [pendingEmbeddingModel, setPendingEmbeddingModel] = useState<string | null>(null);
 
   const { toast } = useToast();
   const { platformInfo } = usePlatformInfo();
@@ -143,17 +147,13 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
       // Try to load from localStorage first, then auto-select first model
       if (allEmbeddingModels.length > 0 && !selectedEmbeddingModel) {
         const savedModel = loadEmbeddingModelFromStorage();
-        
-        // Check if the saved model exists in the available models
         const modelExists = savedModel && allEmbeddingModels.some(model => model.modelSyntax === savedModel);
-        
-        if (modelExists) {
+        const providerHasKey = modelExists && checkApiKey(savedModel.split('@')[0]);
+        if (modelExists && providerHasKey) {
           setSelectedEmbeddingModel(savedModel);
         } else {
-          // Fallback to first model and save it
-          const firstModel = allEmbeddingModels[0].modelSyntax;
-          setSelectedEmbeddingModel(firstModel);
-          saveEmbeddingModelToStorage(firstModel);
+          setSelectedEmbeddingModel(''); // Show placeholder
+          saveEmbeddingModelToStorage('');
         }
       }
     } catch (error) {
@@ -206,6 +206,36 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
       console.error('Error loading embedding model from localStorage:', error);
     }
     return '';
+  };
+
+  const checkApiKey = (provider: string): boolean => {
+    try {
+      const saved = localStorage.getItem('platform_apiKeys');
+      if (!saved) return false;
+      const savedKeys: { name: string; apiKey: string }[] = JSON.parse(saved);
+      return savedKeys.some(item => item.name === provider && item.apiKey.trim());
+    } catch (error) {
+      console.error('Error checking API key:', error);
+      return false;
+    }
+  };
+
+  const handleEmbeddingModelSelect = (modelSyntax: string) => {
+    const [provider] = modelSyntax.split('@');
+    if (!checkApiKey(provider)) {
+      setPendingEmbeddingModel(modelSyntax);
+      setRequiredProvider(provider);
+      setApiKeysModalOpen(true);
+      return;
+    }
+    setSelectedEmbeddingModel(modelSyntax);
+    saveEmbeddingModelToStorage(modelSyntax);
+  };
+
+  const isEmbeddingModelApiKeyPresent = () => {
+    if (!selectedEmbeddingModel) return false;
+    const [provider] = selectedEmbeddingModel.split('@');
+    return checkApiKey(provider);
   };
 
   // Get selected vector store names
@@ -654,10 +684,7 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                     <Label className="text-sm font-medium">Embedding Model</Label>
                     <Select 
                       value={selectedEmbeddingModel} 
-                      onValueChange={(value) => {
-                        setSelectedEmbeddingModel(value);
-                        saveEmbeddingModelToStorage(value);
-                      }}
+                      onValueChange={handleEmbeddingModelSelect}
                     >
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select embedding model..." />
@@ -917,7 +944,7 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
                 </Button>
                 <Button 
                   onClick={handleSave}
-                  disabled={selectedVectorStores.length === 0 || (useRuntimeModelSettings && !selectedEmbeddingModel)}
+                  disabled={selectedVectorStores.length === 0 || (useRuntimeModelSettings && (!selectedEmbeddingModel || !isEmbeddingModelApiKeyPresent()))}
                   className="bg-positive-trend hover:bg-positive-trend/90 text-white"
                 >
                   Save Configuration
@@ -977,6 +1004,31 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
           </div>
         </div>
       </DialogContent>
+      <ApiKeysModal
+        open={apiKeysModalOpen}
+        onOpenChange={(open) => {
+          setApiKeysModalOpen(open);
+          if (!open) {
+            if (pendingEmbeddingModel && requiredProvider && !checkApiKey(requiredProvider)) {
+              setSelectedEmbeddingModel(''); // Clear selection if key not present
+              saveEmbeddingModelToStorage('');
+            }
+            setRequiredProvider(undefined);
+            setPendingEmbeddingModel(null);
+          }
+        }}
+        onSaveSuccess={() => {
+          if (pendingEmbeddingModel && requiredProvider) {
+            setTimeout(() => {
+              if (checkApiKey(requiredProvider)) {
+                setSelectedEmbeddingModel(pendingEmbeddingModel);
+                saveEmbeddingModelToStorage(pendingEmbeddingModel);
+              }
+            }, 100);
+          }
+        }}
+        requiredProvider={requiredProvider}
+      />
     </Dialog>
   );
 };
