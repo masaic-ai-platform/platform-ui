@@ -12,6 +12,7 @@ import PlaygroundSidebar from './PlaygroundSidebar';
 import CodeTabs from '@/playground/CodeTabs';
 import { PlaygroundRequest } from '@/playground/PlaygroundRequest';
 import { API_URL } from '@/config';
+import { usePlatformInfo } from '@/contexts/PlatformContext';
 
 interface ToolExecution {
   serverName: string;
@@ -124,6 +125,9 @@ const AiPlayground: React.FC = () => {
   const apiUrl = API_URL;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { platformInfo } = usePlatformInfo();
+  const modelSettings = platformInfo?.modelSettings;
 
   useEffect(() => {
     // Load saved settings from localStorage
@@ -563,19 +567,53 @@ const AiPlayground: React.FC = () => {
               : {}
           };
         } else         if (tool.id === 'file_search' && tool.fileSearchConfig) {
-          // Add file search tool
-          return {
+          const toolBody: any = {
             type: 'file_search',
             vector_store_ids: tool.fileSearchConfig.selectedVectorStores
           };
+          if (modelSettings?.settingsType === 'RUNTIME') {
+            const provider = localStorage.getItem('platform_embedding_modelProvider') || '';
+            const modelName = localStorage.getItem('platform_embedding_modelName') || '';
+            const apiKeysRaw = localStorage.getItem('platform_apiKeys');
+            let bearerToken = '';
+            if (apiKeysRaw) {
+              try {
+                const apiKeys = JSON.parse(apiKeysRaw);
+                const found = apiKeys.find((item: any) => item.name === provider);
+                if (found) bearerToken = found.apiKey;
+              } catch {}
+            }
+            toolBody.modelInfo = {
+              bearerToken,
+              model: provider && modelName ? `${provider}@${modelName}` : ''
+            };
+          }
+          return toolBody;
         } else if (tool.id === 'agentic_file_search' && tool.agenticFileSearchConfig) {
-          // Add agentic file search tool with proper agentic_search type
-          return {
+          const toolBody: any = {
             type: 'agentic_search',
             vector_store_ids: tool.agenticFileSearchConfig.selectedVectorStores,
             max_iterations: tool.agenticFileSearchConfig.iterations,
             max_num_results: tool.agenticFileSearchConfig.maxResults
           };
+          if (modelSettings?.settingsType === 'RUNTIME') {
+            const provider = localStorage.getItem('platform_embedding_modelProvider') || '';
+            const modelName = localStorage.getItem('platform_embedding_modelName') || '';
+            const apiKeysRaw = localStorage.getItem('platform_apiKeys');
+            let bearerToken = '';
+            if (apiKeysRaw) {
+              try {
+                const apiKeys = JSON.parse(apiKeysRaw);
+                const found = apiKeys.find((item: any) => item.name === provider);
+                if (found) bearerToken = found.apiKey;
+              } catch {}
+            }
+            toolBody.modelInfo = {
+              bearerToken,
+              model: provider && modelName ? `${provider}@${modelName}` : ''
+            };
+          }
+          return toolBody;
         } else if (tool.id === 'fun_req_gathering_tool') {
           // Add Fun Req Assembler tool
           return {
