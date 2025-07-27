@@ -141,6 +141,16 @@ interface ConfigurationPanelProps {
   setJsonSchemaName: (name: string | null) => void;
   // When true, advanced sections (settings, tools, system prompt) are hidden for Masaic Mocky mode
   mockyMode?: boolean;
+  // When true, shows Model Test Agent specific UI
+  modelTestMode?: boolean;
+  modelTestUrl?: string;
+  setModelTestUrl?: (url: string) => void;
+  modelTestName?: string;
+  setModelTestName?: (name: string) => void;
+  modelTestApiKey?: string;
+  setModelTestApiKey?: (key: string) => void;
+  onTestModelConnectivity?: () => void;
+  isTestingModel?: boolean;
   className?: string;
 }
 
@@ -189,11 +199,21 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   jsonSchemaName,
   setJsonSchemaName,
   mockyMode = false,
+  modelTestMode = false,
+  modelTestUrl = '',
+  setModelTestUrl = () => {},
+  modelTestName = '',
+  setModelTestName = () => {},
+  modelTestApiKey = '',
+  setModelTestApiKey = () => {},
+  onTestModelConnectivity = () => {},
+  isTestingModel = false,
   className = ''
 }) => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [editingFunction, setEditingFunction] = useState<Tool | null>(null);
   const [editingMCP, setEditingMCP] = useState<Tool | null>(null);
   const [editingFileSearch, setEditingFileSearch] = useState<Tool | null>(null);
@@ -312,7 +332,8 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
 
   // Get all available models from providers - memoized to prevent unnecessary recalculations
   const allModels = useMemo(() => {
-    return providers.flatMap(provider => 
+    // Get models from API providers
+    const apiModels = providers.flatMap(provider => 
       provider.supportedModels
         .filter(model => !model.isEmbeddingModel) // Filter out embedding models
         .map(model => ({
@@ -321,9 +342,44 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           providerDescription: provider.description
         }))
     );
-  }, [providers]);
+
+    // Get models from localStorage (own models)
+    let ownModels: any[] = [];
+    try {
+      const savedOwnModels = localStorage.getItem('platform_own_model');
+      if (savedOwnModels) {
+        const ownModelsData = JSON.parse(savedOwnModels);
+        ownModels = ownModelsData.supportedModels.map((model: any) => ({
+          name: model.name,
+          modelSyntax: model.modelSyntax,
+          providerName: ownModelsData.name,
+          providerDescription: ownModelsData.description,
+          isEmbeddingModel: false
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading own models from localStorage:', error);
+    }
+
+    // Return own models first, then API models
+    return [...ownModels, ...apiModels];
+  }, [providers, refreshTrigger]);
 
   const getModelString = () => `${modelProvider}@${modelName}`;
+
+  const handleRefreshModels = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  // Listen for storage events to auto-refresh when models are saved
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setRefreshTrigger(prev => prev + 1);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Check if API key exists for provider
   const checkApiKey = (provider: string): boolean => {
@@ -550,42 +606,150 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             </div>
           )}
           
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 flex-1">
-              <Label className="text-sm font-medium whitespace-nowrap">Model</Label>
-              <ModelSelectionModal
-                models={allModels}
-                selectedModel={getModelString()}
-                onModelSelect={handleModelSelect}
-                loading={loading}
-                error={error}
-              />
+          {/* Model Test Agent UI */}
+          {modelTestMode ? (
+            <div className="space-y-4">
+              {/* URL Field */}
+              <div className="space-y-2">
+                <div className="space-y-1">
+                  <Label className="text-sm font-medium">Model base url</Label>
+                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Input
+                        placeholder="https://api.example.com/v1"
+                        value={modelTestUrl}
+                        onChange={(e) => setModelTestUrl(e.target.value)}
+                        className={`text-sm ${
+                          modelTestUrl && !modelTestUrl.match(/^https?:\/\/.+/) 
+                            ? 'border-red-500 focus:border-red-500' 
+                            : ''
+                        }`}
+                      />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p style={{ fontSize: '12px' }}>
+                        Example: If absolute URL=https://example.com/v1/chat/completions then enter https://example.com/v1
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                {modelTestUrl && !modelTestUrl.match(/^https?:\/\/.+/) && (
+                  <p className="text-xs text-red-500">URL must start with http:// or https://</p>
+                )}
+              </div>
+              
+              {/* Model Name */}
+              <div className="flex items-center space-x-3">
+                <div className="flex-1 space-y-2">
+                  <Label className="text-sm font-medium">Model Name</Label>
+                  <Input
+                    placeholder="gpt-4o"
+                    value={modelTestName}
+                    onChange={(e) => setModelTestName(e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="flex items-center space-x-2 pt-6">
+                  <ConfigurationSettingsModal
+                    textFormat={textFormat}
+                    setTextFormat={setTextFormat}
+                    toolChoice={toolChoice}
+                    setToolChoice={setToolChoice}
+                    temperature={temperature}
+                    setTemperature={setTemperature}
+                    maxTokens={maxTokens}
+                    setMaxTokens={setMaxTokens}
+                    topP={topP}
+                    setTopP={setTopP}
+                    jsonSchemaContent={jsonSchemaContent}
+                    setJsonSchemaContent={setJsonSchemaContent}
+                    jsonSchemaName={jsonSchemaName}
+                    setJsonSchemaName={setJsonSchemaName}
+                  />
+                </div>
+              </div>
+
+              {/* Model Settings Display */}
+              <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
+                <span>text_format:</span>
+                <span className="text-positive-trend font-medium">{textFormat}</span>
+                <span className="ml-2">tool_choice:</span>
+                <span className="text-positive-trend font-medium">{toolChoice}</span>
+                <span className="ml-2">temp:</span>
+                <span className="text-positive-trend font-medium">{temperature}</span>
+                <span className="ml-2">tokens:</span>
+                <span className="text-positive-trend font-medium">{maxTokens}</span>
+              </div>
+
+              {/* API Key Field */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">API Key</Label>
+                <Input
+                  type="password"
+                  placeholder="sk-..."
+                  value={modelTestApiKey}
+                  onChange={(e) => setModelTestApiKey(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+
+              {/* Test Model Connectivity Button */}
+              <Button
+                onClick={onTestModelConnectivity}
+                disabled={isTestingModel || !modelTestUrl.trim() || !modelTestName.trim() || !modelTestApiKey.trim() || (modelTestUrl && !modelTestUrl.match(/^https?:\/\/.+/))}
+                className="w-full bg-positive-trend hover:bg-positive-trend/90 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isTestingModel ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Testing Model Connectivity...
+                  </>
+                ) : (
+                  'Test Model Connectivity'
+                )}
+              </Button>
             </div>
-            {/* Settings icon hidden in Masaic Mocky mode */}
-            {!mockyMode && (
-            <div className="flex items-center space-x-2">
-              <ConfigurationSettingsModal
-                textFormat={textFormat}
-                setTextFormat={setTextFormat}
-                toolChoice={toolChoice}
-                setToolChoice={setToolChoice}
-                temperature={temperature}
-                setTemperature={setTemperature}
-                maxTokens={maxTokens}
-                setMaxTokens={setMaxTokens}
-                topP={topP}
-                setTopP={setTopP}
-                jsonSchemaContent={jsonSchemaContent}
-                setJsonSchemaContent={setJsonSchemaContent}
-                jsonSchemaName={jsonSchemaName}
-                setJsonSchemaName={setJsonSchemaName}
-              />
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3 flex-1">
+                <Label className="text-sm font-medium whitespace-nowrap">Model</Label>
+                <ModelSelectionModal
+                  models={allModels}
+                  selectedModel={getModelString()}
+                  onModelSelect={handleModelSelect}
+                  loading={loading}
+                  error={error}
+                  onRefresh={handleRefreshModels}
+                />
+              </div>
+              {/* Settings icon hidden in Masaic Mocky mode */}
+              {!mockyMode && (
+              <div className="flex items-center space-x-2">
+                <ConfigurationSettingsModal
+                  textFormat={textFormat}
+                  setTextFormat={setTextFormat}
+                  toolChoice={toolChoice}
+                  setToolChoice={setToolChoice}
+                  temperature={temperature}
+                  setTemperature={setTemperature}
+                  maxTokens={maxTokens}
+                  setMaxTokens={setMaxTokens}
+                  topP={topP}
+                  setTopP={setTopP}
+                  jsonSchemaContent={jsonSchemaContent}
+                  setJsonSchemaContent={setJsonSchemaContent}
+                  jsonSchemaName={jsonSchemaName}
+                  setJsonSchemaName={setJsonSchemaName}
+                />
+              </div>
+              )}
             </div>
-            )}
-          </div>
+          )}
           
-          {/* Configuration Parameters summary hidden in Masaic Mocky mode */}
-          {!mockyMode && (
+          {/* Configuration Parameters summary hidden in Masaic Mocky mode and Model Test mode */}
+          {!mockyMode && !modelTestMode && (
           <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
             <span>text_format:</span>
             <span className="text-positive-trend font-medium">{textFormat}</span>
@@ -599,8 +763,8 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           )}
         </div>
 
-        {/* Tools Section (hidden in Masaic Mocky mode) */}
-        {!mockyMode && (
+        {/* Tools Section (hidden in Masaic Mocky mode and Model Test mode) */}
+        {!mockyMode && !modelTestMode && (
         <div className="mt-6 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center flex-wrap gap-2">
@@ -986,8 +1150,8 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           </div>
         )}
 
-        {/* System Message - hidden in Masaic Mocky mode */}
-        {!mockyMode && (
+        {/* System Message - hidden in Masaic Mocky mode and Model Test mode */}
+        {!mockyMode && !modelTestMode && (
         <div className="mt-6 flex flex-col flex-grow min-h-0">
           <div className="flex items-center justify-between mb-3 flex-shrink-0">
             <Label className="text-sm font-medium">System message</Label>

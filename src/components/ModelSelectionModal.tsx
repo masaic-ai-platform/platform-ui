@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { Search, Check, ChevronDown } from 'lucide-react';
+import { Search, Check, ChevronDown, RefreshCw } from 'lucide-react';
 
 interface Model {
   name: string;
@@ -20,6 +20,7 @@ interface ModelSelectionModalProps {
   onModelSelect: (modelSyntax: string) => void;
   loading?: boolean;
   error?: string | null;
+  onRefresh?: () => void;
 }
 
 const ModelSelectionModal: React.FC<ModelSelectionModalProps> = ({
@@ -27,7 +28,8 @@ const ModelSelectionModal: React.FC<ModelSelectionModalProps> = ({
   selectedModel,
   onModelSelect,
   loading = false,
-  error = null
+  error = null,
+  onRefresh
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,7 +124,20 @@ const ModelSelectionModal: React.FC<ModelSelectionModalProps> = ({
         align="start"
       >
         <div className="p-4 border-b">
-          <h4 className="text-sm font-medium mb-3">Select a model</h4>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-medium">Select a model</h4>
+            {onRefresh && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onRefresh}
+                className="h-6 w-6 p-0 hover:bg-muted/50"
+                title="Refresh models"
+              >
+                <RefreshCw className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            )}
+          </div>
           
           {/* Search Input */}
           <div className="relative">

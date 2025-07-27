@@ -73,6 +73,15 @@ const getProviderApiKey = (provider: string): string => {
   }
 };
 
+const isValidUrl = (url: string): boolean => {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
 const AiPlayground: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -113,6 +122,16 @@ const AiPlayground: React.FC = () => {
   // Masaic Mocky mode state
   const [mockyMode, setMockyMode] = useState(false);
   const [mockyAgentData, setMockyAgentData] = useState<null | { systemPrompt: string; greetingMessage: string; description: string; tools: any[] }>(null);
+
+  // Model Test Agent mode state
+  const [modelTestMode, setModelTestMode] = useState(false);
+  const [modelTestAgentData, setModelTestAgentData] = useState<null | { systemPrompt: string; greetingMessage: string; userMessage: string; tools: any[] }>(null);
+  const [modelTestUrl, setModelTestUrl] = useState('');
+  const [modelTestName, setModelTestName] = useState('');
+  const [modelTestApiKey, setModelTestApiKey] = useState('');
+  const [isTestingModel, setIsTestingModel] = useState(false);
+  const [showSaveModel, setShowSaveModel] = useState(false);
+  const [saveModelState, setSaveModelState] = useState<'success' | 'tool_issue' | 'error' | null>(null);
 
   // Chat header state
   const [copiedResponseId, setCopiedResponseId] = useState(false);
@@ -1247,8 +1266,38 @@ const AiPlayground: React.FC = () => {
   };
 
   const handleTabChange = (tab: string) => {
+    // First, always reset any active special modes
+    const resetMockyMode = () => {
+      if (mockyMode) {
+        setMockyMode(false);
+        setMockyAgentData(null);
+        setMessages([]);
+        setConversationId(null);
+        setPreviousResponseId(null);
+      }
+    };
+
+    const resetModelTestMode = () => {
+      if (modelTestMode) {
+        setModelTestMode(false);
+        setModelTestAgentData(null);
+        setModelTestUrl('');
+        setModelTestName('');
+        setModelTestApiKey('');
+        setIsTestingModel(false);
+        setShowSaveModel(false);
+        setSaveModelState(null);
+        setMessages([]);
+        setConversationId(null);
+        setPreviousResponseId(null);
+      }
+    };
+
     // Special handling for Masaic Mocky option
     if (tab === 'masaic-mocky') {
+      // Reset Model Test mode first if active
+      resetModelTestMode();
+      
       setActiveTab(tab);
       // Fetch agent definition
       fetch(`${API_URL}/v1/agents/Masaic-Mocky`)
@@ -1304,14 +1353,52 @@ const AiPlayground: React.FC = () => {
       return;
     }
 
-    // Exiting Masaic Mocky mode if active and user selects other tab
-    if (mockyMode) {
-      setMockyMode(false);
-      setMockyAgentData(null);
-      setMessages([]);
-      setConversationId(null);
-      setPreviousResponseId(null);
+    // Special handling for Add Model option
+    if (tab === 'add-model') {
+      // Reset Mocky mode first if active
+      resetMockyMode();
+      
+      setActiveTab(tab);
+      // Fetch ModelTestAgent definition
+      fetch(`${API_URL}/v1/agents/ModelTestAgent`)
+        .then(res => res.json())
+        .then(data => {
+          if (data) {
+            setModelTestMode(true);
+            setModelTestAgentData({
+              systemPrompt: data.systemPrompt || '',
+              greetingMessage: data.greetingMessage || '',
+              userMessage: data.userMessage || '',
+              tools: data.tools || []
+            });
+
+            // Reset form fields
+            setModelTestUrl('');
+            setModelTestName('');
+            setModelTestApiKey('');
+            setIsTestingModel(false);
+            setShowSaveModel(false);
+
+            // reset conversation tracking ids
+            setConversationId(null);
+            setPreviousResponseId(null);
+
+            // Reset previous conversation
+            setMessages([]);
+          } else {
+            toast.error('Failed to load Model Test Agent data');
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          toast.error('Error fetching Model Test Agent');
+        });
+      return;
     }
+
+    // For any other tab, reset both modes
+    resetMockyMode();
+    resetModelTestMode();
 
     setActiveTab(tab);
     // Handle API Keys tab by opening the API keys modal
@@ -1319,6 +1406,545 @@ const AiPlayground: React.FC = () => {
       setApiKeysModalOpen(true);
       // Reset to previous tab since API Keys is a modal action, not a tab
       setActiveTab('responses');
+    }
+  };
+
+  const handleTestModelConnectivity = async () => {
+    // Validation
+    if (!modelTestUrl.trim()) {
+      toast.error('Please enter a model URL');
+      return;
+    }
+    
+    if (!isValidUrl(modelTestUrl.trim())) {
+      toast.error('Please enter a valid URL starting with http:// or https://');
+      return;
+    }
+    
+    if (!modelTestName.trim()) {
+      toast.error('Please enter a model name');
+      return;
+    }
+    
+    if (!modelTestApiKey.trim()) {
+      toast.error('Please enter an API key');
+      return;
+    }
+
+    if (!modelTestAgentData) {
+      toast.error('Model Test Agent data not loaded');
+      return;
+    }
+
+    setIsTestingModel(true);
+    setShowSaveModel(false);
+    setSaveModelState(null);
+
+    // Reset conversation state like Reset Chat CTA
+    setMessages([]);
+    setConversationId(null);
+    setPreviousResponseId(null);
+
+    // Display greeting message from agent
+    const greetingId = Date.now().toString() + '_assistant';
+    const greetingMessage: Message = {
+      id: greetingId,
+      role: 'assistant',
+      content: '',
+      type: 'text',
+      timestamp: new Date(),
+      isLoading: true
+    };
+    
+    setMessages([greetingMessage]);
+
+    // Artificial streaming of greeting text
+    const greetingText: string = modelTestAgentData.greetingMessage || '';
+    let idx = 0;
+    const greetingInterval = setInterval(() => {
+      idx += 1;
+      const partial = greetingText.slice(0, idx);
+      setMessages(prev => prev.map(msg => msg.id === greetingId ? { ...msg, content: partial } : msg));
+      if (idx >= greetingText.length) {
+        clearInterval(greetingInterval);
+        setMessages(prev => prev.map(msg => msg.id === greetingId ? { ...msg, isLoading: false } : msg));
+        
+        // After greeting is complete, add user message
+        setTimeout(() => {
+          const userMessageId = Date.now().toString() + '_user';
+          const userMessage: Message = {
+            id: userMessageId,
+            role: 'user',
+            content: '',
+            type: 'text',
+            timestamp: new Date(),
+            isLoading: true
+          };
+          
+          setMessages(prev => [...prev, userMessage]);
+          
+          // Stream user message
+          const userText = modelTestAgentData.userMessage || '';
+          let userIdx = 0;
+          const userInterval = setInterval(() => {
+            userIdx += 1;
+            const userPartial = userText.slice(0, userIdx);
+            setMessages(prev => prev.map(msg => msg.id === userMessageId ? { ...msg, content: userPartial } : msg));
+            if (userIdx >= userText.length) {
+              clearInterval(userInterval);
+              setMessages(prev => prev.map(msg => msg.id === userMessageId ? { ...msg, isLoading: false } : msg));
+              
+              // After user message is complete, make API call
+              setTimeout(() => {
+                makeModelTestApiCall();
+              }, 500);
+            }
+          }, 25);
+        }, 1000);
+      }
+    }, 25);
+  };
+
+  const makeModelTestApiCall = async () => {
+    if (!modelTestAgentData) return;
+
+    const assistantMessageId = Date.now().toString() + '_assistant_response';
+    const assistantMessage: Message = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      contentBlocks: [{
+        type: 'text',
+        content: ''
+      }],
+      type: 'text',
+      timestamp: new Date(),
+      isLoading: true
+    };
+
+    setMessages(prev => [...prev, assistantMessage]);
+
+    // Build text format from current settings
+    let textFormatBlock: any = { type: textFormat };
+    if (textFormat === 'json_schema') {
+      let schema = null;
+      let schemaName = jsonSchemaName;
+      try {
+        if (jsonSchemaContent) {
+          const parsed = JSON.parse(jsonSchemaContent);
+          schema = parsed.schema;
+          schemaName = parsed.name || schemaName;
+        }
+      } catch {}
+      if (!schema || !schemaName) {
+        const errorMsg = 'JSON schema is missing or invalid. Please define a valid schema in settings.';
+        toast.error(errorMsg);
+        setMessages(prev => prev.map(msg =>
+          msg.id === assistantMessageId
+            ? {
+                ...msg,
+                content: errorMsg,
+                type: 'text',
+                hasThinkTags: false,
+                isLoading: false
+              }
+            : msg
+        ));
+        setIsTestingModel(false);
+        return;
+      }
+      textFormatBlock = {
+        type: 'json_schema',
+        name: schemaName,
+        schema
+      };
+    }
+
+    const requestBody = {
+      model: `${modelTestUrl.trim()}@${modelTestName.trim()}`,
+      instructions: modelTestAgentData.systemPrompt,
+      input: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'input_text',
+              text: modelTestAgentData.userMessage
+            }
+          ]
+        }
+      ],
+      text: {
+        format: textFormatBlock
+      },
+      tools: modelTestAgentData.tools || [],
+      temperature: temperature,
+      max_output_tokens: maxTokens,
+      top_p: topP,
+      store: true,
+      stream: true,
+      previous_response_id: null
+    };
+
+    try {
+      const response = await fetch(`${apiUrl}/v1/responses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${modelTestApiKey.trim()}`
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        setMessages(prev => prev.map(msg =>
+          msg.id === assistantMessageId
+            ? {
+                ...msg,
+                content: `Error: ${errorText}`,
+                type: 'text',
+                hasThinkTags: false,
+                isLoading: false
+              }
+            : msg
+        ));
+        setIsTestingModel(false);
+        return;
+      }
+
+      // Handle streaming response (reuse existing streaming logic)
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let streamingContent = '';
+      let responseId = '';
+      let isStreaming = false;
+      let contentBlocks: ContentBlock[] = [];
+      let currentTextBlock: ContentBlock | null = null;
+      let activeToolExecutions = new Map<string, ToolExecution>();
+      let lastEvent: string | null = null;
+      let responseCompleted = false;
+      let toolCompleted = false;
+
+      const updateMessage = (blocks: ContentBlock[], fullContent: string) => {
+        setMessages(prev => prev.map(msg =>
+          msg.id === assistantMessageId
+            ? {
+                ...msg,
+                content: fullContent,
+                contentBlocks: [...blocks],
+                type: 'text',
+                hasThinkTags: false,
+                isLoading: false
+              }
+            : msg
+        ));
+      };
+
+      const addInlineLoading = (blocks: ContentBlock[]) => {
+        const blocksWithoutLoading = blocks.filter(block => block.type !== 'inline_loading');
+        return [...blocksWithoutLoading, { type: 'inline_loading' as const }];
+      };
+
+      const removeInlineLoading = (blocks: ContentBlock[]) => {
+        return blocks.filter(block => block.type !== 'inline_loading');
+      };
+
+      if (reader) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              // Capture event name if present
+              if (line.startsWith('event: ')) {
+                lastEvent = line.slice(7).trim();
+                continue;
+              }
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+
+                  // Handle explicit error events from SSE stream
+                  if (lastEvent === 'error' || (data.code && data.message && !data.type)) {
+                    const errorCode = data.code || 'error';
+                    const errorMsg = data.message || 'Unknown error';
+                    const errorContent = `Error: [${errorCode}] ${errorMsg}`;
+
+                    // Update assistant message with error content, stop loading state
+                    setMessages(prev => prev.map(msg =>
+                      msg.id === assistantMessageId
+                        ? {
+                            ...msg,
+                            content: errorContent,
+                            contentBlocks: [
+                              {
+                                type: 'text',
+                                content: `[${errorCode}] ${errorMsg}`
+                              }
+                            ],
+                            type: 'text',
+                            hasThinkTags: false,
+                            isLoading: false
+                          }
+                        : msg
+                    ));
+
+                    // Exit streaming loop on error and reset testing state
+                    setIsTestingModel(false);
+                    setSaveModelState('error');
+                    setShowSaveModel(true);
+                    reader.cancel().catch(() => {});
+                    return;
+                  }
+
+                  // Handle different event types
+                  if (data.type === 'response.completed') {
+                    if (data.response?.id) {
+                      responseId = data.response.id;
+                      setPreviousResponseId(responseId);
+                    }
+                    responseCompleted = true;
+                    
+                    // Determine save model state based on completion status
+                    if (toolCompleted) {
+                      // Both response and tool completed successfully
+                      setSaveModelState('success');
+                    } else {
+                      // Response completed but no tool completion - tool calling issue
+                      setSaveModelState('tool_issue');
+                    }
+                    
+                    // Response completed - stop testing and show save button
+                    setIsTestingModel(false);
+                    setShowSaveModel(true);
+                  } else if (data.type === 'response.output_text.delta') {
+                    // Start or continue streaming
+                    if (!isStreaming) {
+                      isStreaming = true;
+                    }
+                    
+                    if (data.delta) {
+                      streamingContent += data.delta;
+                      
+                      // Create or update current text block
+                      if (!currentTextBlock) {
+                        currentTextBlock = { type: 'text', content: data.delta };
+                        contentBlocks.push(currentTextBlock);
+                      } else {
+                        currentTextBlock.content = (currentTextBlock.content || '') + data.delta;
+                      }
+                      
+                      // Check if we have a complete JSON object for real-time formatting
+                      let displayContent = streamingContent;
+                      if (textFormat === 'json_object' || textFormat === 'json_schema') {
+                        try {
+                          JSON.parse(streamingContent);
+                          displayContent = streamingContent;
+                        } catch {
+                          displayContent = streamingContent;
+                        }
+                      }
+                      
+                      // Remove any inline loading when text streaming starts
+                      const blocksWithoutLoading = removeInlineLoading(contentBlocks);
+                      updateMessage(blocksWithoutLoading, displayContent);
+                    }
+                  } else if (data.type === 'response.output_text.done') {
+                    // Streaming completed for this output
+                    isStreaming = false;
+                    currentTextBlock = null;
+                    if (data.text) {
+                      streamingContent = data.text;
+                      // Update the last text block with complete content
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'text') {
+                          contentBlocks[i].content = data.text;
+                          break;
+                        }
+                      }
+                      updateMessage(contentBlocks, streamingContent);
+                    }
+                  } else if (data.type === 'response.get_weather_by_city.in_progress') {
+                    // Handle get_weather_by_city tool in_progress
+                    const toolExecution: ToolExecution = {
+                      serverName: 'get_weather_by_city',
+                      toolName: 'get_weather_by_city',
+                      status: 'in_progress'
+                    };
+                    activeToolExecutions.set('get_weather_by_city', toolExecution);
+                    
+                    // Find or create tool progress block
+                    let toolProgressBlock = contentBlocks.find(block => block.type === 'tool_progress');
+                    if (!toolProgressBlock) {
+                      toolProgressBlock = { type: 'tool_progress', toolExecutions: Array.from(activeToolExecutions.values()) };
+                      contentBlocks.push(toolProgressBlock);
+                    } else {
+                      toolProgressBlock.toolExecutions = Array.from(activeToolExecutions.values());
+                    }
+                    currentTextBlock = null;
+                    updateMessage(contentBlocks, streamingContent);
+                  } else if (data.type === 'response.get_weather_by_city.completed') {
+                    // Handle get_weather_by_city tool completed
+                    const toolExecution = activeToolExecutions.get('get_weather_by_city');
+                    if (toolExecution) {
+                      toolExecution.status = 'completed';
+                      toolCompleted = true;
+                      
+                      // If response already completed, update save model state to success
+                      if (responseCompleted) {
+                        setSaveModelState('success');
+                      }
+                      
+                      // Update the tool progress block
+                      for (let i = contentBlocks.length - 1; i >= 0; i--) {
+                        if (contentBlocks[i].type === 'tool_progress') {
+                          contentBlocks[i].toolExecutions = Array.from(activeToolExecutions.values());
+                          break;
+                        }
+                      }
+                      const blocksWithLoading = addInlineLoading(contentBlocks);
+                      updateMessage(blocksWithLoading, streamingContent);
+                    }
+                  }
+                } catch (parseError) {
+                  console.error('Error parsing SSE data:', parseError);
+                }
+              }
+            }
+          }
+        } catch (streamError) {
+          console.error('Error reading stream:', streamError);
+          setMessages(prev => prev.map(msg =>
+            msg.id === assistantMessageId
+              ? {
+                  ...msg,
+                  content: `Error: Failed to read streaming response`,
+                  type: 'text',
+                  hasThinkTags: false,
+                  isLoading: false
+                }
+              : msg
+          ));
+          setIsTestingModel(false);
+          setSaveModelState('error');
+          setShowSaveModel(true);
+        } finally {
+          reader.releaseLock();
+        }
+      }
+
+    } catch (error) {
+      console.error('Error making model test API call:', error);
+      setMessages(prev => prev.map(msg =>
+        msg.id === assistantMessageId
+          ? {
+              ...msg,
+              content: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`,
+              type: 'text',
+              hasThinkTags: false,
+              isLoading: false
+            }
+          : msg
+      ));
+      setIsTestingModel(false);
+      setSaveModelState('error');
+      setShowSaveModel(true);
+    }
+  };
+
+  const handleSaveModel = () => {
+    if (!modelTestUrl.trim() || !modelTestName.trim() || !modelTestApiKey.trim()) {
+      toast.error('Missing model information');
+      return;
+    }
+
+    try {
+      // 1. Update platform_own_model in localStorage
+      const existingOwnModels = localStorage.getItem('platform_own_model');
+      let ownModelsData;
+      
+      if (existingOwnModels) {
+        ownModelsData = JSON.parse(existingOwnModels);
+      } else {
+        ownModelsData = {
+          name: "own model",
+          description: "My own models",
+          supportedModels: []
+        };
+      }
+
+      const newModelSyntax = `${modelTestUrl.trim()}@${modelTestName.trim()}`;
+      
+      // Check if model already exists by modelSyntax (to prevent duplicates)
+      const existingModelIndex = ownModelsData.supportedModels.findIndex(
+        (model: any) => model.modelSyntax === newModelSyntax
+      );
+
+      const newModel = {
+        name: modelTestName.trim(),
+        modelSyntax: newModelSyntax
+      };
+
+      if (existingModelIndex >= 0) {
+        // Update existing model
+        ownModelsData.supportedModels[existingModelIndex] = newModel;
+      } else {
+        // Add new model
+        ownModelsData.supportedModels.push(newModel);
+      }
+
+      localStorage.setItem('platform_own_model', JSON.stringify(ownModelsData));
+
+      // 2. Update platform_apiKeys in localStorage
+      const existingApiKeys = localStorage.getItem('platform_apiKeys');
+      let apiKeysData = [];
+      
+      if (existingApiKeys) {
+        apiKeysData = JSON.parse(existingApiKeys);
+      }
+
+      // Check if API key for this model already exists
+      const existingApiKeyIndex = apiKeysData.findIndex(
+        (apiKey: any) => apiKey.name === modelTestUrl.trim()
+      );
+
+      const newApiKey = {
+        name: modelTestUrl.trim(),
+        apiKey: modelTestApiKey.trim()
+      };
+
+      if (existingApiKeyIndex >= 0) {
+        // Update existing API key
+        apiKeysData[existingApiKeyIndex] = newApiKey;
+      } else {
+        // Add new API key
+        apiKeysData.push(newApiKey);
+      }
+
+      localStorage.setItem('platform_apiKeys', JSON.stringify(apiKeysData));
+
+      toast.success(`Model "${modelTestName.trim()}" saved successfully!`);
+      
+      // Trigger a refresh of the models list by dispatching a storage event
+      window.dispatchEvent(new Event('storage'));
+      
+      // Reset the form
+      setModelTestUrl('');
+      setModelTestName('');
+      setModelTestApiKey('');
+      setShowSaveModel(false);
+      setSaveModelState(null);
+      
+    } catch (error) {
+      console.error('Error saving model:', error);
+      toast.error('Failed to save model');
     }
   };
 
@@ -1387,6 +2013,15 @@ const AiPlayground: React.FC = () => {
           setJsonSchemaName={setJsonSchemaName}
           className="w-full"
           mockyMode={mockyMode}
+          modelTestMode={modelTestMode}
+          modelTestUrl={modelTestUrl}
+          setModelTestUrl={setModelTestUrl}
+          modelTestName={modelTestName}
+          setModelTestName={setModelTestName}
+          modelTestApiKey={modelTestApiKey}
+          setModelTestApiKey={setModelTestApiKey}
+          onTestModelConnectivity={handleTestModelConnectivity}
+          isTestingModel={isTestingModel}
         />
       </DrawerContent>
     </Drawer>
@@ -1446,6 +2081,15 @@ const AiPlayground: React.FC = () => {
         setJsonSchemaName={setJsonSchemaName}
         className="hidden md:block md:w-[30%]"
         mockyMode={mockyMode}
+        modelTestMode={modelTestMode}
+        modelTestUrl={modelTestUrl}
+        setModelTestUrl={setModelTestUrl}
+        modelTestName={modelTestName}
+        setModelTestName={setModelTestName}
+        modelTestApiKey={modelTestApiKey}
+        setModelTestApiKey={setModelTestApiKey}
+        onTestModelConnectivity={handleTestModelConnectivity}
+        isTestingModel={isTestingModel}
       />
 
       {/* Chat Area */}
@@ -1482,6 +2126,12 @@ const AiPlayground: React.FC = () => {
             {mockyMode && mockyAgentData?.description && (
               <span className="absolute left-1/2 transform -translate-x-1/2 text-xs text-muted-foreground truncate max-w-[60%] text-center">
                 {mockyAgentData.description}
+              </span>
+            )}
+
+            {modelTestMode && (
+              <span className="absolute left-1/2 transform -translate-x-1/2 text-xs text-muted-foreground truncate max-w-[60%] text-center">
+                Test model connectivity and validate API integration
               </span>
             )}
 
@@ -1546,7 +2196,7 @@ const AiPlayground: React.FC = () => {
                 selectedVectorStore={selectedVectorStore}
                 instructions={instructions}
                 isLoading={message.isLoading}
-                onRetry={handleRetry}
+                onRetry={modelTestMode ? undefined : handleRetry}
               />
             ))}
           </div>
@@ -1556,40 +2206,80 @@ const AiPlayground: React.FC = () => {
 
         {/* Input Area */}
         <div className="bg-background px-6 py-4">
-          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
-            <div className="relative">
-              <Textarea
-                value={inputValue}
-                onChange={handleTextareaChange}
-                onKeyPress={handleKeyPress}
-                placeholder="Chat with your prompt..."
-                className="chat-input-textarea w-full min-h-[96px] max-h-[40vh] resize-none rounded-xl border border-border bg-muted/50 px-4 py-4 pr-12 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
-                disabled={isLoading}
-                rows={1}
-                style={{ 
-                  lineHeight: '1.5',
-                  paddingTop: '18px',
-                  paddingBottom: '18px',
-                  boxShadow: 'none !important',
-                  outline: 'none !important'
-                }}
-              />
-              <div className="absolute bottom-3 right-3">
+          {modelTestMode && showSaveModel ? (
+            <div className="max-w-4xl mx-auto space-y-2">
+              {saveModelState === 'success' && (
                 <Button 
-                  type="submit" 
-                  disabled={!inputValue.trim() || isLoading}
-                  className="h-8 w-8 p-0 bg-positive-trend hover:bg-positive-trend/90 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={inputValue.trim() ? "Send message" : "Type a message to send"}
+                  onClick={handleSaveModel}
+                  className="w-full h-12 bg-positive-trend hover:bg-positive-trend/90 text-white rounded-xl font-medium"
                 >
-                  {isLoading ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <Send className="h-3 w-3" />
-                  )}
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Model
                 </Button>
-              </div>
+              )}
+              
+              {saveModelState === 'tool_issue' && (
+                <>
+                  <p className="text-xs text-yellow-600 text-center">Model has problem with tool calling</p>
+                  <Button 
+                    onClick={handleSaveModel}
+                    className="w-full h-12 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl font-medium"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Model
+                  </Button>
+                </>
+              )}
+              
+              {saveModelState === 'error' && (
+                <>
+                  <p className="text-xs text-red-600 text-center">Model connectivity test was not complete</p>
+                  <Button 
+                    onClick={handleSaveModel}
+                    className="w-full h-12 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Model
+                  </Button>
+                </>
+              )}
             </div>
-          </form>
+          ) : !modelTestMode ? (
+            <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+              <div className="relative">
+                <Textarea
+                  value={inputValue}
+                  onChange={handleTextareaChange}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Chat with your prompt..."
+                  className="chat-input-textarea w-full min-h-[96px] max-h-[40vh] resize-none rounded-xl border border-border bg-muted/50 px-4 py-4 pr-12 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-positive-trend/60 focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-positive-trend/60 transition-all duration-200"
+                  disabled={isLoading}
+                  rows={1}
+                  style={{ 
+                    lineHeight: '1.5',
+                    paddingTop: '18px',
+                    paddingBottom: '18px',
+                    boxShadow: 'none !important',
+                    outline: 'none !important'
+                  }}
+                />
+                <div className="absolute bottom-3 right-3">
+                  <Button 
+                    type="submit" 
+                    disabled={!inputValue.trim() || isLoading}
+                    className="h-8 w-8 p-0 bg-positive-trend hover:bg-positive-trend/90 text-white rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={inputValue.trim() ? "Send message" : "Type a message to send"}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Send className="h-3 w-3" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          ) : null}
         </div>
       </div>
     </div>
