@@ -367,8 +367,28 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
 
   const getModelString = () => `${modelProvider}@${modelName}`;
 
-  const handleRefreshModels = () => {
-    setRefreshTrigger(prev => prev + 1);
+  const handleDeleteModel = (modelSyntax: string) => {
+    try {
+      const existingOwnModels = localStorage.getItem('platform_own_model');
+      if (existingOwnModels) {
+        const ownModelsData = JSON.parse(existingOwnModels);
+        
+        // Remove the model from supportedModels array
+        ownModelsData.supportedModels = ownModelsData.supportedModels.filter(
+          (model: any) => model.modelSyntax !== modelSyntax
+        );
+        
+        localStorage.setItem('platform_own_model', JSON.stringify(ownModelsData));
+        
+        // Trigger refresh to update the dropdown
+        setRefreshTrigger(prev => prev + 1);
+        
+        // Also dispatch storage event for other components
+        window.dispatchEvent(new Event('storage'));
+      }
+    } catch (error) {
+      console.error('Error deleting model:', error);
+    }
   };
 
   // Listen for storage events to auto-refresh when models are saved
@@ -721,7 +741,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                   onModelSelect={handleModelSelect}
                   loading={loading}
                   error={error}
-                  onRefresh={handleRefreshModels}
+                  onDeleteModel={handleDeleteModel}
                 />
               </div>
               {/* Settings icon hidden in Masaic Mocky mode */}
