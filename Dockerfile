@@ -26,10 +26,10 @@ ENV APP_VERSION=0.0.4
 COPY --from=build /app/dist ./dist
 
 # Copy server entrypoint
-COPY server.js .
+COPY server.cjs .
 
 # Expose port 80
 EXPOSE 80
 
 # Start the server
-CMD ["server.js"]
+CMD ["server.cjs"]

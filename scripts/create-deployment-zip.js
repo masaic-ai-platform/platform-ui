@@ -18,7 +18,7 @@ fs.mkdirSync(deployDir, { recursive: true });
 
 // Files to include in deployment (minimal set)
 const filesToCopy = [
-  'server.js',
+  'server.cjs',
   '.env.production'
 ];
 
@@ -63,7 +63,7 @@ const deployPackageJson = {
   private: packageJson.private,
   type: packageJson.type,
   scripts: {
-    start: "node server.js"
+    start: "node server.cjs"
   },
   // No dependencies needed since we're serving static files
   engines: {
@@ -95,7 +95,7 @@ try {
   console.log('🎉 Ready for AWS Elastic Beanstalk deployment!');
   console.log('');
   console.log('📋 Package contents:');
-  console.log('  - server.js (Node.js server)');
+  console.log('  - server.cjs (Node.js server)');
   console.log('  - dist/ (Built static files)');
   console.log('  - package.json (Minimal config)');
   console.log('  - .env.production (Environment variables)');
