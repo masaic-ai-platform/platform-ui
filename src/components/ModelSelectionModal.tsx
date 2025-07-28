@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { Search, Check, ChevronDown } from 'lucide-react';
+import { Search, Check, ChevronDown, Trash2 } from 'lucide-react';
 
 interface Model {
   name: string;
@@ -20,6 +20,7 @@ interface ModelSelectionModalProps {
   onModelSelect: (modelSyntax: string) => void;
   loading?: boolean;
   error?: string | null;
+  onDeleteModel?: (modelSyntax: string) => void;
 }
 
 const ModelSelectionModal: React.FC<ModelSelectionModalProps> = ({
@@ -27,7 +28,8 @@ const ModelSelectionModal: React.FC<ModelSelectionModalProps> = ({
   selectedModel,
   onModelSelect,
   loading = false,
-  error = null
+  error = null,
+  onDeleteModel
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -160,23 +162,38 @@ const ModelSelectionModal: React.FC<ModelSelectionModalProps> = ({
                 )}
                 <div>
                   {providerModels.map((model) => (
-                    <Button
-                      key={model.modelSyntax}
-                      variant="ghost"
-                      className="w-full justify-start h-auto p-4 hover:bg-positive-trend/10 hover:text-positive-trend focus:bg-positive-trend/10 focus:text-positive-trend rounded-none"
-                      onClick={() => handleModelSelect(model.modelSyntax)}
-                    >
-                      <div className="flex items-center space-x-3 w-full">
-                        <div className="flex items-center justify-center w-5 h-5">
-                          {selectedModel === model.modelSyntax && (
-                            <Check className="h-4 w-4 text-positive-trend" />
-                          )}
+                    <div key={model.modelSyntax} className="flex items-center group">
+                      <Button
+                        variant="ghost"
+                        className="flex-1 justify-start h-auto p-4 hover:bg-positive-trend/10 hover:text-positive-trend focus:bg-positive-trend/10 focus:text-positive-trend rounded-none"
+                        onClick={() => handleModelSelect(model.modelSyntax)}
+                      >
+                        <div className="flex items-center space-x-3 w-full">
+                          <div className="flex items-center justify-center w-5 h-5">
+                            {selectedModel === model.modelSyntax && (
+                              <Check className="h-4 w-4 text-positive-trend" />
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-2 flex-1 min-w-0">
+                            <span className="font-medium truncate">{model.name}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-2 flex-1 min-w-0">
-                          <span className="font-medium truncate">{model.name}</span>
-                        </div>
-                      </div>
-                    </Button>
+                      </Button>
+                      {provider === 'own model' && onDeleteModel && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/10 hover:text-red-500 mr-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteModel(model.modelSyntax);
+                          }}
+                          title="Delete model"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>

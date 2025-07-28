@@ -10,7 +10,8 @@ import {
   Database,
   BarChart3,
   Shield,
-  Sparkles
+  Sparkles,
+  Plus
 } from 'lucide-react';
 
 interface PlaygroundSidebarProps {
@@ -35,6 +36,7 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
     { id: 'observability', label: 'Observability', icon: BarChart3, link: 'https://communal-lionfish.in.signoz.cloud/home' },
     // New clickable option directly below Observability
     { id: 'masaic-mocky', label: 'Masaic Mocky', icon: Sparkles, clickable: true },
+    { id: 'add-model', label: 'Add Model', icon: Plus, clickable: true },
     { id: 'compliance', label: 'Compliance', icon: Shield },
   ];
 

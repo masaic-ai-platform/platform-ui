@@ -128,6 +128,8 @@ const ToolExecutionProgress: React.FC<ToolExecutionProgressProps> = ({ toolExecu
         return 'Mock Generator';
       case 'mock_save_tool':
         return 'Mock Save';
+      case 'get_weather_by_city':
+        return 'get_weather_by_city';
       default:
         return serverName;
     }
@@ -189,6 +191,8 @@ const ToolExecutionProgress: React.FC<ToolExecutionProgressProps> = ({ toolExecu
                   return tool.status === 'in_progress' ? 'Understanding mock requirements' : 'Completed';
                 } else if (tool.serverName === 'mock_save_tool') {
                   return tool.status === 'in_progress' ? 'Saving mock' : 'Mock saved';
+                } else if (tool.serverName === 'get_weather_by_city') {
+                  return tool.status === 'in_progress' ? 'Tool called' : 'Tool call completed';
                 }
                 return tool.toolName;
               };
