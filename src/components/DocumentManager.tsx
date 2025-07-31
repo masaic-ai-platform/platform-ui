@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { apiClient } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -122,7 +123,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
 
   const loadVectorStoreFiles = async (vectorStoreId: string) => {
     try {
-      const response = await fetch(`${baseUrl}/v1/vector_stores/${vectorStoreId}/files`, {
+      const response = await apiClient.rawRequest(`/v1/vector_stores/${vectorStoreId}/files`, {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
         },
@@ -143,12 +144,13 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
       }
     } catch (error) {
       console.error(`Error loading files for vector store ${vectorStoreId}:`, error);
+      // Authentication errors are handled by ApiClient
     }
   };
 
   const loadDocuments = async () => {
     try {
-      const response = await fetch(`${baseUrl}/v1/files`, {
+      const response = await apiClient.rawRequest('/v1/files', {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
         },
@@ -160,12 +162,13 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
       }
     } catch (error) {
       console.error('Error loading documents:', error);
+      // Authentication errors are handled by ApiClient
     }
   };
 
   const loadVectorStores = async () => {
     try {
-      const response = await fetch(`${baseUrl}/v1/vector_stores`, {
+      const response = await apiClient.rawRequest('/v1/vector_stores', {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
         },
@@ -177,6 +180,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
       }
     } catch (error) {
       console.error('Error loading vector stores:', error);
+      // Authentication errors are handled by ApiClient
     }
   };
 
@@ -193,7 +197,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
       formData.append('file', file);
       formData.append('purpose', 'user_data');
 
-      const response = await fetch(`${baseUrl}/v1/files`, {
+      const response = await apiClient.rawRequest('/v1/files', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -230,10 +234,9 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${baseUrl}/v1/vector_stores`, {
+      const response = await apiClient.rawRequest('/v1/vector_stores', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
@@ -270,10 +273,9 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${baseUrl}/v1/vector_stores/${vectorStoreId}/files`, {
+      const response = await apiClient.rawRequest(`/v1/vector_stores/${vectorStoreId}/files`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
@@ -318,7 +320,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${baseUrl}/v1/vector_stores/${vectorStoreId}/files/${fileId}`, {
+      const response = await apiClient.rawRequest(`/v1/vector_stores/${vectorStoreId}/files/${fileId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -351,7 +353,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${baseUrl}/v1/files/${fileId}`, {
+      const response = await apiClient.rawRequest(`/v1/files/${fileId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -388,7 +390,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${baseUrl}/v1/vector_stores/${vectorStoreId}`, {
+      const response = await apiClient.rawRequest(`/v1/vector_stores/${vectorStoreId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -456,7 +458,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({
     setFileContent('');
 
     try {
-      const response = await fetch(`${baseUrl}/v1/files/${fileId}/content`, {
+      const response = await apiClient.rawRequest(`/v1/files/${fileId}/content`, {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
         },

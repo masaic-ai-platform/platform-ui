@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { API_URL } from '@/config';
+import { apiClient } from '@/lib/api';
 import { Key, Loader2, Eye, EyeOff } from 'lucide-react';
 
 const apiUrl = API_URL;
@@ -53,12 +54,17 @@ const ApiKeysModal: React.FC<ApiKeysModalProps> = ({
   const fetchProviders = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${apiUrl}/v1/dashboard/models`);
-      if (!response.ok) throw new Error('Failed to fetch providers');
-      const data: Provider[] = await response.json();
+      const data: Provider[] = await apiClient.jsonRequest<Provider[]>('/v1/dashboard/models');
       setProviders(data);
     } catch (error) {
       console.error('Error fetching providers:', error);
+      
+      // Check if it's an authentication error
+      if (error instanceof Error && error.message === 'Authentication required') {
+        // This will trigger the login screen via ApiClient's handleAuthError
+        return;
+      }
+      
       toast({
         description: "Failed to load providers. Please try again.",
         variant: "destructive",

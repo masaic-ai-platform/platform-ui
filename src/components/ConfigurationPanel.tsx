@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
 import { API_URL } from '@/config';
+import { apiClient } from '@/lib/api';
 import ToolConfigModal from './ToolConfigModal';
 import ToolsSelectionModal from './ToolsSelectionModal';
 import PromptMessagesInline from './PromptMessagesInline';
@@ -248,13 +249,11 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const loadMockServers = async () => {
     setLoadingServers(true);
     try{
-      const res = await fetch(`${API_URL}/v1/dashboard/mcp/mock/servers`);
-      if(res.ok){
-        const data = await res.json();
-        setMockServers(data);
-      }
+      const data = await apiClient.jsonRequest<any[]>('/v1/dashboard/mcp/mock/servers');
+      setMockServers(data);
     }catch(err){
       console.error(err);
+      // Authentication errors are handled by ApiClient
     }finally{
       setLoadingServers(false);
     }
@@ -263,13 +262,11 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   const loadMockFunctions = async () => {
     setLoadingFunctions(true);
     try{
-      const res = await fetch(`${API_URL}/v1/dashboard/mcp/mock/functions`);
-      if(res.ok){
-        const data = await res.json();
-        setMockFunctions(data);
-      }
+      const data = await apiClient.jsonRequest<any[]>('/v1/dashboard/mcp/mock/functions');
+      setMockFunctions(data);
     }catch(err){
       console.error(err);
+      // Authentication errors are handled by ApiClient
     }finally{
       setLoadingFunctions(false);
     }
@@ -277,14 +274,12 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
 
   const loadFunctionMocks = async (funcId: string) => {
     try {
-      const res = await fetch(`${API_URL}/v1/dashboard/mcp/mock/functions/${funcId}`);
-      if (res.ok) {
-        const data = await res.json();
-        const jsonArr: string[] = data?.mocks?.mockJsons || [];
-        setViewingMocks(jsonArr);
-      }
+      const data = await apiClient.jsonRequest<any>(`/v1/dashboard/mcp/mock/functions/${funcId}`);
+      const jsonArr: string[] = data?.mocks?.mockJsons || [];
+      setViewingMocks(jsonArr);
     } catch (err) {
       console.error(err);
+      // Authentication errors are handled by ApiClient
     }
   };
 
@@ -306,18 +301,19 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
       setError(null);
       
       try {
-        const apiUrl = API_URL;
-        const response = await fetch(`${apiUrl}/v1/dashboard/models`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
+        const data = await apiClient.jsonRequest<any[]>('/v1/dashboard/models');
         setProviders(data);
       } catch (err) {
         console.error('Error fetching models:', err);
-        const errorMessage = err instanceof Error && err.message.includes('Failed to fetch') 
+        
+        // Check if it's an authentication error
+        if (err instanceof Error && err.message === 'Authentication required') {
+          // This will trigger the login screen via ApiClient's handleAuthError
+          return;
+        }
+        
+        // For other errors, show appropriate message
+        const errorMessage = err instanceof Error && err.message.includes('Network error')
           ? 'Cannot connect to API server.'
           : 'Failed to load models.';
         setError(errorMessage);
@@ -589,18 +585,18 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
 
   const handleServerClick = async (server:{id:string,url:string,serverLabel:string})=>{
     try{
-      const res = await fetch(`${API_URL}/v1/dashboard/mcp/list_actions`,{
+      const tools: MCPTool[] = await apiClient.jsonRequest<MCPTool[]>('/v1/dashboard/mcp/list_actions', {
         method:'POST',
-        headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ serverLabel: server.serverLabel, serverUrl: server.url, headers:{} })
       });
-      if(res.ok){
-        const tools: MCPTool[] = await res.json();
-        setMcpPreview({tools, serverLabel: server.serverLabel});
-      } else {
-        toast.error('Failed to load tools');
+      setMcpPreview({tools, serverLabel: server.serverLabel});
+    }catch(err){ 
+      console.error(err); 
+      // Authentication errors are handled by ApiClient
+      if (!(err instanceof Error && err.message === 'Authentication required')) {
+        toast.error('Error fetching tools'); 
       }
-    }catch(err){ console.error(err); toast.error('Error fetching tools'); }
+    }
   };
 
   const { platformInfo } = usePlatformInfo();

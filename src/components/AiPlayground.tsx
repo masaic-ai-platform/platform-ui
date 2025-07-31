@@ -12,6 +12,7 @@ import PlaygroundSidebar from './PlaygroundSidebar';
 import CodeTabs from '@/playground/CodeTabs';
 import { PlaygroundRequest } from '@/playground/PlaygroundRequest';
 import { API_URL } from '@/config';
+import { apiClient } from '@/lib/api';
 import { usePlatformInfo } from '@/contexts/PlatformContext';
 
 interface ToolExecution {
@@ -672,10 +673,9 @@ const AiPlayground: React.FC = () => {
     setLastRequest(playgroundRequest);
 
     try {
-      const response = await fetch(`${apiUrl}/v1/responses`, {
+      const response = await apiClient.rawRequest('/v1/responses', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKeyForProvider}`
         },
         body: JSON.stringify(requestBody)
@@ -1587,10 +1587,9 @@ const AiPlayground: React.FC = () => {
     };
 
     try {
-      const response = await fetch(`${apiUrl}/v1/responses`, {
+      const response = await apiClient.rawRequest('/v1/responses', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${modelTestApiKey.trim()}`
         },
         body: JSON.stringify(requestBody)
