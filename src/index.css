@@ -141,3 +141,102 @@
   .vercel-shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
   .vercel-shadow-xl { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
 }
+
+/* Masaic Brand Animations */
+@keyframes slide-in {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 100%;
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-delayed {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 100%;
+    opacity: 1;
+  }
+}
+
+@keyframes underline-sweep {
+  from {
+    width: 0;
+    opacity: 0.8;
+  }
+  to {
+    width: 100%;
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes badge-ring {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(46, 125, 50, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.1);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(46, 125, 50, 0);
+  }
+}
+
+@keyframes badge-ring-delayed {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.3);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.08);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 12px rgba(34, 197, 94, 0);
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.8s ease-out 0.3s both;
+}
+
+.animate-slide-in-delayed {
+  animation: slide-in-delayed 0.8s ease-out 0.5s both;
+}
+
+.animate-underline-sweep {
+  animation: underline-sweep 0.6s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out;
+}
+
+.animate-badge-ring {
+  animation: badge-ring 2.5s ease-in-out infinite;
+}
+
+.animate-badge-ring-delayed {
+  animation: badge-ring-delayed 2.5s ease-in-out infinite 1.25s;
+}

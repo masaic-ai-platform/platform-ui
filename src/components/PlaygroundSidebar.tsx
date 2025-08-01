@@ -26,7 +26,7 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
   className = ''
 }) => {
   const mainOptions = [
-    { id: 'responses', label: 'Responses', icon: MessageSquare },
+    { id: 'responses', label: 'AgC API', icon: MessageSquare },
     { id: 'completions', label: 'Completions', icon: Zap, disabled: true },
   ];
 
@@ -48,13 +48,6 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
 
   return (
     <div className={cn("bg-background border-r border-border h-full flex flex-col", className)}>
-      {/* Header */}
-      <div className="p-4 border-b border-border">
-        <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-          PLAYGROUND
-        </h2>
-      </div>
-
       {/* Main Options */}
       <div className="flex-1 p-2 space-y-1">
         {mainOptions.map((option) => {

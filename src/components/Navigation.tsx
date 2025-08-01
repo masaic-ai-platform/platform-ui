@@ -1,5 +1,6 @@
 import React from 'react';
 import VersionBadge from './VersionBadge';
+import MasaicBrand from './MasaicBrand';
 
 const Navigation: React.FC = () => {
 
@@ -9,19 +10,7 @@ const Navigation: React.FC = () => {
       <div className="px-8 py-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 flex items-center justify-center">
-              <img 
-                src="/Masaic-Logo.png" 
-                alt="Masaic Logo" 
-                className="h-21 w-21 object-contain"
-              />
-            </div>
-            <div>
-              <h1 className="text-2xl font-medium text-foreground tracking-tight">
-                Masaic Dev Platform
-              </h1>
-
-            </div>
+            <MasaicBrand />
           </div>
           
           {/* Version Badge in top-right corner */}
