@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading, authEnabled, apiError } = useAuth();
+  const { isAuthenticated, isLoading, authEnabled, apiError, tokenExpired } = useAuth();
 
   // If auth is disabled, render children directly
   if (!authEnabled) {
@@ -27,8 +27,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  // If not authenticated, show login (with API error if present)
-  if (!isAuthenticated) {
+  // If not authenticated or token expired, show login (with API error if present)
+  if (!isAuthenticated || tokenExpired) {
     return <GoogleLogin showApiError={apiError} />;
   }
 

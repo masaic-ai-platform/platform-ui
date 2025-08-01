@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AUTH_CONFIG, GoogleUser, AuthConfig } from '@/config/auth';
 import { API_URL } from '@/config';
+import { apiClient } from '@/lib/api';
 
 interface AuthContextType {
   user: GoogleUser | null;
@@ -8,6 +9,7 @@ interface AuthContextType {
   isLoading: boolean;
   authEnabled: boolean;
   apiError: boolean;
+  tokenExpired: boolean; // Added
   login: (credential: string) => Promise<void>;
   logout: () => void;
 }
@@ -31,10 +33,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [authEnabled, setAuthEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState(false);
+  const [tokenExpired, setTokenExpired] = useState(false);
 
   const fetchAuthConfig = async () => {
     try {
-      const response = await fetch(`${API_URL}/v1/dashboard/platform/info`);
+      const response = await apiClient.rawRequest('/v1/dashboard/platform/info');
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -67,20 +70,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const token = localStorage.getItem('google_token');
       if (token) {
         // Verify token with backend
-        const response = await fetch(`${API_URL}/v1/dashboard/platform/auth/verify`, {
+        const response = await apiClient.rawRequest('/v1/dashboard/platform/auth/verify', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           body: JSON.stringify({ token }),
         });
 
         if (response.ok) {
           const userData = await response.json();
           setUser(userData);
+          setTokenExpired(false); // Reset token expiration state
         } else {
           // Token is invalid, remove it
           localStorage.removeItem('google_token');
+          setTokenExpired(true); // Set token as expired
         }
       }
     } catch (error) {
@@ -95,17 +97,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('google_token', credential);
 
       // Verify token with backend
-      const response = await fetch(`${API_URL}/v1/dashboard/platform/auth/verify`, {
+      const response = await apiClient.rawRequest('/v1/dashboard/platform/auth/verify', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ token: credential }),
       });
 
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
+        setTokenExpired(false); // Reset token expiration state on successful login
       } else {
         throw new Error('Failed to verify token');
       }
@@ -118,11 +118,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = () => {
     setUser(null);
+    setTokenExpired(false); // Reset token expiration state on logout
     localStorage.removeItem('google_token');
   };
 
   useEffect(() => {
     fetchAuthConfig();
+  }, []);
+
+  // Listen for token expiration events
+  useEffect(() => {
+    const handleTokenExpired = () => {
+      setTokenExpired(true);
+      setUser(null);
+      localStorage.removeItem('google_token');
+    };
+
+    window.addEventListener('auth:token-expired', handleTokenExpired);
+    return () => window.removeEventListener('auth:token-expired', handleTokenExpired);
   }, []);
 
   const value: AuthContextType = {
@@ -131,6 +144,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     authEnabled,
     apiError,
+    tokenExpired,
     login,
     logout,
   };

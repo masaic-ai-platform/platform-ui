@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronLeft, ChevronRight, Eye, EyeOff, Plus, X, Loader2, Check, Edit } from 'lucide-react';
 import { MCP } from '@lobehub/icons';
 import { API_URL } from '@/config';
+import { apiClient } from '@/lib/api';
 
 interface MCPModalProps {
   open: boolean;
@@ -83,8 +84,7 @@ const MCPModal: React.FC<MCPModalProps> = ({
     if(readOnly) return;
     // fetch suggestions once when modal opens
     if(open){
-      fetch(`${apiUrl}/v1/dashboard/mcp/mock/servers`)
-        .then(res=>res.json())
+      apiClient.jsonRequest<any[]>('/v1/dashboard/mcp/mock/servers')
         .then((data:any[])=>{
           const mapped = data.map(item=>({ url:item.url, label:item.serverLabel || item.label || item.url }));
           setServerSuggestions(mapped);
@@ -127,19 +127,10 @@ const MCPModal: React.FC<MCPModalProps> = ({
       };
 
       // Make API call
-      const response = await fetch(`${apiUrl}/v1/dashboard/mcp/list_actions`, {
+      const data: MCPTool[] = await apiClient.jsonRequest<MCPTool[]>('/v1/dashboard/mcp/list_actions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(requestBody)
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: MCPTool[] = await response.json();
       
       // Simulate connection animation delay
       setTimeout(() => {
@@ -201,19 +192,10 @@ const MCPModal: React.FC<MCPModalProps> = ({
       };
 
       // Make API call
-      const response = await fetch(`${apiUrl}/v1/dashboard/mcp/list_actions`, {
+      const data: MCPTool[] = await apiClient.jsonRequest<MCPTool[]>('/v1/dashboard/mcp/list_actions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
         body: JSON.stringify(requestBody)
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: MCPTool[] = await response.json();
       
       // Set tools and preserve previously selected tools
       setTools(data);

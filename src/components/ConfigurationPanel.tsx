@@ -1095,9 +1095,8 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                         if(!newServerLabel.trim() || selectedFunctionIds.length===0) return;
                         setCreatingServer(true);
                         try{
-                          const res = await fetch(`${API_URL}/v1/dashboard/mcp/mock/servers`,{
+                          const res = await apiClient.rawRequest('/v1/dashboard/mcp/mock/servers',{
                             method:'POST',
-                            headers:{'Content-Type':'application/json'},
                             body: JSON.stringify({ serverLabel:newServerLabel.trim(), toolIds:selectedFunctionIds })
                           });
                           if(res.ok){

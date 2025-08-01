@@ -21,34 +21,34 @@ class ApiClient {
     }
   }
 
-  private async getHeaders(): Promise<HeadersInit> {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    };
+              private async getHeaders(): Promise<HeadersInit> {
+                const headers: HeadersInit = {
+                  'Content-Type': 'application/json',
+                };
 
-    // Add model API key (existing behavior)
-    const modelApiKey = this.getModelApiKey();
-    if (modelApiKey) {
-      headers['Authorization'] = `Bearer ${modelApiKey}`;
-    }
+                // Add model API key (existing behavior)
+                const modelApiKey = this.getModelApiKey();
+                if (modelApiKey) {
+                  headers['Authorization'] = `Bearer ${modelApiKey}`;
+                }
 
-    // Add Google token if auth is enabled
-    const authEnabled = await this.isAuthEnabled();
-    if (authEnabled) {
-      const googleToken = this.getGoogleToken();
-      if (googleToken) {
-        headers['X-Google-Token'] = googleToken;
-      }
-    }
+                // Add Google token if auth is enabled
+                const authEnabled = await this.isAuthEnabled();
+                if (authEnabled) {
+                  const googleToken = this.getGoogleToken();
+                  if (googleToken) {
+                    headers['X-Google-Token'] = googleToken;
+                  }
+                }
 
-    return headers;
-  }
+                return headers;
+              }
 
   private handleAuthError() {
     // Clear invalid token
     localStorage.removeItem('google_token');
-    // Trigger a page reload to show login screen
-    window.location.reload();
+    // Instead of reloading, dispatch a custom event to trigger login screen
+    window.dispatchEvent(new CustomEvent('auth:token-expired'));
   }
 
   async request(endpoint: string, options: RequestInit = {}): Promise<Response> {
