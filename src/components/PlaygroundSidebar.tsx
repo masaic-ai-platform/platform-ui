@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   MessageSquare, 
   Zap, 
@@ -11,7 +12,8 @@ import {
   BarChart3,
   Shield,
   Sparkles,
-  Plus
+  Plus,
+  LogOut
 } from 'lucide-react';
 
 interface PlaygroundSidebarProps {
@@ -25,6 +27,7 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
   onTabChange,
   className = ''
 }) => {
+  const { logout, authEnabled, isAuthenticated } = useAuth();
   const mainOptions = [
     { id: 'responses', label: 'AgC API', icon: MessageSquare },
     { id: 'completions', label: 'Completions', icon: Zap, disabled: true },
@@ -45,6 +48,10 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
     { id: 'github', label: 'GitHub', icon: Github, link: 'https://github.com/masaic-ai-platform' },
     { id: 'discord', label: 'Discord', icon: MessageCircle, link: 'https://discord.com/channels/1335132819260702723/1354795442004820068' },
   ];
+
+  // Add Sign Out option if authentication is enabled and user is authenticated
+  const signOutOption = authEnabled && isAuthenticated ? 
+    { id: 'sign-out', label: 'Sign Out', icon: LogOut, action: 'signout' } : null;
 
   return (
     <div className={cn("bg-background border-r border-border h-full flex flex-col", className)}>
@@ -160,6 +167,21 @@ const PlaygroundSidebar: React.FC<PlaygroundSidebarProps> = ({
             </Button>
           );
         })}
+        
+        {/* Sign Out Button - Only shown when authenticated */}
+        {signOutOption && (
+          <Button
+            key={signOutOption.id}
+            variant="ghost"
+            className="w-full justify-start text-xs h-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+            onClick={() => {
+              logout();
+            }}
+          >
+            <signOutOption.icon className="h-3 w-3 mr-2" />
+            {signOutOption.label}
+          </Button>
+        )}
       </div>
     </div>
   );

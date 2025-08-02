@@ -10,6 +10,7 @@ import { Loader2, Upload, FileSearch, Copy, Plus, Check, Search } from 'lucide-r
 import { useToast } from '../hooks/use-toast';
 import { usePlatformInfo } from '@/contexts/PlatformContext';
 import { API_URL } from '@/config';
+import { apiClient } from '@/lib/api';
 import ApiKeysModal from './ApiKeysModal';
 
 interface AgenticFileSearchModalProps {
@@ -128,10 +129,7 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
     }
 
     try {
-      const response = await fetch(`${apiUrl}/v1/dashboard/models`);
-      if (!response.ok) throw new Error('Failed to fetch models');
-      
-      const providers: Provider[] = await response.json();
+      const providers: Provider[] = await apiClient.jsonRequest<Provider[]>('/v1/dashboard/models');
       const allEmbeddingModels = providers.flatMap(provider => 
         provider.supportedModels
           .filter(model => model.isEmbeddingModel === true) // Only embedding models
@@ -158,6 +156,13 @@ const AgenticFileSearchModal: React.FC<AgenticFileSearchModalProps> = ({
       }
     } catch (error) {
       console.error('Error fetching embedding models:', error);
+      
+      // Check if it's an authentication error
+      if (error instanceof Error && error.message === 'Authentication required') {
+        // This will trigger the login screen via ApiClient's handleAuthError
+        return;
+      }
+      
       setEmbeddingModels([]);
     }
   };

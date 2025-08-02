@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { API_URL } from '@/config';
+import { apiClient } from '@/lib/api';
 
 interface ModelSettings {
   settingsType: string;
@@ -69,7 +70,7 @@ export const PlatformProvider: React.FC<PlatformProviderProps> = ({ children }) 
     setError(null);
     
     try {
-      const response = await fetch(`${API_URL}/v1/dashboard/platform/info`);
+      const response = await apiClient.rawRequest('/v1/dashboard/platform/info');
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
